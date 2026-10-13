@@ -1,0 +1,62 @@
+# AGENTS.md
+
+Instructions for AI coding agents (Codex, Claude Code, Cursor, …) working in this repository. Humans are welcome to read it too.
+
+## Project
+
+MijiaBar is a macOS menu bar app (SwiftUI, macOS 14+) that controls Xiaomi Mi Home devices, plus a CLI and stdio MCP server. Swift Package Manager only; no Xcode project, no third-party dependencies.
+
+- `Sources/MijiaCore` — Xiaomi cloud API (RC4-signed requests), QR sign-in, the miIO LAN protocol (UDP 54321), MIoT specs, localization (`L()`, `AppLang`, generated `Translations.swift`), the agent setup prompt (`AgentPrompt.swift`), and `Controller`, which picks cloud or LAN for each device.
+- `Sources/MijiaBarApp` — the SwiftUI app.
+  - `AppModel` holds state and navigation.
+  - `Motion.swift` holds every animation token and shared interaction modifiers.
+  - `Theme.swift` holds semantic colors (light/dark aware).
+  - `TypeKit.swift` / `TypeDetails.swift` / `Art.swift` are the per-device-type detail pages and their illustrations; `CardViews.swift` is the generic spec-driven card; `ACViews.swift` is the air conditioner card.
+- `Sources/mijiabar` — the CLI and MCP server. Writes are gated by `AgentPolicy` (Settings → Agent interface).
+
+## Build and check
+
+```bash
+swift build                                    # debug build of all targets
+swift build -c release                         # what CI packages
+scripts/scan-secrets.sh                        # must pass before every commit (CI runs it)
+python3 scripts/gen-i18n.py                    # regenerate Translations.swift; fails if any L() string lacks a translation
+.build/debug/MijiaBarApp --snapshot /tmp/shots -AppleLanguages "(zh-Hans)"   # every screen, light and dark (*-light.png / *-dark.png)
+.build/debug/MijiaBarApp --gif /tmp/demo.gif -AppleLanguages "(zh-Hans)"     # record the AC card animation
+```
+
+`scripts/package.sh` builds the app and DMG. With a Developer ID it signs and notarizes; `SIGN_IDENTITY=-` forces ad-hoc signing (what CI does).
+
+CI (`.github/workflows/build.yml`) uses Xcode 16 on `macos-15`. Code must compile there: guard newer APIs with `if #available(macOS 15, *)` and keep a macOS 14 fallback.
+
+**Command Line Tools only (no Xcode):** the macOS 27 SDK in Command Line Tools lacks the SwiftUI macro plugin, so `@State` fails to compile. Build against the 26.x SDK instead:
+
+```bash
+SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk swift build --build-system native
+```
+
+## Verifying UI changes
+
+You can't click through the menu bar app, so verify visually:
+
+1. Run `--snapshot` and look at the PNGs in both light and dark (list, both AC cards, light, plug, fan, settings, login).
+2. For motion, run `--gif` and step through frames: `ffmpeg -i /tmp/demo.gif -vf fps=4,tile=6x3 sheet.png`.
+3. The snapshot path uses `cacheDisplay`, which can't draw `.blur` or `rotation3DEffect`. Use gradients and 2D transforms so screenshots match the live app.
+
+`--snapshot --real` renders your own signed-in devices for local checks. **Never commit those images**: they contain real device names and rooms.
+
+Regenerate `docs/screenshots/` (Simplified Chinese, `-AppleLanguages "(zh-Hans)"`) only when a PR changes how a screen looks. Every README language uses these same images.
+
+## Conventions
+
+- **Read [`docs/DESIGN.md`](docs/DESIGN.md) before touching UI.** In short: animate only for feedback or state; use `Motion.*` tokens (no bounce, ≤ 300 ms, exits faster than entrances); keyboard actions never animate (`withoutAnimation { }`, `animated: false`); respect Reduce Motion; use `Theme` semantic colors; give icon-only and stateful controls accessibility labels and values.
+- **Strings:** every user-facing string goes through `L("简体中文", "English")` (or `LF` with `%@` arguments). The English text is the key for the other languages: add a row to `i18n/ui.tsv` (English, de, fr, es, it, ru, ja) and the Taiwan-style Traditional Chinese to `i18n/zh-Hant.tsv`, then run `python3 scripts/gen-i18n.py`. Never edit `Translations.swift` by hand. Reusing an existing English key reuses its translations, so pick a distinct key when the meaning differs (e.g. "Power" is wattage; the power button uses "Power on/off").
+- **Style:** match the surrounding code — compact one-line bodies are normal here. Code comments are in Chinese; keep new ones short and in Chinese.
+- **Privacy:** never commit tokens, `ssecurity`, device IPs, or real device names. Demo data lives in `Snapshot.swift`. Credentials belong in the Keychain; caches in `~/Library/Application Support/MijiaBar/` with mode 0600.
+- **Agent safety:** don't widen what the CLI/MCP can do without going through `AgentPolicy.canWrite` and the confirmation prompt.
+
+## Pull requests
+
+- One topic per PR. Describe user-visible changes first, then implementation notes and a test plan.
+- The READMEs (`README.md`, `README.zh-CN.md`, `README.zh-TW.md`, `README.ru.md`, `README.de.md`, `README.fr.md`) are generated by `scripts/gen-readme.py`. Change the text there and regenerate; don't edit the README files directly.
+- Things you can't verify without real devices (LAN control, sign-in) must be listed as unchecked items in the test plan.
