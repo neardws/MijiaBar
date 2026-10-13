@@ -77,8 +77,10 @@ public struct DeviceState: Sendable {
 /// 记录每台设备的局域网是否可达。不在家时局域网请求只会超时，
 /// 失败一次后在 backoff 时间内直接走云端，不再每次先等一个超时。
 struct LANHealth {
-    var backoff: TimeInterval = 300
+    var backoff: TimeInterval
     private var downUntil: [String: Date] = [:]
+    // 显式写出：有 private 属性时，Swift 6.0 不会生成可用的逐成员初始化方法
+    init(backoff: TimeInterval = 300) { self.backoff = backoff }
     func shouldTry(_ did: String, now: Date = Date()) -> Bool { downUntil[did].map { now >= $0 } ?? true }
     mutating func recordFailure(_ did: String, now: Date = Date()) { downUntil[did] = now.addingTimeInterval(backoff) }
     mutating func recordSuccess(_ did: String) { downUntil[did] = nil }
