@@ -161,7 +161,7 @@ struct SettingsView: View {
                             .foregroundStyle(.red)
                     }.buttonStyle(.plain).help("⌘Q")
                     group(L("关于", "About")) {
-                        row("MijiaBar") { Text("v0.1.6-rc2").foregroundStyle(.secondary) }
+                        row("MijiaBar") { Text("v0.1.6").foregroundStyle(.secondary) }
                         Link("github.com/neardws/MijiaBar", destination: URL(string: "https://github.com/neardws/MijiaBar")!)
 
                     }
