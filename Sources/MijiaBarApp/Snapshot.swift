@@ -124,7 +124,7 @@ enum Snapshot {
             m.page = .detail("d3"); render(root, f("light"))
             m.page = .detail("d5"); render(root, f("plug"))
             m.page = .detail("d4"); m.states["d4"]?.values["2.1"] = .bool(true); render(root, f("fan"))
-            m.page = .settings; render(root, f("settings"))
+            m.page = .settings; render(root, f("settings")); render(AgentSettingsSection().padding(12).frame(maxHeight: .infinity, alignment: .top).background(Theme.bg).environmentObject(m), f("agent"), size: CGSize(width: 360, height: 420))
             m.page = .list; m.showHidden = true; render(root, f("list-hidden")); m.showHidden = false
             m.session = nil; m.qrImage = qr("https://github.com/neardws/MijiaBar"); m.loginStatus = L("打开米家 App 扫一扫，并在手机上确认登录", "Scan with the Mi Home app")
             render(root, f("login"))

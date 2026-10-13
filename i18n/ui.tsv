@@ -1,0 +1,221 @@
+Room 	Raum 	Pièce 	Sala 	Stanza 	Комната 	室温 
+Power 	Leistung 	Puissance 	Potencia 	Potenza 	Мощность 	電力 
+Fan	Lüfter	Ventilation	Ventilador	Ventola	Вентилятор	送風
+Off	Aus	Éteint	Apagado	Spento	Выкл.	オフ
+Power (Space)	Ein/Aus (Leertaste)	Marche/arrêt (Espace)	Encender/apagar (Espacio)	Accendi/spegni (Spazio)	Вкл./выкл. (Пробел)	電源（スペース）
+Mode	Modus	Mode	Modo	Modalità	Режим	モード
+Sleep	Schlaf	Sommeil	Sueño	Notte	Сон	おやすみ
+Swing	Schwenken	Balayage	Oscilación	Oscillazione	Качание	スイング
+← → adjust	← → anpassen	← → régler	← → ajustar	← → regola	← → настройка	← → で調整
+N/A	k. A.	N/D	N/D	N/D	Н/Д	—
+On	Ein	Allumé	Encendido	Acceso	Вкл.	オン
+Mi Home	Mi Home	Mi Home	Mi Home	Mi Home	Mi Home	Mi Home
+Favorites	Favoriten	Favoris	Favoritos	Preferiti	Избранное	お気に入り
+No room	Kein Raum	Sans pièce	Sin sala	Nessuna stanza	Без комнаты	部屋なし
+Unavailable	Nicht verfügbar	Indisponible	No disponible	Non disponibile	Недоступно	利用不可
+Loading…	Wird geladen …	Chargement…	Cargando…	Caricamento…	Загрузка…	読み込み中…
+Online	Online	En ligne	En línea	Online	В сети	オンライン
+Failed: 	Fehlgeschlagen: 	Échec : 	Error: 	Non riuscito: 	Ошибка: 	失敗：
+Done	Erledigt	Terminé	Hecho	Fatto	Готово	完了
+Refresh failed: 	Aktualisierung fehlgeschlagen: 	Échec de l’actualisation : 	Error al actualizar: 	Aggiornamento non riuscito: 	Не удалось обновить: 	更新に失敗：
+Fetching QR code…	QR-Code wird geladen …	Récupération du QR code…	Obteniendo código QR…	Recupero del codice QR…	Получение QR-кода…	QR コードを取得中…
+Scan with the Mi Home app and confirm	Mit der Mi-Home-App scannen und bestätigen	Scanne avec l’app Mi Home et confirme	Escanea con la app Mi Home y confirma	Scansiona con l’app Mi Home e conferma	Отсканируйте в приложении Mi Home и подтвердите	Mi Home アプリでスキャンして確認
+min	Min.	min	min	min	мин	分
+s	s	s	s	s	с	秒
+h	h	h	h	h	ч	時間
+More	Mehr	Plus	Más	Altro	Ещё	その他
+No public MIoT spec for this model.	Für dieses Modell gibt es keine öffentliche MIoT-Spezifikation.	Aucune spécification MIoT publique pour ce modèle.	No hay especificación MIoT pública para este modelo.	Nessuna specifica MIoT pubblica per questo modello.	Для этой модели нет публичной спецификации MIoT.	このモデルには公開 MIoT 仕様がありません。
+Offline	Offline	Hors ligne	Sin conexión	Offline	Не в сети	オフライン
+Warm	Warm	Chaud	Cálida	Calda	Тёплый	暖色
+Neutral	Neutral	Neutre	Neutra	Neutra	Нейтральный	昼白色
+Cool	Kühl	Froid	Fría	Fredda	Холодный	寒色
+Air conditioner	Klimaanlage	Climatiseur	Aire acondicionado	Condizionatore	Кондиционер	エアコン
+Plug / switch	Steckdose / Schalter	Prise / interrupteur	Enchufe / interruptor	Presa / interruttore	Розетка / выключатель	プラグ / スイッチ
+Light	Licht	Lumière	Luz	Luce	Свет	照明
+Heater	Heizgerät	Radiateur	Calefactor	Stufa	Обогреватель	ヒーター
+Dehumidifier	Luftentfeuchter	Déshumidificateur	Deshumidificador	Deumidificatore	Осушитель	除湿機
+Sensor	Sensor	Capteur	Sensor	Sensore	Датчик	センサー
+TV	TV	TV	TV	TV	Телевизор	テレビ
+Camera	Kamera	Caméra	Cámara	Telecamera	Камера	カメラ
+Speaker	Lautsprecher	Enceinte	Altavoz	Altoparlante	Колонка	スピーカー
+Kitchen	Küche	Cuisine	Cocina	Cucina	Кухня	キッチン
+Printer	Drucker	Imprimante	Impresora	Stampante	Принтер	プリンター
+Water purifier	Wasserfilter	Purificateur d’eau	Purificador de agua	Depuratore d’acqua	Фильтр для воды	浄水器
+Device	Gerät	Appareil	Dispositivo	Dispositivo	Устройство	デバイス
+Click or press Space	Klicken oder Leertaste drücken	Clique ou appuie sur Espace	Haz clic o pulsa Espacio	Fai clic o premi Spazio	Нажмите или пробел	クリックまたはスペース
+Source: 	Quelle: 	Source : 	Fuente: 	Fonte: 	Источник: 	ソース：
+Yes	Ja	Oui	Sí	Sì	Да	はい
+No	Nein	Non	No	No	Нет	いいえ
+Back	Zurück	Retour	Atrás	Indietro	Назад	戻る
+Settings	Einstellungen	Réglages	Ajustes	Impostazioni	Настройки	設定
+Account	Konto	Compte	Cuenta	Account	Аккаунт	アカウント
+Xiaomi ID	Xiaomi-ID	ID Xiaomi	ID de Xiaomi	ID Xiaomi	Xiaomi ID	Xiaomi ID
+Region	Region	Région	Región	Regione	Регион	地域
+Sign out	Abmelden	Se déconnecter	Cerrar sesión	Esci	Выйти	サインアウト
+Language	Sprache	Langue	Idioma	Lingua	Язык	言語
+Suggested for region	Empfohlen für die Region	Suggérées pour la région	Sugeridos para la región	Consigliate per la regione	Рекомендуемые для региона	地域のおすすめ
+Other	Weitere	Autres	Otros	Altre	Другие	その他
+Follow region default	Regionsstandard verwenden	Suivre la région	Usar el predeterminado de la región	Segui la regione	Как в регионе	地域の既定に従う
+Devices	Geräte	Appareils	Dispositivos	Dispositivi	Устройства	デバイス
+Show hidden devices	Ausgeblendete Geräte anzeigen	Afficher les appareils masqués	Mostrar dispositivos ocultos	Mostra dispositivi nascosti	Показывать скрытые устройства	非表示のデバイスを表示
+Hidden by default: offline devices and devices not seen online for 30+ days. Right-click a device to hide, favorite or rename.	Standardmäßig ausgeblendet: Offline-Geräte und Geräte, die seit über 30 Tagen nicht online waren. Rechtsklick auf ein Gerät zum Ausblenden, Favorisieren oder Umbenennen.	Masqués par défaut : appareils hors ligne et appareils absents depuis plus de 30 jours. Clic droit sur un appareil pour le masquer, l’ajouter aux favoris ou le renommer.	Ocultos por defecto: dispositivos sin conexión y los que no se conectan desde hace más de 30 días. Haz clic derecho en un dispositivo para ocultarlo, marcarlo como favorito o renombrarlo.	Nascosti per impostazione predefinita: dispositivi offline e quelli non online da oltre 30 giorni. Fai clic destro su un dispositivo per nasconderlo, aggiungerlo ai preferiti o rinominarlo.	По умолчанию скрыты: устройства не в сети и не появлявшиеся в сети более 30 дней. Щёлкните устройство правой кнопкой, чтобы скрыть, добавить в избранное или переименовать.	既定で非表示：オフラインのデバイスと 30 日以上オンラインになっていないデバイス。デバイスを右クリックすると非表示・お気に入り・名前変更ができます。
+Agent interface (CLI / MCP)	Agent-Schnittstelle (CLI / MCP)	Interface agent (CLI / MCP)	Interfaz de agente (CLI / MCP)	Interfaccia agente (CLI / MCP)	Интерфейс агента (CLI / MCP)	エージェント連携（CLI / MCP）
+Access	Zugriff	Accès	Acceso	Accesso	Доступ	アクセス
+Read	Lesen	Lecture	Lectura	Lettura	Чтение	読み取り
+Allowlist	Positivliste	Liste autorisée	Lista permitida	Lista consentita	Белый список	許可リスト
+Full	Voll	Complet	Completo	Completo	Полный	すべて
+Confirm every write	Jeden Schreibvorgang bestätigen	Confirmer chaque écriture	Confirmar cada escritura	Conferma ogni scrittura	Подтверждать каждую запись	書き込みごとに確認
+Devices agents may control:	Geräte, die Agents steuern dürfen:	Appareils que les agents peuvent contrôler :	Dispositivos que los agentes pueden controlar:	Dispositivi che gli agenti possono controllare:	Устройства, которыми могут управлять агенты:	エージェントが操作できるデバイス：
+Copy MCP config	MCP-Konfiguration kopieren	Copier la config MCP	Copiar configuración MCP	Copia configurazione MCP	Копировать конфигурацию MCP	MCP 設定をコピー
+Copied	Kopiert	Copié	Copiado	Copiato	Скопировано	コピーしました
+Copy CLI path	CLI-Pfad kopieren	Copier le chemin de la CLI	Copiar ruta de la CLI	Copia percorso CLI	Копировать путь к CLI	CLI のパスをコピー
+Quit MijiaBar	MijiaBar beenden	Quitter MijiaBar	Salir de MijiaBar	Esci da MijiaBar	Завершить MijiaBar	MijiaBar を終了
+About	Über	À propos	Acerca de	Info	О программе	情報
+My Home	Mein Zuhause	Ma maison	Mi casa	Casa mia	Мой дом	マイホーム
+Parents	Eltern	Parents	Padres	Genitori	Родители	実家
+Living room AC	Klimaanlage Wohnzimmer	Clim du salon	Aire del salón	Clima soggiorno	Кондиционер в гостиной	リビングのエアコン
+Living room	Wohnzimmer	Salon	Salón	Soggiorno	Гостиная	リビング
+Bedroom AC	Klimaanlage Schlafzimmer	Clim de la chambre	Aire del dormitorio	Clima camera	Кондиционер в спальне	寝室のエアコン
+Bedroom	Schlafzimmer	Chambre	Dormitorio	Camera da letto	Спальня	寝室
+Floor lamp	Stehlampe	Lampadaire	Lámpara de pie	Lampada da terra	Торшер	フロアランプ
+Circulator fan	Ventilator	Ventilateur	Ventilador	Ventilatore	Вентилятор	サーキュレーター
+Smart plug	Smarte Steckdose	Prise connectée	Enchufe inteligente	Presa smart	Умная розетка	スマートプラグ
+Study	Arbeitszimmer	Bureau	Estudio	Studio	Кабинет	書斎
+Thermometer	Thermometer	Thermomètre	Termómetro	Termometro	Термометр	温度計
+Old camera	Alte Kamera	Ancienne caméra	Cámara antigua	Vecchia telecamera	Старая камера	古いカメラ
+Balcony	Balkon	Balcon	Balcón	Balcone	Балкон	バルコニー
+Old printer	Alter Drucker	Ancienne imprimante	Impresora antigua	Vecchia stampante	Старый принтер	古いプリンター
+Scan with the Mi Home app	Mit der Mi-Home-App scannen	Scanne avec l’app Mi Home	Escanea con la app Mi Home	Scansiona con l’app Mi Home	Отсканируйте в приложении Mi Home	Mi Home アプリでスキャン
+Oscillating	Schwenkt	Oscillation	Oscilando	In oscillazione	Поворот	首振り中
+Speed	Stufe	Vitesse	Velocidad	Velocità	Скорость	風量
+Oscillate	Schwenken	Oscillation	Oscilar	Oscillazione	Поворот	首振り
+Angle	Winkel	Angle	Ángulo	Angolo	Угол	角度
+Child lock	Kindersicherung	Sécurité enfants	Bloqueo infantil	Blocco bambini	Защита от детей	チャイルドロック
+Brightness	Helligkeit	Luminosité	Brillo	Luminosità	Яркость	明るさ
+Color temp	Farbtemperatur	Température de couleur	Temperatura de color	Temperatura colore	Цветовая температура	色温度
+Soft	Sanft	Doux	Suave	Morbida	Мягкий	やわらか
+Scene	Szene	Scène	Escena	Scena	Сцена	シーン
+Presets	Voreinstellungen	Préréglages	Preajustes	Preset	Пресеты	プリセット
+10%	10 %	10 %	10 %	10%	10 %	10%
+40%	40 %	40 %	40 %	40%	40 %	40%
+70%	70 %	70 %	70 %	70%	70 %	70%
+100%	100 %	100 %	100 %	100%	100 %	100%
+Powered	Eingeschaltet	Sous tension	Encendido	Alimentata	Под напряжением	通電中
+Power	Leistung	Puissance	Potencia	Potenza	Мощность	電力
+Total 	Gesamt 	Total 	Total 	Totale 	Всего 	累計 
+Indicator	Anzeige-LED	Voyant	Indicador	Spia	Индикатор	インジケーター
+Power-on	Nach Stromausfall	À la remise sous tension	Al recuperar la corriente	All’accensione	При подаче питания	通電時
+Last	Letzter	Dernier	Último	Ultimo	Последнее	前回の状態
+Input 	Eingang 	Entrée 	Entrada 	Ingresso 	Вход 	入力 
+Input	Eingang	Entrée	Entrada	Ingresso	Вход	入力
+Mute	Stumm	Muet	Silencio	Muto	Без звука	ミュート
+Pause	Pause	Pause	Pausa	Pausa	Пауза	一時停止
+Play	Wiedergabe	Lecture	Reproducir	Riproduci	Воспроизвести	再生
+Do not disturb	Nicht stören	Ne pas déranger	No molestar	Non disturbare	Не беспокоить	おやすみモード
+Muted	Stummgeschaltet	En sourdine	Silenciado	Silenziato	Звук выключен	ミュート中
+Previous	Zurück	Précédent	Anterior	Precedente	Предыдущий	前へ
+Next	Weiter	Suivant	Siguiente	Successivo	Следующий	次へ
+Watching	Überwacht	Surveillance	Vigilando	In osservazione	Наблюдение	監視中
+Privacy mode	Privatsphäre-Modus	Mode privé	Modo privacidad	Modalità privacy	Режим приватности	プライバシーモード
+Doorbell	Türklingel	Sonnette	Timbre	Campanello	Дверной звонок	ドアベル
+SD 	SD 	SD 	SD 	SD 	SD 	SD 
+Battery 	Akku 	Batterie 	Batería 	Batteria 	Батарея 	電池 
+Night	Nacht	Nuit	Noche	Notte	Ночь	夜間
+Motion	Bewegung	Mouvement	Movimiento	Movimento	Движение	動体
+Record	Aufnahme	Enregistrement	Grabación	Registrazione	Запись	録画
+Status	Status	État	Estado	Stato	Состояние	状態
+Printed 	Gedruckt 	Imprimé 	Impreso 	Stampate 	Напечатано 	印刷済み 
+pages	Seiten	pages	páginas	pagine	стр.	ページ
+Auto sleep	Auto-Ruhezustand	Veille auto	Suspensión automática	Sospensione automatica	Автосон	自動スリープ
+Ink levels are only available in the Mi Home app	Tintenstände sind nur in der Mi-Home-App verfügbar	Les niveaux d’encre ne sont visibles que dans l’app Mi Home	Los niveles de tinta solo están disponibles en la app Mi Home	I livelli di inchiostro sono disponibili solo nell’app Mi Home	Уровень чернил доступен только в приложении Mi Home	インク残量は Mi Home アプリでのみ確認できます
+Remaining	Verbleibend	Restant	Restante	Rimanente	Осталось	残り時間
+Target 	Ziel 	Cible 	Objetivo 	Obiettivo 	Цель 	目標 
+Heat 	Hitze 	Chauffe 	Calor 	Calore 	Нагрев 	火力 
+Sound	Ton	Son	Sonido	Suono	Звук	サウンド
+Running	In Betrieb	En marche	En funcionamiento	In funzione	Работает	運転中
+Pure water TDS	TDS Reinwasser	TDS eau purifiée	TDS agua purificada	TDS acqua depurata	TDS очищенной воды	浄水 TDS
+Tap 	Leitung 	Robinet 	Grifo 	Rubinetto 	Водопровод 	原水 
+Filter 	Filter 	Filtre 	Filtro 	Filtro 	Фильтр 	フィルター 
+No public MIoT spec; only online state is available	Keine öffentliche MIoT-Spezifikation; nur der Online-Status ist verfügbar	Pas de spécification MIoT publique ; seul l’état en ligne est disponible	Sin especificación MIoT pública; solo está disponible el estado de conexión	Nessuna specifica MIoT pubblica; è disponibile solo lo stato online	Нет публичной спецификации MIoT; доступен только статус сети	公開 MIoT 仕様がないため、オンライン状態のみ表示できます
+Tank full	Tank voll	Réservoir plein	Depósito lleno	Serbatoio pieno	Бак полон	タンク満水
+Target	Ziel	Cible	Objetivo	Obiettivo	Цель	目標温度
+Target humidity	Zielfeuchte	Humidité cible	Humedad objetivo	Umidità obiettivo	Целевая влажность	目標湿度
+Humidity 	Feuchte 	Humidité 	Humedad 	Umidità 	Влажность 	湿度 
+Level	Stufe	Niveau	Nivel	Livello	Уровень	レベル
+Temperature	Temperatur	Température	Temperatura	Temperatura	Температура	温度
+Humidity	Luftfeuchte	Humidité	Humedad	Umidità	Влажность	湿度
+BLE readings sync via gateway and may be delayed	Bluetooth-Messwerte werden über das Gateway synchronisiert und können verzögert sein	Les mesures Bluetooth passent par la passerelle et peuvent être retardées	Las lecturas Bluetooth se sincronizan mediante la pasarela y pueden retrasarse	Le letture Bluetooth passano dal gateway e possono essere in ritardo	Данные Bluetooth передаются через шлюз и могут запаздывать	Bluetooth の値はゲートウェイ経由で同期されるため遅れることがあります
+Illuminance	Helligkeit	Luminosité	Iluminancia	Illuminamento	Освещённость	照度
+Motion events are shown in the Mi Home app	Bewegungsereignisse werden in der Mi-Home-App angezeigt	Les détections de mouvement s’affichent dans l’app Mi Home	Los eventos de movimiento se muestran en la app Mi Home	Gli eventi di movimento sono mostrati nell’app Mi Home	События движения отображаются в приложении Mi Home	動体イベントは Mi Home アプリで確認できます
+No reading	Kein Messwert	Aucune mesure	Sin lectura	Nessuna lettura	Нет данных	データなし
+Volume	Lautstärke	Volume	Volumen	Volume	Громкость	音量
+Unknown	Unbekannt	Inconnu	Desconocido	Sconosciuto	Неизвестно	不明
+Sign in to Xiaomi	Bei Xiaomi anmelden	Se connecter à Xiaomi	Iniciar sesión en Xiaomi	Accedi a Xiaomi	Вход в Xiaomi	Xiaomi にログイン
+Scan with the Mi Home app — no password needed	Mit der Mi-Home-App scannen – kein Passwort nötig	Scanne avec l’app Mi Home, sans mot de passe	Escanea con la app Mi Home, sin contraseña	Scansiona con l’app Mi Home, senza password	Отсканируйте в приложении Mi Home — пароль не нужен	Mi Home アプリでスキャン（パスワード不要）
+Get QR code	QR-Code anzeigen	Obtenir le QR code	Obtener código QR	Ottieni codice QR	Получить QR-код	QR コードを表示
+Refresh	Aktualisieren	Actualiser	Actualizar	Aggiorna	Обновить	更新
+Quit	Beenden	Quitter	Salir	Esci	Выход	終了
+Search devices, rooms, models	Geräte, Räume, Modelle suchen	Rechercher appareils, pièces, modèles	Buscar dispositivos, salas, modelos	Cerca dispositivi, stanze, modelli	Поиск устройств, комнат, моделей	デバイス・部屋・モデルを検索
+Loading devices…	Geräte werden geladen …	Chargement des appareils…	Cargando dispositivos…	Caricamento dispositivi…	Загрузка устройств…	デバイスを読み込み中…
+No devices	Keine Geräte	Aucun appareil	Sin dispositivos	Nessun dispositivo	Нет устройств	デバイスがありません
+Show hidden	Ausgeblendete anzeigen	Afficher les masqués	Mostrar ocultos	Mostra nascosti	Показать скрытые	非表示を表示
+Collapse hidden devices	Ausgeblendete Geräte einklappen	Replier les appareils masqués	Contraer dispositivos ocultos	Comprimi dispositivi nascosti	Свернуть скрытые устройства	非表示のデバイスを折りたたむ
+%@ offline/unused hidden · Show	%@ offline/ungenutzt ausgeblendet · Anzeigen	%@ hors ligne/inutilisés masqués · Afficher	%@ sin conexión/sin uso ocultos · Mostrar	%@ offline/inutilizzati nascosti · Mostra	Скрыто неактивных: %@ · Показать	オフライン・未使用 %@ 台を非表示 · 表示
+%@ on	%@ an	%@ allumés	%@ encendidos	%@ accesi	Включено: %@	%@ 台オン
+%@ offline	%@ offline	%@ hors ligne	%@ sin conexión	%@ offline	Не в сети: %@	%@ 台オフライン
+Hidden	Ausgeblendet	Masqué	Oculto	Nascosto	Скрыто	非表示
+Unfavorite	Aus Favoriten entfernen	Retirer des favoris	Quitar de favoritos	Rimuovi dai preferiti	Убрать из избранного	お気に入りから外す
+Favorite	Favorit	Favori	Favorito	Preferito	В избранное	お気に入り
+Rename…	Umbenennen …	Renommer…	Renombrar…	Rinomina…	Переименовать…	名前を変更…
+Unhide	Einblenden	Afficher	Mostrar	Mostra	Показать	表示する
+Hide	Ausblenden	Masquer	Ocultar	Nascondi	Скрыть	非表示にする
+Show in menu bar	In der Menüleiste anzeigen	Afficher dans la barre des menus	Mostrar en la barra de menús	Mostra nella barra dei menu	Показывать в строке меню	メニューバーに表示
+Remove from agent allowlist	Von der Agent-Positivliste entfernen	Retirer de la liste autorisée	Quitar de la lista permitida	Rimuovi dalla lista consentita	Убрать из белого списка агента	許可リストから外す
+Allow agent control	Agent-Steuerung erlauben	Autoriser le contrôle par agent	Permitir control por agente	Consenti controllo agente	Разрешить управление агенту	エージェントの操作を許可
+Copy did	did kopieren	Copier le did	Copiar did	Copia did	Копировать did	did をコピー
+Rename	Umbenennen	Renommer	Renombrar	Rinomina	Переименовать	名前を変更
+Cancel	Abbrechen	Annuler	Cancelar	Annulla	Отмена	キャンセル
+Save	Sichern	Enregistrer	Guardar	Salva	Сохранить	保存
+Retry	Erneut versuchen	Réessayer	Reintentar	Riprova	Повторить	再試行
+Device offline	Gerät offline	Appareil hors ligne	Dispositivo sin conexión	Dispositivo offline	Устройство не в сети	デバイスはオフラインです
+Reading state…	Status wird gelesen …	Lecture de l’état…	Leyendo estado…	Lettura stato…	Чтение состояния…	状態を読み込み中…
+LAN request timed out	LAN-Anfrage abgelaufen	Délai de la requête LAN dépassé	Tiempo de espera de la red local agotado	Richiesta LAN scaduta	Время ожидания LAN истекло	LAN リクエストがタイムアウトしました
+Bad device response	Ungültige Geräteantwort	Réponse de l’appareil invalide	Respuesta del dispositivo no válida	Risposta del dispositivo non valida	Неверный ответ устройства	デバイスの応答が不正です
+Device error: 	Gerätefehler: 	Erreur de l’appareil : 	Error del dispositivo: 	Errore del dispositivo: 	Ошибка устройства: 	デバイスエラー：
+Invalid token	Ungültiges Token	Jeton invalide	Token no válido	Token non valido	Неверный токен	無効なトークン
+No LAN info and not logged in	Keine LAN-Daten und nicht angemeldet	Pas d’infos LAN et non connecté	Sin datos de red local y sin sesión	Nessun dato LAN e accesso non effettuato	Нет данных LAN и вход не выполнен	LAN 情報がなく未ログインです
+Unknown property/action: 	Unbekannte Eigenschaft/Aktion: 	Propriété/action inconnue : 	Propiedad/acción desconocida: 	Proprietà/azione sconosciuta: 	Неизвестное свойство/действие: 	不明なプロパティ/アクション：
+Device not found: 	Gerät nicht gefunden: 	Appareil introuvable : 	Dispositivo no encontrado: 	Dispositivo non trovato: 	Устройство не найдено: 	デバイスが見つかりません：
+No MIoT spec for model: 	Keine MIoT-Spezifikation für Modell: 	Aucune spécification MIoT pour le modèle : 	Sin especificación MIoT para el modelo: 	Nessuna specifica MIoT per il modello: 	Нет спецификации MIoT для модели: 	MIoT 仕様がないモデル：
+Denied by agent policy: 	Durch Agent-Richtlinie abgelehnt: 	Refusé par la politique agent : 	Denegado por la política de agente: 	Negato dalla policy agente: 	Запрещено политикой агента: 	エージェント権限により拒否：
+Property not writable: 	Eigenschaft nicht beschreibbar: 	Propriété non modifiable : 	Propiedad no editable: 	Proprietà non scrivibile: 	Свойство недоступно для записи: 	書き込めないプロパティ：
+Not logged in	Nicht angemeldet	Non connecté	Sin sesión iniciada	Accesso non effettuato	Вход не выполнен	未ログイン
+Session expired, please scan again	Sitzung abgelaufen, bitte erneut scannen	Session expirée, scanne à nouveau	La sesión caducó, vuelve a escanear	Sessione scaduta, scansiona di nuovo	Сеанс истёк, отсканируйте снова	セッションの期限切れです。もう一度スキャンしてください
+Xiaomi cloud error: 	Xiaomi-Cloud-Fehler: 	Erreur du cloud Xiaomi : 	Error de la nube de Xiaomi: 	Errore cloud Xiaomi: 	Ошибка облака Xiaomi: 	Xiaomi クラウドエラー：
+Bad cloud response	Ungültige Cloud-Antwort	Réponse du cloud invalide	Respuesta de la nube no válida	Risposta cloud non valida	Неверный ответ облака	クラウドの応答が不正です
+QR code expired	QR-Code abgelaufen	QR code expiré	Código QR caducado	Codice QR scaduto	QR-код истёк	QR コードの期限切れ
+No serviceToken	Kein serviceToken	Pas de serviceToken	Sin serviceToken	Nessun serviceToken	Нет serviceToken	serviceToken がありません
+Mainland China	Festlandchina	Chine continentale	China continental	Cina continentale	Материковый Китай	中国本土
+Europe	Europa	Europe	Europa	Europa	Европа	ヨーロッパ
+United States	USA	États-Unis	Estados Unidos	Stati Uniti	США	アメリカ
+Russia	Russland	Russie	Rusia	Russia	Россия	ロシア
+Singapore	Singapur	Singapour	Singapur	Singapore	Сингапур	シンガポール
+India	Indien	Inde	India	India	Индия	インド
+Home	Zuhause	Maison	Casa	Casa	Дом	ホーム
+ (ambiguous: 	 (mehrdeutig: 	 (ambigu : 	 (ambiguo: 	 (ambiguo: 	 (неоднозначно: 	（曖昧：
+Deny	Ablehnen	Refuser	Denegar	Nega	Запретить	拒否
+Allow	Erlauben	Autoriser	Permitir	Consenti	Разрешить	許可
+agent mode is %@; enable writes or allowlist the device in MijiaBar settings	Agent-Modus ist %@; Schreibzugriff aktivieren oder Gerät in den MijiaBar-Einstellungen freigeben	le mode agent est %@ ; active l’écriture ou autorise l’appareil dans les réglages de MijiaBar	el modo de agente es %@; activa la escritura o permite el dispositivo en los ajustes de MijiaBar	la modalità agente è %@; abilita la scrittura o consenti il dispositivo nelle impostazioni di MijiaBar	режим агента: %@; разрешите запись или добавьте устройство в белый список в настройках MijiaBar	エージェントモードは %@ です。MijiaBar の設定で書き込みを有効にするか、デバイスを許可リストに追加してください
+Agent wants to control "%@": %@	Agent möchte „%@“ steuern: %@	Un agent veut contrôler « %@ » : %@	Un agente quiere controlar «%@»: %@	Un agente vuole controllare «%@»: %@	Агент хочет управлять «%@»: %@	エージェントが「%@」を操作しようとしています：%@
+user declined	vom Benutzer abgelehnt	refusé par l’utilisateur	rechazado por el usuario	rifiutato dall’utente	отклонено пользователем	ユーザーが拒否しました
+action 	Aktion 	action 	acción 	azione 	действие 	アクション 
+Error: 	Fehler: 	Erreur : 	Error: 	Errore: 	Ошибка: 	エラー：
+Auto	Auto	Auto	Auto	Auto	Авто	自動
+Dry	Trocknen	Déshumidif.	Secado	Deumidifica	Осушение	除湿
+Heat	Heizen	Chauffage	Calor	Caldo	Обогрев	暖房
+Low	Niedrig	Faible	Baja	Bassa	Низкая	弱
+Medium	Mittel	Moyenne	Media	Media	Средняя	中
+High	Hoch	Élevée	Alta	Alta	Высокая	強
+Paste this into Claude Code, Codex, Cursor or any other agent — it will install and configure itself.	Füge das in Claude Code, Codex, Cursor oder einen anderen Agent ein – er richtet sich selbst ein.	Colle ceci dans Claude Code, Codex, Cursor ou tout autre agent : il s’installera et se configurera seul.	Pega esto en Claude Code, Codex, Cursor u otro agente: se instalará y configurará solo.	Incolla questo in Claude Code, Codex, Cursor o un altro agente: si installerà e configurerà da solo.	Вставьте это в Claude Code, Codex, Cursor или другой агент — он сам всё установит и настроит.	これを Claude Code・Codex・Cursor などのエージェントに貼り付けると、自動でインストールと設定を行います。
+Copied — paste it into your agent	Kopiert – jetzt in deinen Agent einfügen	Copié — colle-le dans ton agent	Copiado: pégalo en tu agente	Copiato: incollalo nel tuo agente	Скопировано — вставьте в агента	コピーしました。エージェントに貼り付けてください
+Copy setup instructions	Einrichtungsanleitung kopieren	Copier les instructions	Copiar instrucciones	Copia istruzioni	Копировать инструкцию	セットアップ手順をコピー

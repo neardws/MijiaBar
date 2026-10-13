@@ -140,9 +140,6 @@ struct SettingsView: View {
                                 Section(L("其他", "Other")) { ForEach(AppLang.allCases.filter { !sug.contains($0) }, id: \.self) { Text($0.nativeName).tag($0) } }
                             }.labelsHidden().fixedSize()
                         }
-                        if !m.lang.isComplete {
-                            Text("\(m.lang.nativeName): translation in progress, showing English for now.").font(.system(size: 10)).foregroundStyle(.secondary)
-                        }
                         if m.langManual {
                             Button(L("跟随地区默认", "Follow region default")) {
                                 UserDefaults.standard.set(false, forKey: "MijiaBarLangManual")
@@ -156,30 +153,7 @@ struct SettingsView: View {
                                "Hidden by default: offline devices and devices not seen online for 30+ days. Right-click a device to hide, favorite or rename."))
                             .font(.system(size: 11)).foregroundStyle(.secondary)
                     }
-                    group(L("Agent 接口（CLI / MCP）", "Agent interface (CLI / MCP)")) {
-                        Picker(L("权限", "Access"), selection: $m.agent.mode) {
-                            Text(L("关闭", "Off")).tag(AgentPolicy.Mode.disabled)
-                            Text(L("只读", "Read")).tag(AgentPolicy.Mode.readOnly)
-                            Text(L("白名单", "Allowlist")).tag(AgentPolicy.Mode.allowlist)
-                            Text(L("全部", "Full")).tag(AgentPolicy.Mode.full)
-                        }.pickerStyle(.segmented)
-                        Toggle(L("每次写操作弹窗确认", "Confirm every write"), isOn: $m.agent.confirmWrites)
-                        if m.agent.mode == .allowlist {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(L("允许 Agent 控制的设备：", "Devices agents may control:")).font(.system(size: 11)).foregroundStyle(.secondary)
-                                ForEach(m.devices.filter { !m.isHidden($0) }) { d in
-                                    Toggle(m.displayName(d), isOn: Binding(get: { m.agent.allowlist.contains(d.did) }, set: { on in
-                                        if on { m.agent.allowlist.append(d.did) } else { m.agent.allowlist.removeAll { $0 == d.did } }
-                                    })).font(.system(size: 12))
-                                }
-                            }.transition(.pop(0.98, anchor: .top))
-                        }
-                        Text(m.cliPath).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary).textSelection(.enabled)
-                        HStack {
-                            Button(L("复制 MCP 配置", "Copy MCP config")) { copy(m.mcpConfig); m.showToast(L("已复制", "Copied")) }
-                            Button(L("复制 CLI 路径", "Copy CLI path")) { copy(m.cliPath); m.showToast(L("已复制", "Copied")) }
-                        }
-                    }
+                    AgentSettingsSection()
                     Button { m.quitApp() } label: {
                         Label(L("完全退出 MijiaBar", "Quit MijiaBar"), systemImage: "power")
                             .font(.system(size: 13, weight: .semibold)).frame(maxWidth: .infinity).padding(.vertical, 9)
@@ -187,7 +161,7 @@ struct SettingsView: View {
                             .foregroundStyle(.red)
                     }.buttonStyle(.plain).help("⌘Q")
                     group(L("关于", "About")) {
-                        row("MijiaBar") { Text("v0.1.5").foregroundStyle(.secondary) }
+                        row("MijiaBar") { Text("v0.1.6-rc2").foregroundStyle(.secondary) }
                         Link("github.com/neardws/MijiaBar", destination: URL(string: "https://github.com/neardws/MijiaBar")!)
 
                     }
@@ -212,4 +186,71 @@ struct SettingsView: View {
         .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.card))
     }
     func row<C: View>(_ t: String, @ViewBuilder _ c: () -> C) -> some View { HStack { Text(t); Spacer(); c() } }
+}
+
+/// 一段可直接粘贴给 Claude Code / Codex / Cursor 等 Agent 的安装说明，Agent 读完即可自行完成配置
+struct AgentPromptBox: View {
+    let text: String
+    let onCopy: (String) -> Void
+    @State private var copied = false
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(L("把下面这段话粘贴给 Claude Code、Codex、Cursor 等 Agent，它会自己完成安装和配置。",
+                       "Paste this into Claude Code, Codex, Cursor or any other agent — it will install and configure itself."))
+                    .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+            ScrollView {
+                Text(text).font(.system(size: 10, design: .monospaced)).textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(10)
+            }
+            .frame(height: 150)
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.tile))
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.stroke))
+            Button {
+                onCopy(text)
+                withAnimation(Motion.snappy) { copied = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { withAnimation(Motion.snappy) { copied = false } }
+            } label: {
+                Label(copied ? L("已复制", "Copied") : L("复制安装说明", "Copy setup instructions"), systemImage: copied ? "checkmark" : "doc.on.doc")
+                    .contentTransition(.symbolEffect(.replace))
+                    .font(.system(size: 12, weight: .semibold)).frame(maxWidth: .infinity).padding(.vertical, 7)
+                    .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.accentColor.opacity(copied ? 0.25 : 0.15)))
+            }
+            .buttonStyle(.pressable).hoverHighlight()
+        }
+    }
+}
+
+/// 设置 → Agent 接口：权限 + 一段可直接粘贴给 Agent 的安装说明
+struct AgentSettingsSection: View {
+    @EnvironmentObject var m: AppModel
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L("Agent 接口（CLI / MCP）", "Agent interface (CLI / MCP)")).font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
+                        Picker(L("权限", "Access"), selection: $m.agent.mode) {
+                            Text(L("关闭", "Off")).tag(AgentPolicy.Mode.disabled)
+                            Text(L("只读", "Read")).tag(AgentPolicy.Mode.readOnly)
+                            Text(L("白名单", "Allowlist")).tag(AgentPolicy.Mode.allowlist)
+                            Text(L("全部", "Full")).tag(AgentPolicy.Mode.full)
+                        }.pickerStyle(.segmented).labelsHidden()
+                        Toggle(L("每次写操作弹窗确认", "Confirm every write"), isOn: $m.agent.confirmWrites)
+                        if m.agent.mode == .allowlist {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(L("允许 Agent 控制的设备：", "Devices agents may control:")).font(.system(size: 11)).foregroundStyle(.secondary)
+                                ForEach(m.devices.filter { !m.isHidden($0) }) { d in
+                                    Toggle(m.displayName(d), isOn: Binding(get: { m.agent.allowlist.contains(d.did) }, set: { on in
+                                        if on { m.agent.allowlist.append(d.did) } else { m.agent.allowlist.removeAll { $0 == d.did } }
+                                    })).font(.system(size: 12))
+                                }
+                            }.transition(.pop(0.98, anchor: .top))
+                        }
+                        AgentPromptBox(text: agentSetupPrompt(cli: m.cliPath)) { copy($0); m.showToast(L("已复制，粘贴给你的 Agent 即可", "Copied — paste it into your agent")) }
+                            }
+        .font(.system(size: 12))
+        .padding(12).frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.card))
+        .animation(Motion.smooth, value: m.agent.mode)
+    }
+    func copy(_ s: String) { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(s, forType: .string) }
 }

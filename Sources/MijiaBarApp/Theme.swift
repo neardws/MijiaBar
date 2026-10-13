@@ -63,7 +63,10 @@ extension DeviceCategory {
 
 /// 常见 MIoT 属性/服务的中文名
 func zhName(_ name: String, fallback: String) -> String {
-    guard isChinese else { return fallback.isEmpty ? name : fallback }
+    guard isChinese else {
+        if currentLang != .en, let t = trNameTable[name] { return t[currentLang.trIndex] }
+        return fallback.isEmpty ? name : fallback
+    }
     let m = ["on": "开关", "mode": "模式", "brightness": "亮度", "color-temperature": "色温", "color": "颜色", "target-temperature": "目标温度",
              "temperature": "温度", "relative-humidity": "湿度", "fan-level": "风速", "horizontal-swing": "左右摆风", "vertical-swing": "上下摆风",
              "electric-power": "功率", "power-consumption": "耗电量", "target-humidity": "目标湿度", "physical-controls-locked": "童锁",
