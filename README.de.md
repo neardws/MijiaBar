@@ -18,7 +18,7 @@
 
 <p align="center"><img src="docs/screenshots/demo.gif" width="300" alt="demo"></p>
 
-[Funktionen](#funktionen) · [Screenshots](#screenshots) · [Installation](#installation) · [Anmeldung](#anmeldung) · [Automatisch ausgeblendete Geräte](#automatisch-ausgeblendete-geräte) · [Agents / MCP](#agents--mcp) · [Aus dem Quellcode bauen](#aus-dem-quellcode-bauen) · [Wo Daten gespeichert werden](#wo-daten-gespeichert-werden) · [Danksagung](#danksagung)
+[Funktionen](#funktionen) · [Screenshots](#screenshots) · [Installation](#installation) · [Anmeldung](#anmeldung) · [Automatisch ausgeblendete Geräte](#automatisch-ausgeblendete-geräte) · [Live-Video (Kameras)](#live-video-kameras) · [Agents / MCP](#agents--mcp) · [Aus dem Quellcode bauen](#aus-dem-quellcode-bauen) · [Wo Daten gespeichert werden](#wo-daten-gespeichert-werden) · [Danksagung](#danksagung)
 
 ## Funktionen
 
@@ -73,6 +73,18 @@ Ein Gerät wird standardmäßig ans Listenende eingeklappt, wenn eine Bedingung 
 - die Cloud liefert einen letzten Online-Zeitpunkt (`last_online` / `lastOnline` / `last_online_time`), der über 30 Tage zurückliegt.
 
 Über das Augen-Symbol oder **Anzeigen** einblenden, oder **Einstellungen → Geräte → Ausgeblendete Geräte anzeigen** aktivieren. Per Rechtsklick lässt sich ein Gerät manuell aus- oder einblenden – die manuelle Wahl hat immer Vorrang vor der Automatik.
+
+## Live-Video (Kameras)
+
+- Die Detailkarten von Kameras und Türklingeln haben eine Schaltfläche **Live ansehen**: Das Video läuft direkt in der Karte, mit der Vergrößern-Taste öffnet es sich in einem eigenen, skalierbaren Fenster.
+- Dafür wird das mitgelieferte [go2rtc](https://github.com/AlexxIT/go2rtc) (MIT, offizielles Release, SHA-256 beim Build geprüft) genutzt, das nur während des Ansehens läuft: lauscht auf `127.0.0.1` mit zufälligem Port, RTSP / WebRTC / HomeKit (mDNS) sind aus, nur Player und `/api/ws` sind erreichbar; es stoppt 20 s nach dem Schließen und wird beim Beenden von MijiaBar beendet.
+- Die Anmeldung nutzt die QR-Sitzung: MijiaBar speichert das `passToken` aus dem QR-Login im Schlüsselbund und übergibt es go2rtc über eine temporäre `go2rtc.yaml` (Rechte 600, sofort nach dem Einlesen gelöscht). Sitzungen von vor v0.1.8 brauchen einen weiteren QR-Scan (**Einstellungen → Kamera-Livebild**).
+- Schlüssel kommen bei jeder Verbindung aus der Xiaomi-Cloud, das Video per Xiaomi-P2P von der Kamera. Es wird nichts aufgezeichnet. Akku-Türklingeln werden geweckt und entladen sich schneller. Agenten / MCP haben keinen Kamerazugriff.
+
+<p align="center">
+  <img src="docs/screenshots/camera-live-light.png" width="260" alt="">
+  <img src="docs/screenshots/doorbell-live-dark.png" width="260" alt="">
+</p>
 
 ## Agents / MCP
 

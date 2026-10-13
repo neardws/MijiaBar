@@ -18,7 +18,7 @@
 
 <p align="center"><img src="docs/screenshots/demo.gif" width="300" alt="demo"></p>
 
-[Features](#features) · [Screenshots](#screenshots) · [Install](#install) · [Sign in](#sign-in) · [Auto-hidden devices](#auto-hidden-devices) · [Agent / MCP](#agent--mcp) · [Build from source](#build-from-source) · [Where data is stored](#where-data-is-stored) · [Credits](#credits)
+[Features](#features) · [Screenshots](#screenshots) · [Install](#install) · [Sign in](#sign-in) · [Auto-hidden devices](#auto-hidden-devices) · [Live video (cameras)](#live-video-cameras) · [Agent / MCP](#agent--mcp) · [Build from source](#build-from-source) · [Where data is stored](#where-data-is-stored) · [Credits](#credits)
 
 ## Features
 
@@ -73,6 +73,18 @@ A device is collapsed to the bottom of the list by default when either is true:
 - the cloud returns a last-online time (`last_online` / `lastOnline` / `last_online_time`) older than 30 days.
 
 Click the eye button or **Show** to reveal them, or turn on **Settings → Devices → Show hidden devices**. Right-click a device to hide / unhide it manually — a manual choice always overrides the automatic rule.
+
+## Live video (cameras)
+
+- Camera and doorbell detail cards have a **Watch live** button: the video plays inline in the card, and the enlarge button pops it out into a resizable window.
+- It uses the bundled [go2rtc](https://github.com/AlexxIT/go2rtc) (MIT, official release, SHA-256 verified at build time) as a helper that only runs while you watch: it listens on `127.0.0.1` on a random port, has RTSP / WebRTC / HomeKit (mDNS) disabled, exposes only the player and `/api/ws`, stops 20 s after the player closes and is killed when MijiaBar quits.
+- Sign-in reuses the QR session: MijiaBar keeps the `passToken` returned by the QR login in the Keychain and hands it to go2rtc via a temporary `go2rtc.yaml` (mode 600, deleted as soon as go2rtc has read it). Sessions from before v0.1.8 need one more QR scan (**Settings → Camera live view**).
+- Stream keys come from the Xiaomi cloud on every connect; video comes from the camera over Xiaomi's P2P. Nothing is recorded. Battery doorbells are woken up and drain faster, so keep it short. Agents / MCP have no camera access.
+
+<p align="center">
+  <img src="docs/screenshots/camera-live-light.png" width="260" alt="">
+  <img src="docs/screenshots/doorbell-live-dark.png" width="260" alt="">
+</p>
 
 ## Agent / MCP
 

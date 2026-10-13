@@ -11,6 +11,10 @@ enum Entry {
         } else if let i = a.firstIndex(of: "--gif"), i + 1 < a.count {
             let scene = a.firstIndex(of: "--scene").flatMap { $0 + 1 < a.count ? a[$0 + 1] : nil } ?? "ac"
             MainActor.assumeIsolated { Snapshot.gif(to: a[i + 1], scene: scene) }
+        } else if let i = a.firstIndex(of: "--live-test"), i + 2 < a.count {
+            #if DEBUG
+            MainActor.assumeIsolated { LiveTest.run(out: a[i + 1], model: a[i + 2]) }
+            #endif
         } else if a.contains("--hittest") {
             MainActor.assumeIsolated { HitTest.run() }
         } else if let i = a.firstIndex(of: "--icon"), i + 1 < a.count {
@@ -22,7 +26,8 @@ enum Entry {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    func applicationDidFinishLaunching(_ n: Notification) { NSApp.setActivationPolicy(.accessory) }
+    func applicationDidFinishLaunching(_ n: Notification) { NSApp.setActivationPolicy(.accessory); LiveManager.killStale() }
+    func applicationWillTerminate(_ n: Notification) { MainActor.assumeIsolated { LiveManager.shared.stopNow() } }
 }
 
 struct MijiaBarApp: App {

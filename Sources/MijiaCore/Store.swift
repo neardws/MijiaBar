@@ -53,9 +53,13 @@ public struct Session: Codable, Equatable, Sendable {
     public var serviceToken: String
     public var region: String
     public var cUserId: String?
-    public init(userId: String, ssecurity: String, serviceToken: String, region: String, cUserId: String? = nil) {
+    /// 扫码登录返回的长期凭据，只用于给本机 go2rtc 直播助手换取摄像头 P2P 密钥（v0.1.8 起保存）
+    public var passToken: String?
+    public init(userId: String, ssecurity: String, serviceToken: String, region: String, cUserId: String? = nil, passToken: String? = nil) {
         self.userId = userId; self.ssecurity = ssecurity; self.serviceToken = serviceToken; self.region = region; self.cUserId = cUserId
+        self.passToken = passToken
     }
+    public var canLiveStream: Bool { !(passToken ?? "").isEmpty }
     public static func load() -> Session? {
         guard let d = Keychain.get(account: "session") else { return nil }
         return try? JSONDecoder().decode(Session.self, from: d)
