@@ -12,14 +12,16 @@ enum Theme {
     static let tile = Color.primary.opacity(0.06)
     static let cool = Color(red: 0.30, green: 0.62, blue: 1.0)
     static let heat = Color(red: 1.0, green: 0.55, blue: 0.22)
-    /// 0 = 冷（蓝）… 1 = 热（橙）
+    /// 温度色带：蓝 → 青 → 暖黄 → 橙（滑条和空调色调共用）
+    static let warmStops: [(r: Double, g: Double, b: Double)] = [(0.25, 0.55, 1), (0.35, 0.85, 0.95), (1, 0.85, 0.4), (1, 0.5, 0.2)]
+    /// 0 = 冷（蓝）… 1 = 热（橙）；沿温度色带取色，中间不会出现灰色
     static func warm(_ t: Double) -> Color {
-        let t = max(0, min(1, t))
-        return Color(red: 0.30 + 0.70 * t, green: 0.62 - 0.07 * t, blue: 1.0 - 0.78 * t)
+        let x = max(0, min(1, t)) * Double(warmStops.count - 1)
+        let i = min(Int(x), warmStops.count - 2), f = x - Double(i)
+        let a = warmStops[i], b = warmStops[i + 1]
+        return Color(red: a.r + (b.r - a.r) * f, green: a.g + (b.g - a.g) * f, blue: a.b + (b.b - a.b) * f)
     }
-    static let sliderGradient = LinearGradient(colors: [Color(red: 0.25, green: 0.55, blue: 1), Color(red: 0.35, green: 0.85, blue: 0.95),
-                                                        Color(red: 1, green: 0.85, blue: 0.4), Color(red: 1, green: 0.5, blue: 0.2)],
-                                               startPoint: .leading, endPoint: .trailing)
+    static let sliderGradient = LinearGradient(colors: warmStops.map { Color(red: $0.r, green: $0.g, blue: $0.b) }, startPoint: .leading, endPoint: .trailing)
 }
 
 extension DeviceCategory {

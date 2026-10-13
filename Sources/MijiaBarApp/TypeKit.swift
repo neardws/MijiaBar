@@ -94,12 +94,14 @@ struct BigValue: View {
     var unit: String = ""
     let caption: String
     var dim = false
+    /// 数值本身：数字滚动时按增减方向翻动
+    var number: Double? = nil
     var body: some View {
         VStack(spacing: 2) {
             if let value {
                 HStack(alignment: .firstTextBaseline, spacing: 2) {
-                    Text(value).font(.system(size: value.count > 4 ? 40 : 60, weight: .thin, design: .rounded))
-                        .monospacedDigit().contentTransition(.numericText()).lineLimit(1).minimumScaleFactor(0.5)
+                    Text(value).font(.system(size: value.filter(\.isNumber).count > 4 || value.count > 6 ? 40 : 60, weight: .thin, design: .rounded))
+                        .monospacedDigit().contentTransition(number.map { .numericText(value: $0) } ?? .numericText()).lineLimit(1).minimumScaleFactor(0.5)
                         .foregroundStyle(LinearGradient(colors: [.primary, .primary, accent.map { dim ? Color.primary : $0 } ?? .primary], startPoint: .top, endPoint: .bottom))
                         .shadow(color: (dim ? nil : accent)?.opacity(0.4) ?? .clear, radius: 20)
                     if !unit.isEmpty { Text(unit).font(.system(size: 18, weight: .light)).foregroundStyle(.secondary) }

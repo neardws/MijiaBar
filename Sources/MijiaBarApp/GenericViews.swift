@@ -19,7 +19,7 @@ struct GenericDetailView: View {
                                 Text(L("点击或按空格切换", "Click or press Space")).font(.system(size: 11)).foregroundStyle(.secondary)
                             }
                             Spacer()
-                            Image(systemName: "power").font(.system(size: 16, weight: .bold)).symbolEffect(.bounce, value: p.isOn)
+                            Image(systemName: "power").font(.system(size: 16, weight: .bold))
                                 .foregroundStyle(p.isOn ? AnyShapeStyle(c) : AnyShapeStyle(.primary))
                         }
                         .padding(16)
