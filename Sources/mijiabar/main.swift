@@ -2,7 +2,7 @@ import Foundation
 import MijiaCore
 
 // mijiabar —— 给人和 Agent 用的米家命令行 / MCP 服务器
-let version = "0.1.5"
+let version = "0.1.6-rc1"
 setvbuf(stdout, nil, _IOLBF, 0)
 
 func eprint(_ s: String) { FileHandle.standardError.write(Data((s + "\n").utf8)) }
@@ -93,10 +93,10 @@ func confirm(_ msg: String) -> Bool {
 
 func checkWrite(_ d: Device, _ what: String) throws {
     guard policy.canWrite(d.did) else {
-        throw MijiaError.denied(L("当前 Agent 模式为「\(policy.mode.rawValue)」，请在 MijiaBar 设置里开启写权限或把设备加入白名单",
-                                  "agent mode is \(policy.mode.rawValue); enable writes or allowlist the device in MijiaBar settings"))
+        throw MijiaError.denied(LF("当前 Agent 模式为「%@」，请在 MijiaBar 设置里开启写权限或把设备加入白名单",
+                                   "agent mode is %@; enable writes or allowlist the device in MijiaBar settings", policy.mode.rawValue))
     }
-    if policy.confirmWrites, !confirm(L("Agent 请求控制「\(prefs.name(d))」：\(what)", "Agent wants to control \"\(prefs.name(d))\": \(what)")) {
+    if policy.confirmWrites, !confirm(LF("Agent 请求控制「%@」：%@", "Agent wants to control \"%@\": %@", prefs.name(d), what)) {
         throw MijiaError.denied(L("用户拒绝", "user declined"))
     }
 }
@@ -189,6 +189,7 @@ mijiabar \(version) — 米家设备命令行 / MCP
   mijiabar set <设备> <属性> <值>              设置属性，例: set 客厅空调 tar_temp 26 / set 台灯 on true
   mijiabar action <设备> <动作> [JSON数组]     执行 MIoT 动作
   mijiabar mcp                               以 stdio MCP 服务器运行
+  mijiabar setup-prompt                      打印给 Agent 的安装说明（与设置里的「复制安装说明」相同）
   mijiabar lan-get --ip IP --token T [--model M]  只读：直接走局域网读取（调试用）
 
 写操作受 MijiaBar 设置 → Agent 接口 的权限控制（默认只读）。
@@ -211,6 +212,9 @@ do {
         let ins = args.count > 3 ? (try? JSONSerialization.jsonObject(with: Data(args[3].utf8))) as? [Any] ?? [] : []
         print(json(try await runAction(args[1], args[2], ins)))
     case "mcp": await mcp()
+    case "setup-prompt":
+        let me = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().path
+        print(agentSetupPrompt(cli: me.contains(".app/") ? me : "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar"))
     case "lan-get":
         guard let ip = opt(args, "--ip"), let tk = opt(args, "--token") else { fail(usage) }
         let model = opt(args, "--model") ?? "lumi.acpartner.mcn02"

@@ -4,7 +4,7 @@ public struct ACOption: Hashable { public let label: String; public let value: P
 
 /// 中英文常见取值翻译
 public func trValue(_ en: String) -> String {
-    guard isChinese else { return en }
+    guard isChinese else { return currentLang == .en ? en : (trValueTable[en.lowercased()].map { $0[currentLang.trIndex] } ?? tr(en, currentLang) ?? en) }
     let m = ["auto": "自动", "cool": "制冷", "cooling": "制冷", "heat": "制热", "heating": "制热", "dry": "除湿", "dehumidify": "除湿",
              "fan": "送风", "wind": "送风", "low": "低", "medium": "中", "middle": "中", "high": "高", "sleep": "睡眠", "silent": "静音",
              "favorite": "喜爱", "straight wind": "直吹", "natural wind": "自然风", "level1": "一档", "level2": "二档", "level3": "三档", "level4": "四档",

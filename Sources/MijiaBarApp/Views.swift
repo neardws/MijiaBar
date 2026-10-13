@@ -241,7 +241,7 @@ struct DeviceListView: View {
         if m.hiddenCount > 0 {
             Button { m.toggleShowHidden() } label: {
                 Text(m.showHidden ? L("收起已隐藏的设备", "Collapse hidden devices")
-                                  : L("已隐藏 \(m.hiddenCount) 台离线或久未使用的设备 · 显示", "\(m.hiddenCount) offline/unused hidden · Show"))
+                                  : LF("已隐藏 %@ 台离线或久未使用的设备 · 显示", "%@ offline/unused hidden · Show", "\(m.hiddenCount)"))
                     .font(.system(size: 11)).foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.vertical, 10)
                     .contentTransition(.numericText())
             }.buttonStyle(.plain).hoverHighlight()
@@ -255,12 +255,12 @@ struct SummaryBar: View {
     var body: some View {
         let s = m.summary
         HStack(spacing: 6) {
-            Chip(icon: "power", text: L("\(s.on) 台开启", "\(s.on) on"), color: s.on > 0 ? .green : .secondary)
+            Chip(icon: "power", text: LF("%@ 台开启", "%@ on", "\(s.on)"), color: s.on > 0 ? .green : .secondary)
             ForEach(s.acs, id: \.0) { name, t, heat in
                 Chip(icon: heat ? "sun.max.fill" : "snowflake", text: "\(name) \(t)°", color: heat ? Theme.heat : Theme.cool)
             }
             if let env = s.env { Chip(icon: "thermometer.medium", text: env, color: .mint) }
-            if s.offline > 0 { Chip(icon: "wifi.slash", text: L("\(s.offline) 离线", "\(s.offline) offline"), color: .secondary) }
+            if s.offline > 0 { Chip(icon: "wifi.slash", text: LF("%@ 离线", "%@ offline", "\(s.offline)"), color: .secondary) }
             Spacer(minLength: 0)
         }
         .animation(Motion.smooth, value: s.on)

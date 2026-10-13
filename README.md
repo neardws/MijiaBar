@@ -1,157 +1,130 @@
-# MijiaBar · 米家菜单栏
-
-把米家（小米智能家居）设备搬进 macOS 菜单栏。扫码登录，自动拉取设备，空调、灯、插座、风扇、取暖器、除湿机都能直接在 Mac 上控制；还自带 CLI 和 MCP 服务器，可以让 Claude、Cursor 等 Agent 来控制设备。
-
-> 非小米官方项目。使用与米家 App 相同的云端接口和局域网 miIO 协议。
+<h1 align="center">MijiaBar</h1>
+<p align="center">Control your Xiaomi Mi Home devices from the macOS menu bar — and let AI agents do it too.</p>
 
 <p align="center">
-  <img src="docs/screenshots/demo.gif" width="300" alt="动效演示：制冷 → 制热 → 关机 → 开机">
+  <a href="https://github.com/neardws/MijiaBar/releases/latest"><img src="https://img.shields.io/github/v/release/neardws/MijiaBar?label=release&color=blue" alt="Release"></a>
+  <a href="https://github.com/neardws/MijiaBar/releases"><img src="https://img.shields.io/github/downloads/neardws/MijiaBar/total?color=brightgreen" alt="Downloads"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/neardws/MijiaBar" alt="License"></a>
+  <img src="https://img.shields.io/badge/macOS-14%2B-000000?logo=apple" alt="macOS 14+">
+  <img src="https://img.shields.io/badge/Swift-5.9%2B-F05138?logo=swift&logoColor=white" alt="Swift 5.9+">
+  <img src="https://img.shields.io/badge/Apple-notarized-success?logo=apple" alt="Notarized">
+  <a href="https://github.com/neardws/MijiaBar/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/neardws/MijiaBar/build.yml?branch=main&label=build" alt="Build"></a>
+  <a href="https://github.com/neardws/MijiaBar/stargazers"><img src="https://img.shields.io/github/stars/neardws/MijiaBar?style=social" alt="Stars"></a>
+</p>
+
+<p align="center"><b>English</b> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.de.md">Deutsch</a> · <a href="README.fr.md">Français</a></p>
+
+> Unofficial project, not affiliated with Xiaomi. It uses the same cloud API as the Mi Home app plus the LAN miIO protocol.
+
+<p align="center"><img src="docs/screenshots/demo.gif" width="300" alt="demo"></p>
+
+[Features](#features) · [Screenshots](#screenshots) · [Install](#install) · [Sign in](#sign-in) · [Agent / MCP](#agent--mcp) · [Build from source](#build-from-source) · [Credits](#credits)
+
+## Features
+
+- **QR sign-in** — scan with the Mi Home app, no password. Mainland China server by default; Europe, US, Russia, Singapore and India are one click away. Credentials stay in the macOS Keychain.
+- **Automatic device list** — all homes, rooms and shared devices with online state. Offline and long-unused devices are hidden by default.
+- **A page designed for each device type** — air conditioner, fan, light, plug, TV, speaker, camera, printer, kitchen appliances, water purifier, heater, dehumidifier and sensors, each with its own skeuomorphic illustration.
+- **Restrained motion** — fast, non-bouncy springs (< 300 ms); fan blades spin with speed, the TV screen glows, heaters radiate; the power button ripples; sliders track 1:1, snap and tick the trackpad. Reduce Motion is respected.
+- **Keyboard first** — `↑/↓` select, `↩` open, `Space` power, `←/→` adjust the main slider, `/` search, `Esc` back, `⌘Q` quit.
+- **Light & dark** — follows the system appearance using semantic colors.
+- **9 UI languages** — 简体中文, 繁體中文, English, Deutsch, Français, Español, Italiano, Русский, 日本語; region-aware defaults.
+- **Agent interface** — `mijiabar` CLI and a stdio MCP server, read-only by default, with allowlist / full access and optional confirmation dialogs.
+- **Two control paths** — Xiaomi cloud MIoT RPC with LAN miIO fallback; AC partners (`lumi.acpartner.*`) use legacy LAN commands.
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/list-light.png" width="260" alt="">
+  <img src="docs/screenshots/ac-cool-light.png" width="260" alt="">
+  <img src="docs/screenshots/fan-light.png" width="260" alt="">
+</p>
+<p align="center"><b>Dark mode</b><br>
+  <img src="docs/screenshots/list-dark.png" width="260" alt="">
+  <img src="docs/screenshots/ac-heat-dark.png" width="260" alt="">
+  <img src="docs/screenshots/light-dark.png" width="260" alt="">
 </p>
 <p align="center">
-  <img src="docs/screenshots/list-light.png" width="260" alt="设备列表">
-  <img src="docs/screenshots/ac-cool-light.png" width="260" alt="空调（制冷）">
-  <img src="docs/screenshots/ac-heat-light.png" width="260" alt="空调（制热）">
-</p>
-<p align="center"><b>深色模式 / Dark</b><br>
-  <img src="docs/screenshots/list-dark.png" width="260" alt="深色列表">
-  <img src="docs/screenshots/ac-cool-dark.png" width="260" alt="深色空调">
-  <img src="docs/screenshots/ac-heat-dark.png" width="260" alt="深色制热">
-</p>
-<p align="center">
-  <img src="docs/screenshots/light-light.png" width="260" alt="灯">
-  <img src="docs/screenshots/settings-light.png" width="260" alt="设置">
-  <img src="docs/screenshots/login-light.png" width="260" alt="扫码登录">
+  <img src="docs/screenshots/plug-light.png" width="260" alt="">
+  <img src="docs/screenshots/agent-light.png" width="260" alt="">
+  <img src="docs/screenshots/login-light.png" width="260" alt="">
 </p>
 
-## 功能
+## Install
 
-- **扫码登录**：用米家 App 扫一扫即可，不用输密码；默认中国大陆服务器，可切换欧洲/美国/新加坡等地区。凭据只存在 macOS 钥匙串。
-- **自动获取设备**：拉取所有家庭、房间和设备（含共享设备），带在线状态、型号和局域网 token。
-- **双通道控制**：MIoT 设备走小米云 `miotspec` 接口，失败时回落到局域网 miIO；空调伴侣（`lumi.acpartner.*`）使用旧版命令并优先走局域网。
-- **按规格自动生成控件**：从 [miot-spec.org](https://home.miot-spec.com/) 拉取每个型号的规格，开关、滑块、选项菜单都自动生成；空调使用专门设计的大卡片。
-- **设备管理**：按房间分组、收藏置顶、搜索、重命名、手动隐藏；离线和久未使用的设备默认收起。
-- **好看也好用**：自动跟随系统浅色/深色外观；圆角卡片，温度大字和蓝到橙的渐变滑条，空调出风动画，底部一排模式/风速/睡眠/扫风按钮；菜单栏显示收藏空调的温度。
-- **克制的动效**：动画只用来反馈和表达状态，统一使用无回弹的快速弹簧（< 300ms），退出比进入快。空调气流随模式变化（制冷冰晶、制热暖光、除湿水滴），风速决定流速，扫风时导风板和气流一起摆动；温度数字按方向滚动，开关有一圈涟漪；滑条 1:1 跟手、松手吸附，每跨一档触控板轻触一下。键盘操作（↑↓ ↩ Esc ← → 空格）一律瞬间响应；系统开启「减弱动态效果」时只保留淡入淡出。
-- **键盘操作**：`↑/↓` 选择，`↩` 打开，`空格` 开关，`/` 搜索，`Esc` 返回，详情页 `←/→` 调温度。
-- **乐观更新**：点了立刻生效，失败自动回滚并提示。
-- **Agent 接口**：`mijiabar` CLI 和 `mijiabar mcp`（stdio MCP），有关闭/只读/白名单/全部四档权限，写操作可以弹窗确认。
+1. Download `MijiaBar-x.y.z.dmg` from [Releases](https://github.com/neardws/MijiaBar/releases/latest), drag MijiaBar into Applications and open it. Release DMGs are Developer ID signed and notarized by Apple.
+2. The first time you control a device, allow the **Local Network** permission (needed for LAN control).
 
-## 安装
+> CI `*-unsigned.dmg` builds and your own local builds are ad-hoc signed; run `xattr -dr com.apple.quarantine /Applications/MijiaBar.app` before first launch.
 
-1. 从 [Releases](https://github.com/neardws/MijiaBar/releases) 下载 `MijiaBar-x.y.z.dmg`，把 MijiaBar 拖进「应用程序」，直接打开即可。正式版 DMG 已用 Developer ID 签名并通过 Apple 公证。
-2. 第一次控制设备时，macOS 会询问「本地网络」权限，请允许（局域网直连需要）。
+Requires macOS 14 or later, Apple silicon or Intel.
 
-> GitHub Actions 自动构建的 `*-unsigned.dmg` 和自己用源码打包的版本是 ad-hoc 签名、没有公证，首次打开前需要执行
-> `xattr -dr com.apple.quarantine /Applications/MijiaBar.app`，或者在 Finder 里右键 →「打开」。
+## Sign in
 
-系统要求：macOS 14 及以上，Apple 芯片和 Intel 都支持。
+1. Click the 🏠 icon in the menu bar; a QR code appears.
+2. Pick your server region (Mainland China by default).
+3. In the **Mi Home** app tap **+ → Scan**, scan the code and confirm on the phone. Devices load automatically.
 
-## 登录
+## Agent / MCP
 
-点菜单栏的 🏠 图标，会显示一个二维码：
+Open **Settings → Agent interface**, click **Copy setup instructions** and paste the text into Claude Code, Codex, Cursor or any other agent. The agent finds the bundled CLI, registers the MCP server in its own config and verifies by listing your devices. The same text (with the path filled in) is printed by `mijiabar setup-prompt`:
 
-1. 确认地区是「中国大陆」（如果你的米家账号在海外服务器，先切换地区）。
-2. 打开手机上的 **米家 App** → 右上角「+」→「扫一扫」，扫码并在手机上确认。
-3. 登录成功后会自动拉取设备列表。
+```text
+Please set up MijiaBar (a macOS menu bar app for Xiaomi Mi Home devices) as an MCP tool for yourself. Do it yourself, step by step:
 
-登录过期（一般几周）时会提示重新扫码。
-
-## 默认隐藏规则
-
-满足任一条件的设备默认收起到列表底部（点「显示」或眼睛按钮可以展开）：
-
-- 云端 `isOnline = false`（离线）；
-- 云端返回了最后在线时间（`last_online` 等字段），且超过 30 天。
-
-右键设备可以手动「隐藏 / 取消隐藏」，手动设置优先于自动规则。
-
-## Agent 接口
-
-CLI 在 app 包里：`/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar`。建议做个软链接：
-
-```bash
-sudo ln -sf /Applications/MijiaBar.app/Contents/Resources/bin/mijiabar /usr/local/bin/mijiabar
+1. Find the CLI. It ships inside the app bundle at /Applications/MijiaBar.app/Contents/Resources/bin/mijiabar. Run "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" --help to check it works. To use it from a terminal, link it: mkdir -p ~/.local/bin && ln -sf "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" ~/.local/bin/mijiabar
+2. Register a stdio MCP server named mijia, command "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar", argument mcp, in your own config:
+   - Claude Code: claude mcp add --scope user mijia -- "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" mcp
+   - Codex: codex mcp add mijia -- "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" mcp
+     (~/.codex/config.toml:
+      [mcp_servers.mijia]
+      command = "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar"
+      args = ["mcp"])
+   - Cursor (~/.cursor/mcp.json), Claude Desktop, …:
+     {"mcpServers": {"mijia": {"command": "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar", "args": ["mcp"]}}}
+   Reload MCP servers afterwards if needed.
+3. Tools: list_devices, get_device_state, set_property, run_action. I control access in MijiaBar → Settings → Agent interface: "Read" is the default (writes are refused); "Allowlist" allows only the devices I pick; "Full" allows every device. When "Confirm every write" is on, each write shows a dialog on the Mac that I have to approve. Never change a device's state unless I ask you to.
+4. Verify: run "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" list (or call list_devices) and show me the device list. If it says I'm not signed in, ask me to sign in with the QR code in MijiaBar first.
 ```
 
-```bash
-mijiabar list                          # 列出设备（--all 包括隐藏的，--refresh 从云端重新拉）
-mijiabar get 客厅空调                   # 读状态，返回 JSON（属性 key、取值范围、选项）
-mijiabar set 客厅空调 tar_temp 26       # 设置属性（空调伴侣：power/mode/tar_temp/fan_level/ver_swing）
-mijiabar set 落地灯 on false            # MIoT 设备：属性可以写 key（2.1）、名称（on）或 服务.属性
-mijiabar action 扫地机 2.1              # 执行 MIoT 动作
-mijiabar mcp                           # 作为 stdio MCP 服务器运行
-```
+### Permissions
 
-MCP 工具：`list_devices`、`get_device_state`、`set_property`、`run_action`。
-
-**权限**：在 MijiaBar「设置 → Agent 接口」里选择：
-
-| 模式 | 说明 |
+| | |
 | --- | --- |
-| 关闭 | Agent 什么都不能做 |
-| 只读（默认） | 只能列设备、读状态 |
-| 白名单 | 只能控制你勾选的设备 |
-| 全部 | 可以控制所有设备 |
+| Off | Agents can do nothing |
+| Read (default) | List devices and read state only |
+| Allowlist | Control only the devices you tick |
+| Full | Control every device |
 
-开启「每次写操作弹窗确认」后，Agent 每次控制设备都会弹出系统对话框，等你点「允许」。
+With **Confirm every write** on, every change an agent makes shows a macOS dialog that you must approve.
 
-### Claude Desktop / Claude Code
+### CLI
 
-`~/Library/Application Support/Claude/claude_desktop_config.json`：
-
-```json
-{
-  "mcpServers": {
-    "mijia": {
-      "command": "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar",
-      "args": ["mcp"]
-    }
-  }
-}
+```bash
+mijiabar list                     # list devices (--all, --refresh)
+mijiabar get <device>             # read state as JSON
+mijiabar set <device> <prop> <value>
+mijiabar action <device> <action> [JSON array]
+mijiabar mcp                      # stdio MCP server
+mijiabar setup-prompt             # print the agent setup instructions
 ```
 
-Claude Code：`claude mcp add mijia -- /Applications/MijiaBar.app/Contents/Resources/bin/mijiabar mcp`
+MCP tools: `list_devices`, `get_device_state`, `set_property`, `run_action`.
 
-### Cursor
-
-`~/.cursor/mcp.json` 写入同样的 `mcpServers` 配置即可。设置页的「复制 MCP 配置」按钮会直接复制这段 JSON。
-
-> CLI 第一次读取钥匙串里的登录信息时，macOS 可能会弹窗询问，选「始终允许」。
-
-## 从源码构建
+## Build from source
 
 ```bash
 git clone https://github.com/neardws/MijiaBar && cd MijiaBar
-swift build                         # 调试构建
-scripts/package.sh                  # 生成 dist/MijiaBar.app 和 DMG（有 Developer ID 时自动签名+公证）
-# 可选环境变量：SIGN_IDENTITY（"-" 强制 ad-hoc）、NOTARY_PROFILE（notarytool 钥匙串配置名，默认 MijiaBar-notary）、VERSION
-.build/debug/MijiaBarApp --snapshot docs/screenshots   # 用演示数据重新生成截图
-.build/debug/MijiaBarApp --gif docs/screenshots/demo.gif   # 录制空调卡片动效演示
+swift build
+.build/debug/MijiaBarApp --snapshot docs/screenshots   # demo-data screenshots
+scripts/package.sh   # dist/MijiaBar.app + DMG (signs & notarizes when a Developer ID is available)
+# env: VERSION, SIGN_IDENTITY ("-" = ad-hoc), NOTARY_PROFILE (default MijiaBar-notary)
 ```
 
-项目结构：
+Project layout: `Sources/MijiaCore` (cloud API, QR login, miIO, MIoT spec), `Sources/MijiaBarApp` (SwiftUI app), `Sources/mijiabar` (CLI + MCP). Translations live in `i18n/*.tsv`; run `scripts/gen-i18n.py` after editing.
 
-- `Sources/MijiaCore`：小米云 API（RC4 签名）、扫码登录、miIO 局域网协议、MIoT 规格、设备控制
-- `Sources/MijiaBarApp`：SwiftUI 菜单栏应用
-- `Sources/mijiabar`：CLI 和 MCP 服务器
+## Credits
 
-数据存放：登录凭据在钥匙串（`com.neardws.MijiaBar`）；设备缓存、偏好和规格缓存在 `~/Library/Application Support/MijiaBar/`（文件权限 600）。
+Motion design contributed by [@skyswordw](https://github.com/skyswordw) ([#1](https://github.com/neardws/MijiaBar/pull/1)). Protocol details from [python-miio](https://github.com/rytilahti/python-miio), [Xiaomi-cloud-tokens-extractor](https://github.com/PiotrMachowski/Xiaomi-cloud-tokens-extractor) and [ha_xiaomi_home](https://github.com/XiaoMi/ha_xiaomi_home). UI inspired by [@the_mcnaveen](https://x.com/the_mcnaveen)'s AC menu bar app.
 
-## 致谢
-
-协议细节参考了 [python-miio](https://github.com/rytilahti/python-miio)、[Xiaomi-cloud-tokens-extractor](https://github.com/PiotrMachowski/Xiaomi-cloud-tokens-extractor) 和 [ha_xiaomi_home](https://github.com/XiaoMi/ha_xiaomi_home)。界面灵感来自 [@the_mcnaveen](https://x.com/the_mcnaveen) 的空调菜单栏应用。
-
----
-
-## English
-
-**MijiaBar** is a macOS menu bar app for Xiaomi / Mi Home devices.
-
-- QR-code sign-in with the Mi Home app (China server by default, region switchable); credentials stored in Keychain.
-- Auto-fetches homes, rooms and devices; controls them via Xiaomi cloud MIoT RPC with LAN miIO fallback (legacy commands for `lumi.acpartner.*`).
-- Controls are generated from each model's MIoT spec; air conditioners get a dedicated card with a big temperature readout, a blue-to-orange slider and an animated unit.
-- Restrained motion: animation is used only for feedback and state — fast, non-bouncy springs under 300 ms, with exits faster than entrances. Mode-aware airflow (frost sparkles, warm embers, droplets) follows fan speed and swing; digits roll in the direction of change; power toggles ripple; the slider tracks the pointer 1:1, snaps on release and ticks the trackpad at each step. Keyboard actions are instant, and Reduce Motion falls back to cross-fades.
-- Favorites, rooms, search, rename, and auto-hiding of offline or long-unused devices.
-- Agent interface: `mijiabar list|get|set|action` CLI and an stdio MCP server (`mijiabar mcp`) with a disabled / read-only / allowlist / full policy and optional confirmation dialogs.
-
-Install: download the DMG from Releases, drag the app to Applications, and open it — release DMGs are Developer ID signed and notarized (CI `-unsigned` builds need `xattr -dr com.apple.quarantine /Applications/MijiaBar.app`). Requires macOS 14+. MIT licensed.
+MIT License.

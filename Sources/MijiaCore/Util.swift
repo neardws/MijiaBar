@@ -1,7 +1,7 @@
 import Foundation
 import CryptoKit
 
-/// 界面语言。简体为原文，繁体由简体自动转换，其余语言暂时回退英文。
+/// 界面语言。简体为原文，繁体由简体自动转换，其余语言见 Translations.swift。
 public enum AppLang: String, CaseIterable, Codable {
     case zhHans = "zh-Hans", zhHant = "zh-Hant", en, de, fr, es, it, ru, ja
     public var nativeName: String {
@@ -12,7 +12,7 @@ public enum AppLang: String, CaseIterable, Codable {
         }
     }
     /// 是否有完整翻译（否则回退英文）
-    public var isComplete: Bool { self == .zhHans || self == .zhHant || self == .en }
+    public var isComplete: Bool { true }
     /// 各小米服务器地区建议的语言，第一个为默认
     public static func suggested(forRegion r: String) -> [AppLang] {
         switch r {
@@ -42,8 +42,15 @@ public func L(_ zh: String, _ en: String) -> String {
         if let c = hantCache[zh] { return c }
         let t = zh.applyingTransform(StringTransform("Hans-Hant"), reverse: false) ?? zh
         hantCache[zh] = t; return t
-    default: return en
+    default: return tr(en, currentLang) ?? en
     }
+}
+
+/// 带参数的本地化：模板中的 %@ 依次替换为参数
+public func LF(_ zh: String, _ en: String, _ args: String...) -> String {
+    var s = L(zh, en)
+    for a in args { if let r = s.range(of: "%@") { s.replaceSubrange(r, with: a) } }
+    return s
 }
 
 public func anyString(_ a: Any?) -> String {
