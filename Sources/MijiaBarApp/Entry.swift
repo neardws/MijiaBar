@@ -9,7 +9,8 @@ enum Entry {
         if let i = a.firstIndex(of: "--snapshot"), i + 1 < a.count {
             MainActor.assumeIsolated { Snapshot.run(dir: a[i + 1], liveQR: a.contains("--live-qr")) }
         } else if let i = a.firstIndex(of: "--gif"), i + 1 < a.count {
-            MainActor.assumeIsolated { Snapshot.gif(to: a[i + 1]) }
+            let scene = a.firstIndex(of: "--scene").flatMap { $0 + 1 < a.count ? a[$0 + 1] : nil } ?? "ac"
+            MainActor.assumeIsolated { Snapshot.gif(to: a[i + 1], scene: scene) }
         } else if let i = a.firstIndex(of: "--icon"), i + 1 < a.count {
             MainActor.assumeIsolated { Snapshot.icon(to: a[i + 1]) }
         } else {
