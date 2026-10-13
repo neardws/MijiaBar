@@ -17,30 +17,41 @@ public enum MiIOError: LocalizedError {
 }
 
 /// miIO 局域网协议（UDP 54321，AES-128-CBC，key=MD5(token)，iv=MD5(key+token)）
-public final class MiIODevice {
-    public let ip: String
-    public var timeout: TimeInterval
-    private let token: Data
-    private let key: Data
-    private let iv: Data
+/// 同一台设备复用一个实例：握手（hello）结果会缓存，不必每次请求都多等一个往返。
+/// 用 actor 保证同一设备的握手状态和消息 id 不会被并发请求打乱。
+public actor MiIODevice {
+    public nonisolated let ip: String
+    public let timeout: TimeInterval
+    let codec: MiIOCodec
     private var deviceID: UInt32 = 0
     private var stampOffset: Int = 0
     private var msgID = Int.random(in: 1...9000)
-    private let queue = DispatchQueue(label: "miio")
+    /// 发一个包、收一个包；默认走 UDP，测试时可以换成假设备
+    private let transport: (Data, TimeInterval) async throws -> Data
 
     public init(ip: String, tokenHex: String, timeout: TimeInterval = 5) throws {
-        guard let t = Data(hex: tokenHex), t.count == 16 else { throw MiIOError.invalidToken }
-        self.ip = ip; self.timeout = timeout; token = t
-        key = md5(t); iv = md5(key + t)
+        try self.init(ip: ip, tokenHex: tokenHex, timeout: timeout, transport: nil)
     }
 
-    private func udp(_ payload: Data) async throws -> Data {
-        let timeout = self.timeout
+    init(ip: String, tokenHex: String, timeout: TimeInterval, transport: ((Data, TimeInterval) async throws -> Data)?) throws {
+        guard let t = Data(hex: tokenHex), t.count == 16 else { throw MiIOError.invalidToken }
+        self.ip = ip; self.timeout = timeout; codec = MiIOCodec(token: t)
+        self.transport = transport ?? { p, timeout in try await MiIODevice.udp(ip: ip, p, timeout: timeout) }
+    }
+
+    /// 超时或网络不通：说明当前不在设备所在的局域网（设备返回的业务错误不算）
+    public nonisolated static func isUnreachable(_ e: Error) -> Bool {
+        if case MiIOError.timeout = e { return true }
+        return e is NWError
+    }
+
+    static func udp(ip: String, _ payload: Data, timeout: TimeInterval) async throws -> Data {
+        let queue = DispatchQueue(label: "miio")
         return try await withCheckedThrowingContinuation { cont in
             let conn = NWConnection(host: NWEndpoint.Host(ip), port: 54321, using: .udp)
             var done = false
             let finish: (Result<Data, Error>) -> Void = { r in
-                self.queue.async {
+                queue.async {
                     guard !done else { return }; done = true
                     conn.cancel(); cont.resume(with: r)
                 }
@@ -57,30 +68,32 @@ public final class MiIODevice {
     }
 
     public func hello() async throws {
-        var p = Data([0x21, 0x31, 0x00, 0x20]); p += Data(repeating: 0xFF, count: 28)
-        let r = try await udp(p)
+        let r = try await transport(MiIOCodec.helloPacket, timeout)
         guard r.count >= 32 else { throw MiIOError.badResponse }
         deviceID = r.be32(8)
         stampOffset = Int(r.be32(12)) - Int(Date().timeIntervalSince1970)
     }
 
     public func send(method: String, params: Any) async throws -> Any {
-        if deviceID == 0 { try await hello() }
+        let cached = deviceID != 0
+        if !cached { try await hello() }
+        do { return try await request(method: method, params: params) }
+        catch where cached && Self.isUnreachable(error) {
+            // 缓存的握手可能已失效（例如设备重启后时间戳变了）：重新握手再试一次
+            deviceID = 0
+            try await hello()
+            return try await request(method: method, params: params)
+        }
+    }
+
+    private func request(method: String, params: Any) async throws -> Any {
         msgID += 1
-        let obj: [String: Any] = ["id": msgID, "method": method, "params": params]
-        let json = try JSONSerialization.data(withJSONObject: obj)
-        let enc = try aes(json, op: CCOperation(kCCEncrypt))
-        var h = Data([0x21, 0x31]); h.appendBE16(UInt16(32 + enc.count))
-        h.appendBE32(0); h.appendBE32(deviceID)
-        h.appendBE32(UInt32(Int(Date().timeIntervalSince1970) + stampOffset))
-        let sum = md5(h + token + enc)
-        let r = try await udp(h + sum + enc)
-        guard r.count > 32 else { throw MiIOError.badResponse }
-        let dec = try aes(r.subdata(in: 32..<r.count), op: CCOperation(kCCDecrypt))
-        let clean = dec.filter { $0 != 0 }
-        guard let resp = try JSONSerialization.jsonObject(with: clean) as? [String: Any] else { throw MiIOError.badResponse }
-        if let e = resp["error"] { throw MiIOError.deviceError("\(e)") }
-        return resp["result"] ?? NSNull()
+        let json = try JSONSerialization.data(withJSONObject: ["id": msgID, "method": method, "params": params] as [String: Any])
+        let packet = try codec.encode(json, deviceID: deviceID, stamp: UInt32(Int(Date().timeIntervalSince1970) + stampOffset))
+        let resp = try codec.decode(try await transport(packet, timeout))
+        guard let obj = try JSONSerialization.jsonObject(with: resp) as? [String: Any] else { throw MiIOError.badResponse }
+        if let e = obj["error"] { throw MiIOError.deviceError("\(e)") }
+        return obj["result"] ?? NSNull()
     }
 
     /// MIoT get_properties，返回键为 "siid.piid"
@@ -99,8 +112,30 @@ public final class MiIODevice {
     public func action(siid: Int, aiid: Int, inputs: [Any]) async throws -> Any {
         try await send(method: "action", params: ["did": "call-\(siid)-\(aiid)", "siid": siid, "aiid": aiid, "in": inputs])
     }
+}
 
-    private func aes(_ input: Data, op: CCOperation) throws -> Data {
+/// miIO 数据包的加解密与封包（与网络无关，便于测试）
+struct MiIOCodec {
+    let token: Data, key: Data, iv: Data
+    init(token: Data) { self.token = token; key = md5(token); iv = md5(key + token) }
+
+    static let helloPacket: Data = { var p = Data([0x21, 0x31, 0x00, 0x20]); p += Data(repeating: 0xFF, count: 28); return p }()
+
+    /// 32 字节头（魔数、长度、0、设备 id、时间戳、MD5 校验）+ 加密后的 JSON
+    func encode(_ json: Data, deviceID: UInt32, stamp: UInt32) throws -> Data {
+        let enc = try aes(json, op: CCOperation(kCCEncrypt))
+        var h = Data([0x21, 0x31]); h.appendBE16(UInt16(32 + enc.count))
+        h.appendBE32(0); h.appendBE32(deviceID); h.appendBE32(stamp)
+        return h + md5(h + token + enc) + enc
+    }
+
+    /// 取出包体并解密，去掉设备在 JSON 末尾补的 0
+    func decode(_ packet: Data) throws -> Data {
+        guard packet.count > 32 else { throw MiIOError.badResponse }
+        return try aes(packet.subdata(in: packet.startIndex + 32..<packet.endIndex), op: CCOperation(kCCDecrypt)).filter { $0 != 0 }
+    }
+
+    func aes(_ input: Data, op: CCOperation) throws -> Data {
         var out = Data(count: input.count + kCCBlockSizeAES128); var moved = 0
         let outCap = out.count
         let st = out.withUnsafeMutableBytes { o in input.withUnsafeBytes { i in key.withUnsafeBytes { k in iv.withUnsafeBytes { v in

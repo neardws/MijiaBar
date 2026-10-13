@@ -119,6 +119,7 @@ Claude Code：`claude mcp add mijia -- /Applications/MijiaBar.app/Contents/Resou
 ```bash
 git clone https://github.com/neardws/MijiaBar && cd MijiaBar
 swift build                         # 调试构建
+scripts/test.sh                     # 运行单元测试
 scripts/package.sh                  # 生成 dist/MijiaBar.app 和 DMG（有 Developer ID 时自动签名+公证）
 # 可选环境变量：SIGN_IDENTITY（"-" 强制 ad-hoc）、NOTARY_PROFILE（notarytool 钥匙串配置名，默认 MijiaBar-notary）、VERSION
 .build/debug/MijiaBarApp --snapshot docs/screenshots   # 用演示数据重新生成截图
