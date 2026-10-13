@@ -18,7 +18,7 @@
 
 <p align="center"><img src="docs/screenshots/demo.gif" width="300" alt="demo"></p>
 
-[Fonctionnalités](#fonctionnalités) · [Captures](#captures) · [Installation](#installation) · [Connexion](#connexion) · [Agents / MCP](#agents--mcp) · [Compiler depuis les sources](#compiler-depuis-les-sources) · [Remerciements](#remerciements)
+[Fonctionnalités](#fonctionnalités) · [Captures](#captures) · [Installation](#installation) · [Connexion](#connexion) · [Appareils masqués automatiquement](#appareils-masqués-automatiquement) · [Agents / MCP](#agents--mcp) · [Compiler depuis les sources](#compiler-depuis-les-sources) · [Où sont stockées les données](#où-sont-stockées-les-données) · [Remerciements](#remerciements)
 
 ## Fonctionnalités
 
@@ -64,6 +64,15 @@ Nécessite macOS 14 ou ultérieur, Apple silicon ou Intel.
 1. Clique sur l’icône 🏠 dans la barre des menus ; un QR code s’affiche.
 2. Choisis la région du serveur (Chine continentale par défaut).
 3. Dans l’app **Mi Home**, touche **+ → Scanner**, scanne le code et confirme sur le téléphone. Les appareils se chargent automatiquement.
+
+## Appareils masqués automatiquement
+
+Un appareil est replié en bas de la liste par défaut si l’une de ces conditions est vraie :
+
+- le cloud le signale hors ligne (`isOnline = false`) ;
+- le cloud renvoie une dernière connexion (`last_online` / `lastOnline` / `last_online_time`) de plus de 30 jours.
+
+Clique sur l’œil ou **Afficher**, ou active **Réglages → Appareils → Afficher les appareils masqués**. Un clic droit sur un appareil permet de le masquer ou l’afficher manuellement — le choix manuel l’emporte toujours sur la règle automatique.
 
 ## Agents / MCP
 
@@ -122,6 +131,13 @@ scripts/package.sh   # dist/MijiaBar.app + DMG (signs & notarizes when a Develop
 ```
 
 Structure : `Sources/MijiaCore` (API cloud, connexion QR, miIO, spécifications MIoT), `Sources/MijiaBarApp` (app SwiftUI), `Sources/mijiabar` (CLI + MCP). Les traductions sont dans `i18n/*.tsv` ; lance `scripts/gen-i18n.py` après modification.
+
+## Où sont stockées les données
+
+- Session de connexion : trousseau macOS, service `com.neardws.MijiaBar` (compte `session`). Supprimée à la déconnexion.
+- Cache des appareils `devices.json`, préférences `prefs.json` (favoris, alias, masquage, région), politique agent `agent.json` et cache des spécifications MIoT `spec-index.json` + `specs/<modèle>.json` — tout dans `~/Library/Application Support/MijiaBar/`, avec les droits 600.
+- Langue de l’interface : `MijiaBarLang` dans les UserDefaults (partagée par l’app et la CLI ; `MIJIABAR_LANG` a priorité).
+- Aucune donnée n’est envoyée ailleurs qu’aux serveurs Xiaomi, à tes appareils sur le réseau local et à miot-spec.org (spécifications publiques).
 
 ## Remerciements
 

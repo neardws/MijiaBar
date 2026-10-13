@@ -1,7 +1,7 @@
 import Foundation
 import CryptoKit
 
-/// 界面语言。简体为原文，繁体由简体自动转换，其余语言见 Translations.swift。
+/// 界面语言。简体为原文，繁体（台湾用语）、其余语言见 Translations.swift。
 public enum AppLang: String, CaseIterable, Codable {
     case zhHans = "zh-Hans", zhHant = "zh-Hant", en, de, fr, es, it, ru, ja
     public var nativeName: String {
@@ -39,6 +39,8 @@ public func L(_ zh: String, _ en: String) -> String {
     switch currentLang {
     case .zhHans: return zh
     case .zhHant:
+        // 台湾用语：优先人工校对过的 i18n/zh-Hant.tsv，缺失时才自动转换
+        if let t = hantTable[zh] { return t }
         if let c = hantCache[zh] { return c }
         let t = zh.applyingTransform(StringTransform("Hans-Hant"), reverse: false) ?? zh
         hantCache[zh] = t; return t

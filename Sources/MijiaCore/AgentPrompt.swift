@@ -6,7 +6,7 @@ public func agentSetupPrompt(cli: String) -> String {
     let t: String
     switch currentLang {
     case .zhHans: t = zhPrompt
-    case .zhHant: t = zhPrompt.applyingTransform(StringTransform("Hans-Hant"), reverse: false) ?? zhPrompt
+    case .zhHant: t = zhHantPrompt
     case .de: t = dePrompt
     case .fr: t = frPrompt
     case .es: t = esPrompt
@@ -38,6 +38,17 @@ private let zhPrompt = """
    注册后按需重新加载 MCP。
 3. 可用工具：list_devices、get_device_state、set_property、run_action。权限由我在 MijiaBar → 设置 → Agent 接口 中控制：默认「只读」（写操作会被拒绝）；「白名单」只允许控制选中的设备；「全部」允许控制所有设备。开启「每次写操作弹窗确认」时，每次写操作都会在 Mac 上弹窗，需要我点允许。没有我的明确要求，不要改变任何设备的状态。
 4. 验证：运行 "{CLI}" list（或调用 list_devices），把设备列表给我看。如果提示未登录，请让我先在 MijiaBar 里扫码登录。
+"""
+
+private let zhHantPrompt = """
+請幫我把 MijiaBar（macOS 選單列米家控制 App）設定為你的 MCP 工具，按以下步驟自己完成：
+
+1. 找到命令列工具：它在 App 套件內 {CLI}。執行 "{CLI}" --help 確認可用。如需在終端機直接使用，可建立連結：mkdir -p ~/.local/bin && ln -sf "{CLI}" ~/.local/bin/mijiabar
+2. 用你自己的設定註冊一個名為 mijia 的 stdio MCP 伺服器，指令為 "{CLI}"，參數為 mcp：
+\(configBlock)
+   註冊後視需要重新載入 MCP。
+3. 可用工具：list_devices、get_device_state、set_property、run_action。權限由我在 MijiaBar → 設定 → Agent 介面 中控制：預設「唯讀」（寫入操作會被拒絕）；「白名單」只允許控制勾選的裝置；「全部」允許控制所有裝置。開啟「每次寫入操作跳出視窗確認」時，每次寫入操作都會在 Mac 上跳出視窗，需要我按「允許」。沒有我的明確要求，不要改變任何裝置的狀態。
+4. 驗證：執行 "{CLI}" list（或呼叫 list_devices），把裝置清單給我看。如果顯示未登入，請讓我先在 MijiaBar 裡掃碼登入。
 """
 
 private let enPrompt = """

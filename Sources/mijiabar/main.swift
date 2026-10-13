@@ -2,8 +2,15 @@ import Foundation
 import MijiaCore
 
 // mijiabar —— 给人和 Agent 用的米家命令行 / MCP 服务器
-let version = "0.1.6-rc1"
+let version = "0.1.6-rc2"
 setvbuf(stdout, nil, _IOLBF, 0)
+
+// setup-prompt 不需要登录信息：在读取钥匙串之前处理，避免触发钥匙串授权弹窗
+if CommandLine.arguments.dropFirst().first == "setup-prompt" {
+    let me = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().path
+    print(agentSetupPrompt(cli: me.contains(".app/") ? me : "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar"))
+    exit(0)
+}
 
 func eprint(_ s: String) { FileHandle.standardError.write(Data((s + "\n").utf8)) }
 func fail(_ s: String) -> Never { eprint(s); exit(1) }

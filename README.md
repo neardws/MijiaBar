@@ -18,7 +18,7 @@
 
 <p align="center"><img src="docs/screenshots/demo.gif" width="300" alt="demo"></p>
 
-[Features](#features) · [Screenshots](#screenshots) · [Install](#install) · [Sign in](#sign-in) · [Agent / MCP](#agent--mcp) · [Build from source](#build-from-source) · [Credits](#credits)
+[Features](#features) · [Screenshots](#screenshots) · [Install](#install) · [Sign in](#sign-in) · [Auto-hidden devices](#auto-hidden-devices) · [Agent / MCP](#agent--mcp) · [Build from source](#build-from-source) · [Where data is stored](#where-data-is-stored) · [Credits](#credits)
 
 ## Features
 
@@ -64,6 +64,15 @@ Requires macOS 14 or later, Apple silicon or Intel.
 1. Click the 🏠 icon in the menu bar; a QR code appears.
 2. Pick your server region (Mainland China by default).
 3. In the **Mi Home** app tap **+ → Scan**, scan the code and confirm on the phone. Devices load automatically.
+
+## Auto-hidden devices
+
+A device is collapsed to the bottom of the list by default when either is true:
+
+- the cloud reports it offline (`isOnline = false`);
+- the cloud returns a last-online time (`last_online` / `lastOnline` / `last_online_time`) older than 30 days.
+
+Click the eye button or **Show** to reveal them, or turn on **Settings → Devices → Show hidden devices**. Right-click a device to hide / unhide it manually — a manual choice always overrides the automatic rule.
 
 ## Agent / MCP
 
@@ -122,6 +131,13 @@ scripts/package.sh   # dist/MijiaBar.app + DMG (signs & notarizes when a Develop
 ```
 
 Project layout: `Sources/MijiaCore` (cloud API, QR login, miIO, MIoT spec), `Sources/MijiaBarApp` (SwiftUI app), `Sources/mijiabar` (CLI + MCP). Translations live in `i18n/*.tsv`; run `scripts/gen-i18n.py` after editing.
+
+## Where data is stored
+
+- Sign-in session: macOS Keychain, service `com.neardws.MijiaBar` (account `session`). Signing out deletes it.
+- Device cache `devices.json`, preferences `prefs.json` (favorites, aliases, hidden flags, region), agent policy `agent.json`, and MIoT spec cache `spec-index.json` + `specs/<model>.json` — all in `~/Library/Application Support/MijiaBar/`, written with file mode 600.
+- UI language: `MijiaBarLang` in UserDefaults (shared by the app and CLI; `MIJIABAR_LANG` overrides it).
+- Nothing is sent anywhere except Xiaomi's servers, your devices on the LAN, and miot-spec.org (public spec downloads).
 
 ## Credits
 

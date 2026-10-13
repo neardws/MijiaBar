@@ -10,6 +10,10 @@ def load(f):
         c = line.split('\t'); assert len(c) == 7, (f, line); d[c[0]] = c[1:]
     return d
 ui, va, na = load('ui.tsv'), load('values.tsv'), load('names.tsv')
+# 繁体（台湾用语）：简体原文 \t 繁体，人工校对
+hant = {}
+for line in open('i18n/zh-Hant.tsv', encoding='utf-8').read().split('\n'):
+    if line.strip(): a, b = line.split('\t'); hant[a] = b
 esc = lambda s: s.replace('\\', '\\\\').replace('"', '\\"')
 def emit(name, d):
     return '\n'.join([f'public let {name}: [String: [String]] = ['] + ['    "%s": [%s],' % (esc(k), ', '.join('"%s"' % esc(x) for x in v)) for k, v in d.items()] + [']'])
@@ -27,8 +31,10 @@ public func tr(_ en: String, _ lang: AppLang) -> String? {
     switch lang { case .zhHans, .zhHant, .en: return nil; default: return uiTable[en]?[lang.trIndex] }
 }
 
-''' + emit('uiTable', ui) + '\n\n/// 设备状态取值（键为小写英文）\n' + emit('trValueTable', va) + '\n\n/// MIoT 属性/服务名\n' + emit('trNameTable', na) + '\n')
+''' + emit('uiTable', ui) + '\n\n/// 设备状态取值（键为小写英文）\n' + emit('trValueTable', va) + '\n\n/// MIoT 属性/服务名\n' + emit('trNameTable', na) + '\n\n/// 繁体中文（台湾用语），键为简体原文\npublic let hantTable: [String: String] = [\n' + '\n'.join('    "%s": "%s",' % (esc(k), esc(v)) for k, v in hant.items()) + '\n]\n')
 pat = re.compile(r'\bLF?\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*"((?:[^"\\]|\\.)*)"')
 miss = {m.group(2).replace('\\"', '"') for f in glob.glob('Sources/**/*.swift', recursive=True) for m in pat.finditer(open(f, encoding='utf-8').read())} - set(ui)
+zhk = {m.group(1).replace('\\"', '"') for f in glob.glob('Sources/**/*.swift', recursive=True) for m in pat.finditer(open(f, encoding='utf-8').read())}
+miss |= {'[zh-Hant] ' + z for z in zhk - set(hant) if re.search('[\u4e00-\u9fff]', z)}
 if miss: print('缺少翻译：', *sorted(miss), sep='\n  '); sys.exit(1)
-print(f'✅ {len(ui)} 条界面文案、{len(va)} 个取值、{len(na)} 个属性名，6 种语言全部覆盖')
+print(f'✅ {len(ui)} 条界面文案、{len(va)} 个取值、{len(na)} 个属性名，6 种语言全部覆盖；繁体（台湾）{len(hant)} 条')

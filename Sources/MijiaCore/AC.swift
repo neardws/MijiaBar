@@ -32,8 +32,8 @@ public struct ACState {
 
     public var modeLabel: String { modes.first { $0.value == mode }?.label ?? (mode?.description ?? "-") }
     public var fanLabel: String { fans.first { $0.value == fan }?.label ?? (fan?.description ?? "-") }
-    public var isHeating: Bool { modeLabel.contains("制热") || modeLabel.lowercased().contains("heat") }
-    public var isCooling: Bool { modeLabel.contains("制冷") || modeLabel.lowercased().contains("cool") }
+    public var isHeating: Bool { [L("制热", "Heat"), trValue("heat")].contains(modeLabel) || modeLabel.contains("制热") || modeLabel.lowercased().contains("heat") }
+    public var isCooling: Bool { [L("制冷", "Cool"), trValue("cool")].contains(modeLabel) || modeLabel.contains("制冷") || modeLabel.lowercased().contains("cool") }
     public func tempValue(_ v: Double) -> PropValue { tempIsFloat ? .double(v) : .int(Int(v.rounded())) }
 
     public static func make(_ s: DeviceState) -> ACState? {

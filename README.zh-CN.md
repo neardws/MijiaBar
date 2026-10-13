@@ -18,7 +18,7 @@
 
 <p align="center"><img src="docs/screenshots/demo.gif" width="300" alt="demo"></p>
 
-[功能](#功能) · [截图](#截图) · [安装](#安装) · [登录](#登录) · [Agent / MCP](#agent--mcp) · [从源码构建](#从源码构建) · [致谢](#致谢)
+[功能](#功能) · [截图](#截图) · [安装](#安装) · [登录](#登录) · [默认隐藏规则](#默认隐藏规则) · [Agent / MCP](#agent--mcp) · [从源码构建](#从源码构建) · [数据存放](#数据存放) · [致谢](#致谢)
 
 ## 功能
 
@@ -64,6 +64,15 @@
 1. 点菜单栏的 🏠 图标，会显示二维码。
 2. 选择服务器地区（默认中国大陆）。
 3. 打开手机 **米家 App** →「+」→「扫一扫」，扫码并在手机上确认，设备会自动加载。
+
+## 默认隐藏规则
+
+满足任一条件的设备默认收起到列表底部：
+
+- 云端报告离线（`isOnline = false`）；
+- 云端返回了最后在线时间（`last_online` / `lastOnline` / `last_online_time`），且超过 30 天。
+
+点眼睛按钮或「显示」可以展开，也可以在 **设置 → 设备管理 → 显示已隐藏的设备** 中打开。右键设备可以手动「隐藏 / 取消隐藏」，手动设置始终优先于自动规则。
 
 ## Agent / MCP
 
@@ -122,6 +131,13 @@ scripts/package.sh   # dist/MijiaBar.app + DMG (signs & notarizes when a Develop
 ```
 
 项目结构：`Sources/MijiaCore`（云端 API、扫码登录、miIO、MIoT 规格）、`Sources/MijiaBarApp`（SwiftUI 应用）、`Sources/mijiabar`（CLI + MCP）。翻译在 `i18n/*.tsv`，修改后运行 `scripts/gen-i18n.py`。
+
+## 数据存放
+
+- 登录凭据：macOS 钥匙串，服务名 `com.neardws.MijiaBar`（账户 `session`），退出登录即删除。
+- 设备缓存 `devices.json`、偏好 `prefs.json`（收藏、别名、隐藏、地区）、Agent 权限 `agent.json`、MIoT 规格缓存 `spec-index.json` 和 `specs/<型号>.json`，都在 `~/Library/Application Support/MijiaBar/`，文件权限 600。
+- 界面语言：UserDefaults 的 `MijiaBarLang`（App 和 CLI 共用，环境变量 `MIJIABAR_LANG` 可覆盖）。
+- 除了小米服务器、局域网内的设备和 miot-spec.org（下载公开规格）之外，不向任何地方发送数据。
 
 ## 致谢
 

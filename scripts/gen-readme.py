@@ -68,23 +68,23 @@ note="非小米官方專案。使用與米家 App 相同的雲端介面和區域
 toc=["功能","截圖","安裝","登入","Agent / MCP","從原始碼建置","致謝"],dark="深色模式",
 feat=["**掃碼登入**：用米家 App 掃一掃，免密碼。預設中國大陸伺服器，也可切換歐洲、美國、俄羅斯、新加坡、印度。憑證只存在 macOS 鑰匙圈。",
 "**自動取得裝置**：載入所有家庭、房間和共享裝置及上線狀態；離線和久未使用的裝置預設隱藏。",
-"**每類裝置單獨設計**：冷氣、電風扇、燈、插座、電視、音箱、攝影機、印表機、廚房電器、淨水器、暖氣機、除濕機、感測器，各有擬物插圖。",
-"**克制的動態效果**：無回彈的快速彈簧（< 300ms）；風扇依風速轉動、電視螢幕發光、暖氣機熱浪；電源鍵漣漪；滑桿 1:1 跟手、放開吸附、跨檔觸控板輕觸。遵循「減少動態效果」。",
+"**每類裝置單獨設計**：冷氣、電風扇、燈、插座、電視、音箱、攝影機、印表機、廚房電器、淨水器、電暖器、除濕機、感測器，各有擬物插圖。",
+"**克制的動態效果**：無回彈的快速彈簧（< 300ms）；風扇依風速轉動、電視螢幕發光、電暖器熱浪；電源鍵漣漪；滑桿 1:1 跟手、放開吸附、跨檔觸控板輕觸。遵循「減少動態效果」。",
 "**鍵盤優先**：`↑/↓` 選擇、`↩` 開啟、`空白鍵` 開關、`←/→` 調整主滑桿、`/` 搜尋、`Esc` 返回、`⌘Q` 結束。",
 "**淺色 / 深色**：使用系統語意色彩，自動跟隨外觀。",
 "**9 種介面語言**：简体中文、繁體中文、English、Deutsch、Français、Español、Italiano、Русский、日本語，依地區建議預設語言。",
-"**Agent 介面**：`mijiabar` 命令列和 stdio MCP 伺服器，預設唯讀，可選白名單 / 全部權限，寫入操作可跳窗確認。",
-"**雙通道控制**：小米雲 MIoT RPC，失敗時退回區域網路 miIO；空調伴侶（`lumi.acpartner.*`）使用舊版區域網路指令。"],
+"**Agent 介面**：`mijiabar` 命令列和 stdio MCP 伺服器，預設唯讀，可選白名單 / 全部權限，寫入操作可跳出視窗確認。",
+"**雙通道控制**：小米雲端 MIoT RPC，失敗時退回區域網路 miIO；空調夥伴（`lumi.acpartner.*`）使用舊版區域網路指令。"],
 inst=["從 [Releases](https://github.com/neardws/MijiaBar/releases/latest) 下載 `MijiaBar-x.y.z.dmg`，把 MijiaBar 拖進「應用程式」後開啟。正式版已用 Developer ID 簽署並通過 Apple 公證。","第一次控制裝置時，請允許「本機網路」權限（區域網路直連需要）。"],
 inst_note="CI 建置的 `*-unsigned.dmg` 和自行本機打包的版本為 ad-hoc 簽署，首次開啟前執行 `xattr -dr com.apple.quarantine /Applications/MijiaBar.app`。",
 req="系統需求：macOS 14 以上，支援 Apple 晶片和 Intel。",
-login=["點選單列的 🏠 圖示，會顯示 QR 碼。","選擇伺服器地區（預設中國大陸）。","開啟手機 **米家 App** →「+」→「掃一掃」，掃碼並在手機上確認，裝置會自動載入。"],
+login=["點選單列的 🏠 圖示，會顯示 QR 碼。","選擇伺服器地區（預設為中國大陸）。","開啟手機 **米家 App** →「+」→「掃一掃」，掃描 QR 碼並在手機上確認，裝置會自動載入。"],
 agent_intro="開啟 **設定 → Agent 介面**，點 **複製安裝說明**，貼給 Claude Code、Codex、Cursor 等 Agent。Agent 會自己找到內建 CLI、在自己的設定裡註冊 MCP 伺服器，並列出裝置完成驗證。`mijiabar setup-prompt` 會輸出同樣的內容（路徑已填好）：",
 perm_h="權限", perm=[("關閉","Agent 什麼都不能做"),("唯讀（預設）","只能列出裝置、讀取狀態"),("白名單","只能控制你勾選的裝置"),("全部","可以控制所有裝置")],
-confirm="開啟 **每次寫入操作跳窗確認** 後，Agent 的每次控制都會跳出系統對話框，需要你點「允許」。",
+confirm="開啟 **每次寫入操作跳出視窗確認** 後，Agent 的每次控制都會跳出系統對話框，需要你點「允許」。",
 cli_h="命令列", tools="MCP 工具：`list_devices`、`get_device_state`、`set_property`、`run_action`。",
 build_note="專案結構：`Sources/MijiaCore`（雲端 API、掃碼登入、miIO、MIoT 規格）、`Sources/MijiaBarApp`（SwiftUI 應用程式）、`Sources/mijiabar`（CLI + MCP）。翻譯在 `i18n/*.tsv`，修改後執行 `scripts/gen-i18n.py`。",
-credits="動態效果設計由 [@skyswordw](https://github.com/skyswordw) 貢獻（[#1](https://github.com/neardws/MijiaBar/pull/1)）。協定細節參考 [python-miio](https://github.com/rytilahti/python-miio)、[Xiaomi-cloud-tokens-extractor](https://github.com/PiotrMachowski/Xiaomi-cloud-tokens-extractor) 和 [ha_xiaomi_home](https://github.com/XiaoMi/ha_xiaomi_home)。介面靈感來自 [@the_mcnaveen](https://x.com/the_mcnaveen) 的冷氣選單列應用程式。",
+credits="動態效果設計由 [@skyswordw](https://github.com/skyswordw) 貢獻（[#1](https://github.com/neardws/MijiaBar/pull/1)）。協定細節參考 [python-miio](https://github.com/rytilahti/python-miio)、[Xiaomi-cloud-tokens-extractor](https://github.com/PiotrMachowski/Xiaomi-cloud-tokens-extractor) 和 [ha_xiaomi_home](https://github.com/XiaoMi/ha_xiaomi_home)。介面靈感來自 [@the_mcnaveen](https://x.com/the_mcnaveen) 的冷氣選單列 App。",
 lic="MIT 授權。")
 T['ru']=dict(tag="Управляйте устройствами Xiaomi Mi Home из строки меню macOS — или доверьте это AI-агентам.",
 note="Неофициальный проект, не связан с Xiaomi. Использует то же облачное API, что и приложение Mi Home, а также локальный протокол miIO.",
@@ -156,6 +156,22 @@ build_note="Structure : `Sources/MijiaCore` (API cloud, connexion QR, miIO, spé
 credits="Design des animations par [@skyswordw](https://github.com/skyswordw) ([#1](https://github.com/neardws/MijiaBar/pull/1)). Détails des protocoles issus de [python-miio](https://github.com/rytilahti/python-miio), [Xiaomi-cloud-tokens-extractor](https://github.com/PiotrMachowski/Xiaomi-cloud-tokens-extractor) et [ha_xiaomi_home](https://github.com/XiaoMi/ha_xiaomi_home). Interface inspirée de l’app de climatisation de [@the_mcnaveen](https://x.com/the_mcnaveen).",
 lic="Licence MIT.")
 import re
+S="~/Library/Application Support/MijiaBar/"
+X={
+'en':("Auto-hidden devices",["A device is collapsed to the bottom of the list by default when either is true:","the cloud reports it offline (`isOnline = false`);","the cloud returns a last-online time (`last_online` / `lastOnline` / `last_online_time`) older than 30 days.","Click the eye button or **Show** to reveal them, or turn on **Settings → Devices → Show hidden devices**. Right-click a device to hide / unhide it manually — a manual choice always overrides the automatic rule."],
+ "Where data is stored",["Sign-in session: macOS Keychain, service `com.neardws.MijiaBar` (account `session`). Signing out deletes it.",f"Device cache `devices.json`, preferences `prefs.json` (favorites, aliases, hidden flags, region), agent policy `agent.json`, and MIoT spec cache `spec-index.json` + `specs/<model>.json` — all in `{S}`, written with file mode 600.","UI language: `MijiaBarLang` in UserDefaults (shared by the app and CLI; `MIJIABAR_LANG` overrides it).","Nothing is sent anywhere except Xiaomi's servers, your devices on the LAN, and miot-spec.org (public spec downloads)."]),
+'zh-Hans':("默认隐藏规则",["满足任一条件的设备默认收起到列表底部：","云端报告离线（`isOnline = false`）；","云端返回了最后在线时间（`last_online` / `lastOnline` / `last_online_time`），且超过 30 天。","点眼睛按钮或「显示」可以展开，也可以在 **设置 → 设备管理 → 显示已隐藏的设备** 中打开。右键设备可以手动「隐藏 / 取消隐藏」，手动设置始终优先于自动规则。"],
+ "数据存放",["登录凭据：macOS 钥匙串，服务名 `com.neardws.MijiaBar`（账户 `session`），退出登录即删除。",f"设备缓存 `devices.json`、偏好 `prefs.json`（收藏、别名、隐藏、地区）、Agent 权限 `agent.json`、MIoT 规格缓存 `spec-index.json` 和 `specs/<型号>.json`，都在 `{S}`，文件权限 600。","界面语言：UserDefaults 的 `MijiaBarLang`（App 和 CLI 共用，环境变量 `MIJIABAR_LANG` 可覆盖）。","除了小米服务器、局域网内的设备和 miot-spec.org（下载公开规格）之外，不向任何地方发送数据。"]),
+'zh-Hant':("預設隱藏規則",["符合任一條件的裝置預設收合到清單底部：","雲端回報離線（`isOnline = false`）；","雲端回傳了最後上線時間（`last_online` / `lastOnline` / `last_online_time`），且超過 30 天。","按眼睛按鈕或「顯示」可以展開，也可以在 **設定 → 裝置管理 → 顯示已隱藏的裝置** 中開啟。在裝置上按右鍵可以手動「隱藏 / 取消隱藏」，手動設定一律優先於自動規則。"],
+ "資料存放位置",["登入憑證：macOS 鑰匙圈，服務名稱 `com.neardws.MijiaBar`（帳號 `session`），登出即刪除。",f"裝置快取 `devices.json`、偏好設定 `prefs.json`（收藏、別名、隱藏、地區）、Agent 權限 `agent.json`、MIoT 規格快取 `spec-index.json` 和 `specs/<型號>.json`，都在 `{S}`，檔案權限 600。","介面語言：UserDefaults 的 `MijiaBarLang`（App 與 CLI 共用，環境變數 `MIJIABAR_LANG` 可覆寫）。","除了小米伺服器、區域網路內的裝置和 miot-spec.org（下載公開規格）之外，不會將資料傳送到任何地方。"]),
+'ru':("Автоматически скрытые устройства",["Устройство по умолчанию сворачивается в конец списка, если выполняется любое условие:","облако сообщает, что оно не в сети (`isOnline = false`);","облако возвращает время последнего подключения (`last_online` / `lastOnline` / `last_online_time`) старше 30 дней.","Нажмите кнопку с глазом или **Показать**, либо включите **Настройки → Устройства → Показывать скрытые устройства**. Правый клик по устройству позволяет скрыть или показать его вручную — ручной выбор всегда важнее автоматического правила."],
+ "Где хранятся данные",["Сессия входа: связка ключей macOS, служба `com.neardws.MijiaBar` (учётная запись `session`). Удаляется при выходе.",f"Кэш устройств `devices.json`, настройки `prefs.json` (избранное, псевдонимы, скрытие, регион), политика агента `agent.json` и кэш спецификаций MIoT `spec-index.json` + `specs/<model>.json` — всё в `{S}`, права доступа 600.","Язык интерфейса: `MijiaBarLang` в UserDefaults (общий для приложения и CLI; переменная `MIJIABAR_LANG` имеет приоритет).","Данные отправляются только на серверы Xiaomi, на ваши устройства в локальной сети и на miot-spec.org (загрузка публичных спецификаций)."]),
+'de':("Automatisch ausgeblendete Geräte",["Ein Gerät wird standardmäßig ans Listenende eingeklappt, wenn eine Bedingung zutrifft:","die Cloud meldet es als offline (`isOnline = false`);","die Cloud liefert einen letzten Online-Zeitpunkt (`last_online` / `lastOnline` / `last_online_time`), der über 30 Tage zurückliegt.","Über das Augen-Symbol oder **Anzeigen** einblenden, oder **Einstellungen → Geräte → Ausgeblendete Geräte anzeigen** aktivieren. Per Rechtsklick lässt sich ein Gerät manuell aus- oder einblenden – die manuelle Wahl hat immer Vorrang vor der Automatik."],
+ "Wo Daten gespeichert werden",["Anmeldesitzung: macOS-Schlüsselbund, Dienst `com.neardws.MijiaBar` (Account `session`). Wird beim Abmelden gelöscht.",f"Gerätecache `devices.json`, Einstellungen `prefs.json` (Favoriten, Aliasse, Ausblendungen, Region), Agent-Richtlinie `agent.json` und MIoT-Spezifikationscache `spec-index.json` + `specs/<Modell>.json` – alles in `{S}`, mit Dateirechten 600.","UI-Sprache: `MijiaBarLang` in den UserDefaults (von App und CLI gemeinsam genutzt; `MIJIABAR_LANG` überschreibt sie).","Daten gehen nur an Xiaomi-Server, an deine Geräte im LAN und an miot-spec.org (öffentliche Spezifikationen)."]),
+'fr':("Appareils masqués automatiquement",["Un appareil est replié en bas de la liste par défaut si l’une de ces conditions est vraie :","le cloud le signale hors ligne (`isOnline = false`) ;","le cloud renvoie une dernière connexion (`last_online` / `lastOnline` / `last_online_time`) de plus de 30 jours.","Clique sur l’œil ou **Afficher**, ou active **Réglages → Appareils → Afficher les appareils masqués**. Un clic droit sur un appareil permet de le masquer ou l’afficher manuellement — le choix manuel l’emporte toujours sur la règle automatique."],
+ "Où sont stockées les données",["Session de connexion : trousseau macOS, service `com.neardws.MijiaBar` (compte `session`). Supprimée à la déconnexion.",f"Cache des appareils `devices.json`, préférences `prefs.json` (favoris, alias, masquage, région), politique agent `agent.json` et cache des spécifications MIoT `spec-index.json` + `specs/<modèle>.json` — tout dans `{S}`, avec les droits 600.","Langue de l’interface : `MijiaBarLang` dans les UserDefaults (partagée par l’app et la CLI ; `MIJIABAR_LANG` a priorité).","Aucune donnée n’est envoyée ailleurs qu’aux serveurs Xiaomi, à tes appareils sur le réseau local et à miot-spec.org (spécifications publiques)."]),
+}
+
 def anchor(h): return re.sub(r'[^\w\- ]','',h.lower()).strip().replace(' ','-')
 cli='''```bash
 mijiabar list                     # list devices (--all, --refresh)
@@ -175,7 +191,8 @@ scripts/package.sh   # dist/MijiaBar.app + DMG (signs & notarizes when a Develop
 for lang,fn in files.items():
     t=T[lang]
     sw=' · '.join(f'<b>{names[l]}</b>' if l==lang else f'<a href="{f}">{names[l]}</a>' for l,f in files.items())
-    toc=t['toc']
+    hh,hl,dh,dl=X[lang]
+    toc=t['toc'][:4]+[hh]+t['toc'][4:6]+[dh]+t['toc'][6:]
     prompt=subprocess.run(['.build/debug/mijiabar','setup-prompt'],env={**os.environ,'MIJIABAR_LANG':lang},capture_output=True,text=True).stdout.rstrip()
     o=[f'<p align="center"><img src="Resources/AppIcon.png" width="96" alt="MijiaBar"></p>' if os.path.exists('Resources/AppIcon.png') else '',
        '<h1 align="center">MijiaBar</h1>',f'<p align="center">{t["tag"]}</p>','',badges,'',f'<p align="center">{sw}</p>','',
@@ -189,10 +206,12 @@ for lang,fn in files.items():
        '<p align="center">\n  <img src="docs/screenshots/plug-light.png" width="260" alt="">\n  <img src="docs/screenshots/agent-light.png" width="260" alt="">\n  <img src="docs/screenshots/login-light.png" width="260" alt="">\n</p>','',
        f'## {toc[2]}','']+[f'{i+1}. {x}' for i,x in enumerate(t['inst'])]+['',f'> {t["inst_note"]}','',t['req'],'',
        f'## {toc[3]}','']+[f'{i+1}. {x}' for i,x in enumerate(t['login'])]+['',
-       f'## {toc[4]}','',t['agent_intro'],'','```text',prompt,'```','',
+       f'## {hh}','',hl[0],'']+[f'- {x}' for x in hl[1:3]]+['',hl[3],'',
+       f'## {toc[5]}','',t['agent_intro'],'','```text',prompt,'```','',
        f'### {t["perm_h"]}','','| | |','| --- | --- |']+[f'| {a} | {b} |' for a,b in t['perm']]+['',t['confirm'],'',
        f'### {t["cli_h"]}','',cli,'',t['tools'],'',
-       f'## {toc[5]}','',build,'',t['build_note'],'',
-       f'## {toc[6]}','',t['credits'],'',t['lic'],'']
+       f'## {toc[6]}','',build,'',t['build_note'],'',
+       f'## {dh}','']+[f'- {x}' for x in dl]+['',
+       f'## {toc[8]}','',t['credits'],'',t['lic'],'']
     open(fn,'w').write('\n'.join(x for x in o if x is not None).lstrip('\n'))
 print('ok')

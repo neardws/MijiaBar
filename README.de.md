@@ -18,7 +18,7 @@
 
 <p align="center"><img src="docs/screenshots/demo.gif" width="300" alt="demo"></p>
 
-[Funktionen](#funktionen) · [Screenshots](#screenshots) · [Installation](#installation) · [Anmeldung](#anmeldung) · [Agents / MCP](#agents--mcp) · [Aus dem Quellcode bauen](#aus-dem-quellcode-bauen) · [Danksagung](#danksagung)
+[Funktionen](#funktionen) · [Screenshots](#screenshots) · [Installation](#installation) · [Anmeldung](#anmeldung) · [Automatisch ausgeblendete Geräte](#automatisch-ausgeblendete-geräte) · [Agents / MCP](#agents--mcp) · [Aus dem Quellcode bauen](#aus-dem-quellcode-bauen) · [Wo Daten gespeichert werden](#wo-daten-gespeichert-werden) · [Danksagung](#danksagung)
 
 ## Funktionen
 
@@ -64,6 +64,15 @@ Benötigt macOS 14 oder neuer, Apple Silicon oder Intel.
 1. Klicke auf das 🏠-Symbol in der Menüleiste; ein QR-Code erscheint.
 2. Wähle die Serverregion (Standard: Festlandchina).
 3. Tippe in der **Mi-Home**-App auf **+ → Scannen**, scanne den Code und bestätige am Telefon. Die Geräte werden automatisch geladen.
+
+## Automatisch ausgeblendete Geräte
+
+Ein Gerät wird standardmäßig ans Listenende eingeklappt, wenn eine Bedingung zutrifft:
+
+- die Cloud meldet es als offline (`isOnline = false`);
+- die Cloud liefert einen letzten Online-Zeitpunkt (`last_online` / `lastOnline` / `last_online_time`), der über 30 Tage zurückliegt.
+
+Über das Augen-Symbol oder **Anzeigen** einblenden, oder **Einstellungen → Geräte → Ausgeblendete Geräte anzeigen** aktivieren. Per Rechtsklick lässt sich ein Gerät manuell aus- oder einblenden – die manuelle Wahl hat immer Vorrang vor der Automatik.
 
 ## Agents / MCP
 
@@ -122,6 +131,13 @@ scripts/package.sh   # dist/MijiaBar.app + DMG (signs & notarizes when a Develop
 ```
 
 Aufbau: `Sources/MijiaCore` (Cloud-API, QR-Anmeldung, miIO, MIoT-Spezifikationen), `Sources/MijiaBarApp` (SwiftUI-App), `Sources/mijiabar` (CLI + MCP). Übersetzungen liegen in `i18n/*.tsv`; danach `scripts/gen-i18n.py` ausführen.
+
+## Wo Daten gespeichert werden
+
+- Anmeldesitzung: macOS-Schlüsselbund, Dienst `com.neardws.MijiaBar` (Account `session`). Wird beim Abmelden gelöscht.
+- Gerätecache `devices.json`, Einstellungen `prefs.json` (Favoriten, Aliasse, Ausblendungen, Region), Agent-Richtlinie `agent.json` und MIoT-Spezifikationscache `spec-index.json` + `specs/<Modell>.json` – alles in `~/Library/Application Support/MijiaBar/`, mit Dateirechten 600.
+- UI-Sprache: `MijiaBarLang` in den UserDefaults (von App und CLI gemeinsam genutzt; `MIJIABAR_LANG` überschreibt sie).
+- Daten gehen nur an Xiaomi-Server, an deine Geräte im LAN und an miot-spec.org (öffentliche Spezifikationen).
 
 ## Danksagung
 
