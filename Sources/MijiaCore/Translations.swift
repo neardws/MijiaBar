@@ -234,6 +234,12 @@ public let uiTable: [String: [String]] = [
     "Paste this into Claude Code, Codex, Cursor or any other agent — it will install and configure itself.": ["Füge das in Claude Code, Codex, Cursor oder einen anderen Agent ein – er richtet sich selbst ein.", "Colle ceci dans Claude Code, Codex, Cursor ou tout autre agent : il s’installera et se configurera seul.", "Pega esto en Claude Code, Codex, Cursor u otro agente: se instalará y configurará solo.", "Incolla questo in Claude Code, Codex, Cursor o un altro agente: si installerà e configurerà da solo.", "Вставьте это в Claude Code, Codex, Cursor или другой агент — он сам всё установит и настроит.", "これを Claude Code・Codex・Cursor などのエージェントに貼り付けると、自動でインストールと設定を行います。"],
     "Copied — paste it into your agent": ["Kopiert – jetzt in deinen Agent einfügen", "Copié — colle-le dans ton agent", "Copiado: pégalo en tu agente", "Copiato: incollalo nel tuo agente", "Скопировано — вставьте в агента", "コピーしました。エージェントに貼り付けてください"],
     "Copy setup instructions": ["Einrichtungsanleitung kopieren", "Copier les instructions", "Copiar instrucciones", "Copia istruzioni", "Копировать инструкцию", "セットアップ手順をコピー"],
+    "Cooling": ["Kühlen", "Refroidissement", "Enfriando", "Raffreddamento", "Охлаждение", "冷房運転中"],
+    "Heating": ["Heizen", "Chauffage", "Calentando", "Riscaldamento", "Обогрев", "暖房運転中"],
+    "Drying": ["Entfeuchten", "Déshumidification", "Deshumidificando", "Deumidificazione", "Осушение", "除湿運転中"],
+    "Fan only": ["Nur Lüfter", "Ventilation seule", "Solo ventilador", "Solo ventilazione", "Только вентилятор", "送風運転中"],
+    "Target temperature": ["Zieltemperatur", "Température cible", "Temperatura objetivo", "Temperatura impostata", "Заданная температура", "設定温度"],
+    "Drag, or use the ← → keys": ["Ziehen oder ← → verwenden", "Faites glisser ou utilisez ← →", "Arrastra o usa ← →", "Trascina o usa ← →", "Перетащите или используйте ← →", "ドラッグするか ← → キーで調整"],
 ]
 
 /// 设备状态取值（键为小写英文）
@@ -682,4 +688,10 @@ public let hantTable: [String: String] = [
     "用户拒绝": "使用者拒絕",
     "动作 ": "動作 ",
     "错误：": "錯誤：",
+    "制冷中": "冷氣運轉中",
+    "制热中": "暖氣運轉中",
+    "除湿中": "除濕中",
+    "送风中": "送風中",
+    "自动运行": "自動運轉",
+    "拖动调节，或用 ← → 键": "拖曳調整，或使用 ← → 鍵",
 ]

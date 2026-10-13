@@ -157,7 +157,6 @@ struct DeviceListView: View {
             }.padding(.horizontal, 14).padding(.top, 12)
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass").foregroundStyle(searchFocused ? AnyShapeStyle(Theme.cool) : AnyShapeStyle(.secondary))
-                    .symbolEffect(.bounce, value: searchFocused)
                 TextField(L("搜索设备、房间、型号", "Search devices, rooms, models"), text: $m.search)
                     .textFieldStyle(.plain).focused($searchFocused)
                     .onSubmit { searchFocused = false; cursor = 0 }
@@ -479,13 +478,12 @@ struct DetailView: View {
                 IconButton(icon: m.isFavorite(device) ? "star.fill" : "star", help: L("收藏", "Favorite"), tint: m.isFavorite(device) ? .yellow : nil) {
                     m.toggleFavorite(device)
                 }
-                .symbolEffect(.bounce, value: m.isFavorite(device))
                 Menu { DeviceMenu(device: device) } label: { Image(systemName: "ellipsis").foregroundStyle(.secondary).frame(width: 26, height: 26) }
                     .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().hoverHighlight()
             }
             .animation(Motion.snappy, value: m.busy.contains(device.did))
             if let st = m.states[device.did] {
-                if let ac = ACState.make(st) { ACCardView(device: device, ac: ac).frame(width: cardWidth).probe(device.model).transition(.opacity.combined(with: .scale(scale: 0.97))); Spacer(minLength: 0) }
+                if let ac = ACState.make(st) { ACCardView(device: device, ac: ac).transition(.opacity.combined(with: .scale(scale: 0.97))) }
                 else { TypeDetailView(device: device, state: st).transition(.opacity.combined(with: .scale(scale: 0.97))) }
             } else if let e = m.stateErrors[device.did] {
                 Spacer()

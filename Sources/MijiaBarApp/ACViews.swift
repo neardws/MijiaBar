@@ -30,44 +30,47 @@ struct ACCardView: View {
     @State private var dragTemp: Double?
 
     var temp: Double { dragTemp ?? ac.target ?? 24 }
+    /// 0 = 冷 … 1 = 热：制冷始终偏蓝、制热始终偏橙，其余模式跟随温度
     var warmth: Double {
         let t = (temp - ac.minT) / max(ac.maxT - ac.minT, 1)
-        if ac.isHeating { return max(0.7, t) }
-        if ac.isCooling { return min(0.3, t) }
+        if ac.isHeating { return max(0.9, t) }
+        if ac.isCooling { return min(0.12, t) }
         return t
     }
     var tint: Color { ac.power ? Theme.warm(warmth) : Color.secondary }
 
-    var topLabel: String {
-        if let r = ac.roomTemp { return L("室温 ", "Room ") + "\(PropValue.double(r))°" }
-        if let p = ac.loadPower { return L("功率 ", "Power ") + "\(PropValue.double(p)) W" }
-        return m.displayName(device)
+    /// 标题说明空调在做什么；模式和风速已经在下方按钮里，不再重复
+    var title: String {
+        guard ac.power else { return L("已关机", "Off") }
+        switch ac.airMode {
+        case .cool: return L("制冷中", "Cooling")
+        case .heat: return L("制热中", "Heating")
+        case .dry: return L("除湿中", "Drying")
+        case .fan: return L("送风中", "Fan only")
+        case .auto: return L("自动运行", "Auto")
+        }
+    }
+    var subtitle: String {
+        let parts = [ac.roomTemp.map { L("室温 ", "Room ") + "\(PropValue.double($0))°" },
+                     ac.loadPower.map { L("功率 ", "Power ") + "\(PropValue.double($0)) W" }].compactMap { $0 }
+        return parts.isEmpty ? L("空调", "Air conditioner") : parts.joined(separator: " · ")
     }
 
     var body: some View {
-        VStack(spacing: 14) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(topLabel).font(.system(size: 13, weight: .semibold)).contentTransition(.numericText())
-                    Text(ac.power ? "\(ac.modeLabel) · \(L("风速", "Fan")) \(ac.fanLabel)" : L("已关机", "Off"))
-                        .font(.system(size: 11)).foregroundStyle(.secondary).contentTransition(.numericText())
-                }
-                Spacer()
-                PowerButton(on: ac.power, tint: tint) { m.write(device, ac.powerKey, ac.power ? ac.offValue : ac.onValue) }
-                    .help(L("开关（空格）", "Power (Space)"))
-            }
-
+        TypeShell(device: device, tint: tint, isOn: ac.power, title: title, subtitle: subtitle, powerOn: ac.power,
+                  onPower: { m.write(device, ac.powerKey, ac.power ? ac.offValue : ac.onValue) }) {
             ACIllustration(on: ac.power, tint: tint, mode: ac.airMode, speed: ac.fanSpeed, swing: ac.swing == true)
-                .frame(height: 104)
+        } content: {
+            BigValue(value: fmt1(ac.step < 1 ? (temp * 2).rounded() / 2 : temp.rounded()) + "°", caption: L("目标温度", "Target temperature"),
+                     dim: !ac.power, number: temp)
 
-            TempReadout(temp: temp, on: ac.power, tint: tint)
-
-            TempSlider(value: temp, range: ac.minT...ac.maxT, step: ac.step, enabled: ac.tempKey != nil,
+            TempSlider(value: temp, range: ac.minT...ac.maxT, step: ac.step, enabled: ac.tempKey != nil, on: ac.power,
                        onChange: { dragTemp = $0 },
                        onCommit: { v in
                            dragTemp = nil
                            if let k = ac.tempKey, v != ac.target { m.write(device, k, ac.tempValue(v)) }
                        })
+                .help(L("拖动调节，或用 ← → 键", "Drag, or use the ← → keys"))
 
             HStack(spacing: 8) {
                 MenuTile(title: L("模式", "Mode"), value: ac.modeLabel, icon: modeIcon, active: ac.power, tint: tint) {
@@ -80,30 +83,22 @@ struct ACCardView: View {
                         Button { if let k = ac.fanKey { m.write(device, k, o.value) } } label: { Text((o.value == ac.fan ? "✓ " : "") + o.label) }
                     }
                 }
-                ToggleTile(title: L("睡眠", "Sleep"), icon: "moon.zzz", isOn: ac.sleep, tint: tint) {
-                    if let k = ac.sleepKey { m.write(device, k, .bool(!(ac.sleep ?? false))) }
+                // 设备不支持的功能直接不显示，剩下的按钮平分宽度
+                if ac.sleepKey != nil {
+                    ToggleTile(title: L("睡眠", "Sleep"), icon: "moon.zzz", isOn: ac.sleep, tint: tint) {
+                        if let k = ac.sleepKey { m.write(device, k, .bool(!(ac.sleep ?? false))) }
+                    }
                 }
-                ToggleTile(title: L("扫风", "Swing"), icon: "arrow.up.and.down", isOn: ac.swing, tint: tint) {
-                    if let k = ac.swingKey { m.write(device, k, (ac.swing ?? false) ? ac.swingOff : ac.swingOn) }
+                if ac.swingKey != nil {
+                    ToggleTile(title: L("扫风", "Swing"), icon: "arrow.up.and.down", isOn: ac.swing, tint: tint) {
+                        if let k = ac.swingKey { m.write(device, k, (ac.swing ?? false) ? ac.swingOff : ac.swingOn) }
+                    }
                 }
             }
+            .animation(Motion.snappy, value: ac.mode)
+            .animation(Motion.snappy, value: ac.fan)
         }
-        .padding(18)
-        .background {
-            let shape = RoundedRectangle(cornerRadius: 26, style: .continuous)
-            shape.fill(LinearGradient(colors: [tint.opacity(ac.power ? 0.28 : 0.08), tint.opacity(0.02)], startPoint: .top, endPoint: .bottom))
-                .overlay(alignment: .top) {
-                    Rectangle().fill(EllipticalGradient(colors: [tint.opacity(0.45), tint.opacity(0)])).frame(width: 340, height: 220).offset(y: -80)
-                        .opacity(ac.power ? 1 : 0)
-                }
-                .clipShape(shape)
-                .overlay(shape.stroke(LinearGradient(colors: [ac.power ? tint.opacity(0.45) : Theme.stroke, Theme.stroke.opacity(0.4)],
-                                                     startPoint: .top, endPoint: .bottom), lineWidth: 1))
-        }
-        .animation(Motion.smooth, value: ac.power)
         .animation(Motion.smooth, value: warmth)
-        .animation(Motion.snappy, value: ac.mode)
-        .animation(Motion.snappy, value: ac.fan)
     }
 
     var modeIcon: String {
@@ -125,7 +120,6 @@ struct PowerButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: "power").font(.system(size: size * 0.4, weight: .bold)).foregroundStyle(on ? Color.white : Color.primary)
-                .symbolEffect(.bounce, value: on)
                 .frame(width: size, height: size)
                 .background {
                     ZStack {
@@ -141,24 +135,8 @@ struct PowerButton: View {
     }
 }
 
-struct TempReadout: View {
-    let temp: Double
-    let on: Bool
-    let tint: Color
-    var body: some View {
-        HStack(alignment: .top, spacing: 2) {
-            Text("\(Int(temp.rounded()))").font(.system(size: 80, weight: .thin, design: .rounded))
-                .contentTransition(.numericText(value: temp)).monospacedDigit()
-            Text("°C").font(.system(size: 20, weight: .light)).padding(.top, 16)
-        }
-        .foregroundStyle(LinearGradient(colors: [.primary, .primary, on ? tint : .primary], startPoint: .top, endPoint: .bottom))
-        .shadow(color: on ? tint.opacity(0.4) : .clear, radius: 20)
-        .opacity(on ? 1 : 0.45)
-        .animation(Motion.snappy, value: Int(temp.rounded()))
-    }
-}
-
-/// 空调插画：导风板随开关/扫风摆动，出风气流随模式、风速变化
+/// 空调插画：与风扇、灯泡同一套「产品渲染」风格。
+/// 气流是从出风口扇形铺开的柔和气帘和流线（不再是波浪线），随模式、风速、扫风变化。
 struct ACIllustration: View {
     let on: Bool
     let tint: Color
@@ -166,112 +144,104 @@ struct ACIllustration: View {
     var speed: Double = 0.6
     var swing = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var changed = Date.distantPast
-    @State private var alive = true
 
     var body: some View {
-        TimelineView(.animation(paused: reduceMotion || !alive)) { tl in
-            let t = tl.date.timeIntervalSinceReferenceDate
-            let k = intensity(at: tl.date)
-            VStack(spacing: 2) {
+        PowerTimeline(on: on, running: true) { t, k in
+            VStack(spacing: 0) {
                 unit(t: t, k: k)
-                Canvas { ctx, size in draw(&ctx, size, t: t, k: k) }.frame(height: 40)
+                Canvas { ctx, size in draw(&ctx, size, t: t, k: k) }.frame(height: 72)
             }
-        }
-        .onChange(of: on) { _, _ in changed = .now }
-        .task(id: on) {
-            if on { alive = true; return }
-            try? await Task.sleep(nanoseconds: 800_000_000)
-            if !Task.isCancelled { alive = false }
+            .frame(width: 300, height: 136)
         }
     }
 
-    /// 开机时气流渐入，关机时渐隐
-    func intensity(at d: Date) -> Double {
-        if reduceMotion { return on ? 1 : 0 }
-        let e = d.timeIntervalSince(changed)
-        return on ? min(1, max(0, e / 0.9)) : max(0, 1 - e / 0.6)
-    }
+    /// 扫风时导风板和气流一起上下摆动（-1…1）
+    func sway(_ t: Double) -> Double { swing && !reduceMotion ? sin(t * 1.1) : 0 }
 
     func unit(t: Double, k: Double) -> some View {
-        // 导风板开合角度（度），扫风时上下摆动；按正弦换算成可见高度
-        let flap = (swing && !reduceMotion ? 32 + 22 * sin(t * 1.1) : 36) * k
+        // 导风板开合角度（度），扫风时摆动；按正弦换算成可见高度
+        let flap = (36 + 20 * sway(t)) * k
         let flapH = 2 + 5 * sin(flap * .pi / 180)
-        let body = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        let shell = RoundedRectangle(cornerRadius: 16, style: .continuous)
         return ZStack {
-            body.fill(LinearGradient(colors: [Color(white: 0.97), Color(white: 0.80)], startPoint: .top, endPoint: .bottom))
-                .overlay(body.stroke(LinearGradient(colors: [.white, .white.opacity(0)], startPoint: .top, endPoint: .bottom), lineWidth: 1))
-                .overlay(body.stroke(Color.black.opacity(0.08)))
-                .frame(width: 230, height: 58)
-                .shadow(color: on ? tint.opacity(0.5 * k) : .black.opacity(0.3), radius: on ? 6 + 10 * k : 6, y: 4)
-            RoundedRectangle(cornerRadius: 1).fill(Color.black.opacity(0.08)).frame(width: 150, height: 2).offset(y: -6)
+            shell.appliance(tint, k).overlay(shell.stroke(Color.black.opacity(0.08))).frame(width: 230, height: 58)
+            RoundedRectangle(cornerRadius: 1).fill(Color.black.opacity(0.07)).frame(width: 150, height: 2).offset(y: -6)
             // 出风口 + 导风板
             RoundedRectangle(cornerRadius: 3).fill(Color.black.opacity(0.22)).frame(width: 190, height: 6 + 2 * k).offset(y: 17 + k)
             RoundedRectangle(cornerRadius: 1.5)
-                .fill(LinearGradient(colors: [Color(white: 0.70), Color(white: 0.95)], startPoint: .top, endPoint: .bottom))
+                .fill(LinearGradient(colors: [Color(white: 0.70), Color(white: 0.96)], startPoint: .top, endPoint: .bottom))
                 .frame(width: 186 - 4 * k, height: flapH)
                 .offset(y: 19 + 2 * k + flapH / 2)
                 .opacity(k)
             // 指示灯
-            Circle().fill(on ? tint : Color.gray.opacity(0.6)).frame(width: 6, height: 6).offset(x: 96, y: -14)
-                .shadow(color: on ? tint : .clear, radius: 4)
+            Circle().fill(on ? tint : Color.gray.opacity(0.6)).frame(width: 5, height: 5).offset(x: 98, y: -14)
+                .shadow(color: on ? tint : .clear, radius: 3)
         }
-        .background {
-            Rectangle().fill(EllipticalGradient(colors: [tint.opacity(0.55), tint.opacity(0)])).frame(width: 320, height: 110).offset(y: 24)
-                .opacity(k * 0.85)
-        }
+        .frame(height: 64)
+        .background { Ambient(tint, k * 0.85, width: 320, height: 120).offset(y: 30) }
     }
 
     func draw(_ ctx: inout GraphicsContext, _ size: CGSize, t: Double, k: Double) {
         guard k > 0.01 else { return }
         let cx = Double(size.width) / 2, h = Double(size.height)
-        let sway = swing && !reduceMotion ? 0.32 * sin(t * 1.1) : 0
-        let rate = 0.35 + 0.75 * speed
-        let len = 14 + 8 * speed
-        var streams: [(Path, Double)] = []
-        for i in 0..<7 {
-            let fi = Double(i) - 3
-            let angle = sway + fi * 0.05
-            for j in 0..<(speed > 0.75 ? 2 : 1) {
-                let phase = (t * rate + Double(i) * 0.23 + Double(j) * 0.5).truncatingRemainder(dividingBy: 1)
-                let y0 = phase * (h - len)
-                var p = Path()
-                for s in 0...10 {
-                    let y = y0 + len * Double(s) / 10
-                    let x = cx + fi * 30 + y * tan(angle) + 3 * sin(y / 5 + t * 3 + Double(i))
-                    if s == 0 { p.move(to: CGPoint(x: x, y: y)) } else { p.addLine(to: CGPoint(x: x, y: y)) }
-                }
-                streams.append((p, k * 0.9 * sin(phase * .pi)))
-            }
-        }
-        ctx.drawLayer { l in
-            l.addFilter(.blur(radius: 3))
-            for (p, a) in streams { l.stroke(p, with: .color(tint.opacity(a * 0.7)), style: StrokeStyle(lineWidth: 5, lineCap: .round)) }
-        }
-        for (p, a) in streams { ctx.stroke(p, with: .color(tint.opacity(a)), style: StrokeStyle(lineWidth: 2, lineCap: .round)) }
+        let tilt = 0.28 * sway(t)               // 扫风带来的整体偏转
+        let rate = 0.3 + 0.7 * speed            // 气流速度
+        let reach = (0.55 + 0.45 * speed) * h   // 风越大吹得越远
+        let half = 92.0                          // 出风口半宽
+        // 出风口上任一点的水平位置：越往下越向外扩散，并随扫风偏转
+        func x(_ u: Double, _ y: Double) -> Double { cx + u * (half + 0.55 * y) + y * tan(tilt) }
 
-        // 模式粒子：制冷冰晶、制热暖光、除湿水滴
+        // 气帘：从出风口铺开、向下渐隐的一层淡色
+        var curtain = Path()
+        curtain.move(to: CGPoint(x: x(-1, 0), y: 0)); curtain.addLine(to: CGPoint(x: x(1, 0), y: 0))
+        curtain.addLine(to: CGPoint(x: x(1, reach), y: reach)); curtain.addLine(to: CGPoint(x: x(-1, reach), y: reach)); curtain.closeSubpath()
+        ctx.drawLayer { l in
+            l.addFilter(.blur(radius: 8))   // 边缘羽化，像一团空气而不是一块梯形
+            l.fill(curtain, with: .linearGradient(Gradient(colors: [tint.opacity(0.34 * k), tint.opacity(0)]),
+                                                  startPoint: CGPoint(x: cx, y: 0), endPoint: CGPoint(x: cx, y: reach)))
+        }
+
+        // 流线：沿扩散方向向下滑动的细线，两端渐隐
+        let n = 9, len = 16 + 14 * speed
+        for i in 0..<n {
+            let u = (Double(i) / Double(n - 1)) * 2 - 1
+            let ph = (t * rate + Double(i) * 0.37).truncatingRemainder(dividingBy: 1)
+            let y0 = ph * reach, y1 = min(reach, y0 + len)
+            let a = k * sin(ph * .pi) * (1 - 0.35 * abs(u))
+            var p = Path()
+            p.move(to: CGPoint(x: x(u, y0), y: y0)); p.addLine(to: CGPoint(x: x(u, y1), y: y1))
+            let shade = GraphicsContext.Shading.linearGradient(Gradient(colors: [tint.opacity(0), tint.opacity(0.85 * a), tint.opacity(0)]),
+                                                               startPoint: CGPoint(x: x(u, y0), y: y0), endPoint: CGPoint(x: x(u, y1), y: y1))
+            ctx.drawLayer { l in
+                l.addFilter(.blur(radius: 3))
+                l.stroke(p, with: shade, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+            }
+            ctx.opacity = 0.7
+            ctx.stroke(p, with: shade, style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
+            ctx.opacity = 1
+        }
+
+        // 模式粒子：制冷冰晶、制热暖光、除湿水滴，顺着气流方向飘出
         guard mode == .cool || mode == .heat || mode == .dry else { return }
-        func frac(_ x: Double) -> Double { x - floor(x) }
+        func frac(_ v: Double) -> Double { v - floor(v) }
         for i in 0..<12 {
             let seed = Double(i) * 12.9898
             let r1 = frac(sin(seed) * 43758.5453), r2 = frac(sin(seed * 1.7) * 24634.6345)
             let ph = frac(t * rate * (0.5 + 0.4 * r2) + r1)
-            let y = (mode == .dry ? ph * ph : ph) * h
-            let x = cx + (r2 - 0.5) * 200 + y * tan(sway + (r1 - 0.5) * 0.5) + 4 * sin(t * 2 + seed)
-            let a = k * sin(ph * .pi)
+            let y = (mode == .dry ? ph * ph : ph) * reach
+            let px = x(r2 * 2 - 1, y), a = k * sin(ph * .pi)
             switch mode {
             case .cool:
-                let s = 2.2 + 1.8 * r2, tw = 0.55 + 0.45 * sin(t * 6 + seed)
-                ctx.fill(sparkle(CGPoint(x: x, y: y), s), with: .color(Color(red: 0.85, green: 0.95, blue: 1).opacity(a * tw)))
+                let s = 2.2 + 1.6 * r2, tw = 0.6 + 0.4 * sin(t * 5 + seed)
+                ctx.fill(sparkle(CGPoint(x: px, y: y), s), with: .color(Color(red: 0.88, green: 0.96, blue: 1).opacity(a * tw)))
             case .heat:
                 let r = 1.2 + 1.2 * r2
                 ctx.drawLayer { l in
                     l.addFilter(.blur(radius: 1.5))
-                    l.fill(Path(ellipseIn: CGRect(x: x - r, y: y - r, width: 2 * r, height: 2 * r)), with: .color(Color(red: 1, green: 0.78, blue: 0.45).opacity(a * 0.9)))
+                    l.fill(Path(ellipseIn: CGRect(x: px - r, y: y - r, width: 2 * r, height: 2 * r)), with: .color(Color(red: 1, green: 0.8, blue: 0.5).opacity(a * 0.9)))
                 }
             default:
-                ctx.fill(Path(ellipseIn: CGRect(x: x - 1.3, y: y - 1.8, width: 2.6, height: 3.6)), with: .color(Color(red: 0.55, green: 0.85, blue: 1).opacity(a * 0.85)))
+                ctx.fill(Path(ellipseIn: CGRect(x: px - 1.3, y: y - 1.8, width: 2.6, height: 3.6)), with: .color(Color(red: 0.55, green: 0.85, blue: 1).opacity(a * 0.85)))
             }
         }
     }
@@ -292,6 +262,8 @@ struct TempSlider: View {
     let range: ClosedRange<Double>
     let step: Double
     let enabled: Bool
+    /// 空调关机时色带褪色（仍可预设温度）
+    var on = true
     let onChange: (Double) -> Void
     let onCommit: (Double) -> Void
     /// 拖动中滑块 1:1 跟手（不吸附），松手后再吸附到档位
@@ -301,7 +273,7 @@ struct TempSlider: View {
 
     func snap(_ f: Double) -> Double {
         let v = range.lowerBound + max(0, min(1, f)) * (range.upperBound - range.lowerBound)
-        return (v / step).rounded() * step
+        return min(range.upperBound, max(range.lowerBound, (v / step).rounded() * step))
     }
 
     var body: some View {
@@ -316,13 +288,13 @@ struct TempSlider: View {
                         Capsule().fill(Theme.tile.opacity(enabled ? 1 : 0.5))
                         Capsule().fill(Theme.sliderGradient)
                             .mask(alignment: .leading) { Rectangle().frame(width: x + knob / 2) }
-                            .opacity(enabled ? 1 : 0.3)
+                            .saturation(on ? 1 : 0).opacity(!enabled ? 0.3 : on ? 1 : 0.45)
                     }
                     .frame(height: 8)
                     .scaleEffect(x: 1, y: dragging || hovering ? 1.25 : 1)
                     ZStack {
                         Circle().fill(Color.white).overlay(Circle().stroke(Color.black.opacity(0.12))).shadow(color: .black.opacity(dragging ? 0.4 : 0.3), radius: dragging ? 6 : 4, y: 1)
-                        Circle().fill(Theme.warm(f)).frame(width: 9, height: 9)
+                        Circle().fill(on ? Theme.warm(f) : Color.secondary).frame(width: 9, height: 9)
                             .scaleEffect(dragging || hovering ? 1 : 0.6).opacity(dragging || hovering ? 1 : 0)
                     }
                     .frame(width: knob, height: knob)
@@ -337,6 +309,7 @@ struct TempSlider: View {
                 .animation(dragging ? nil : Motion.snappy, value: f)
                 .animation(Motion.press, value: dragging)
                 .animation(Motion.snappy, value: hovering)
+                .animation(Motion.smooth, value: on)
                 .contentShape(Rectangle())
                 .onHover { hovering = $0 && enabled }
                 .gesture(DragGesture(minimumDistance: 0)
@@ -358,7 +331,7 @@ struct TempSlider: View {
             }
             .frame(height: 24)
             HStack {
-                Text("\(Int(range.lowerBound))°"); Spacer(); Text(L("← → 微调", "← → adjust")); Spacer(); Text("\(Int(range.upperBound))°")
+                Text(fmt1(range.lowerBound) + "°"); Spacer(); Text(fmt1(range.upperBound) + "°")
             }.font(.system(size: 10)).foregroundStyle(.secondary)
         }
     }
@@ -373,7 +346,6 @@ struct TileFace: View {
         VStack(spacing: 4) {
             Image(systemName: icon).font(.system(size: 15, weight: .medium)).frame(height: 18)
                 .contentTransition(.symbolEffect(.replace))
-                .symbolEffect(.bounce, value: value)
             Text(title).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
             Text(value).font(.system(size: 11, weight: .semibold)).lineLimit(1).contentTransition(.numericText())
         }
