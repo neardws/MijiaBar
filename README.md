@@ -5,6 +5,9 @@
 > 非小米官方项目。使用与米家 App 相同的云端接口和局域网 miIO 协议。
 
 <p align="center">
+  <img src="docs/screenshots/demo.gif" width="300" alt="动效演示：制冷 → 制热 → 关机 → 开机">
+</p>
+<p align="center">
   <img src="docs/screenshots/list-light.png" width="260" alt="设备列表">
   <img src="docs/screenshots/ac-cool-light.png" width="260" alt="空调（制冷）">
   <img src="docs/screenshots/ac-heat-light.png" width="260" alt="空调（制热）">
@@ -28,6 +31,7 @@
 - **按规格自动生成控件**：从 [miot-spec.org](https://home.miot-spec.com/) 拉取每个型号的规格，开关、滑块、选项菜单都自动生成；空调使用专门设计的大卡片。
 - **设备管理**：按房间分组、收藏置顶、搜索、重命名、手动隐藏；离线和久未使用的设备默认收起。
 - **好看也好用**：自动跟随系统浅色/深色外观；圆角卡片，温度大字和蓝到橙的渐变滑条，空调出风动画，底部一排模式/风速/睡眠/扫风按钮；菜单栏显示收藏空调的温度。
+- **克制的动效**：动画只用来反馈和表达状态，统一使用无回弹的快速弹簧（< 300ms），退出比进入快。空调气流随模式变化（制冷冰晶、制热暖光、除湿水滴），风速决定流速，扫风时导风板和气流一起摆动；温度数字按方向滚动，开关有一圈涟漪；滑条 1:1 跟手、松手吸附，每跨一档触控板轻触一下。键盘操作（↑↓ ↩ Esc ← → 空格）一律瞬间响应；系统开启「减弱动态效果」时只保留淡入淡出。
 - **键盘操作**：`↑/↓` 选择，`↩` 打开，`空格` 开关，`/` 搜索，`Esc` 返回，详情页 `←/→` 调温度。
 - **乐观更新**：点了立刻生效，失败自动回滚并提示。
 - **Agent 接口**：`mijiabar` CLI 和 `mijiabar mcp`（stdio MCP），有关闭/只读/白名单/全部四档权限，写操作可以弹窗确认。
@@ -122,6 +126,7 @@ swift build                         # 调试构建
 scripts/package.sh                  # 生成 dist/MijiaBar.app 和 DMG（有 Developer ID 时自动签名+公证）
 # 可选环境变量：SIGN_IDENTITY（"-" 强制 ad-hoc）、NOTARY_PROFILE（notarytool 钥匙串配置名，默认 MijiaBar-notary）、VERSION
 .build/debug/MijiaBarApp --snapshot docs/screenshots   # 用演示数据重新生成截图
+.build/debug/MijiaBarApp --gif docs/screenshots/demo.gif   # 录制空调卡片动效演示
 ```
 
 项目结构：
@@ -145,6 +150,7 @@ scripts/package.sh                  # 生成 dist/MijiaBar.app 和 DMG（有 Dev
 - QR-code sign-in with the Mi Home app (China server by default, region switchable); credentials stored in Keychain.
 - Auto-fetches homes, rooms and devices; controls them via Xiaomi cloud MIoT RPC with LAN miIO fallback (legacy commands for `lumi.acpartner.*`).
 - Controls are generated from each model's MIoT spec; air conditioners get a dedicated card with a big temperature readout, a blue-to-orange slider and an animated unit.
+- Restrained motion: animation is used only for feedback and state — fast, non-bouncy springs under 300 ms, with exits faster than entrances. Mode-aware airflow (frost sparkles, warm embers, droplets) follows fan speed and swing; digits roll in the direction of change; power toggles ripple; the slider tracks the pointer 1:1, snaps on release and ticks the trackpad at each step. Keyboard actions are instant, and Reduce Motion falls back to cross-fades.
 - Favorites, rooms, search, rename, and auto-hiding of offline or long-unused devices.
 - Agent interface: `mijiabar list|get|set|action` CLI and an stdio MCP server (`mijiabar mcp`) with a disabled / read-only / allowlist / full policy and optional confirmation dialogs.
 

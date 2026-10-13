@@ -13,25 +13,33 @@ struct GenericDetailView: View {
                     let c = device.category.color
                     Button { m.toggle(device) } label: {
                         HStack(spacing: 14) {
-                            ZStack {
-                                Circle().fill(p.isOn ? c : c.opacity(0.15)).frame(width: 56, height: 56)
-                                    .shadow(color: p.isOn ? c.opacity(0.6) : .clear, radius: 14)
-                                Image(systemName: device.category.icon).font(.system(size: 22, weight: .medium)).foregroundStyle(p.isOn ? Color.white : c)
-                            }
+                            DeviceGlyph(category: device.category, on: p.isOn, size: 56, animated: true).ripple(p.isOn, color: c)
                             VStack(alignment: .leading, spacing: 3) {
-                                Text(p.isOn ? L("已开启", "On") : L("已关闭", "Off")).font(.system(size: 20, weight: .semibold))
+                                Text(p.isOn ? L("已开启", "On") : L("已关闭", "Off")).font(.system(size: 20, weight: .semibold)).contentTransition(.numericText())
                                 Text(L("点击或按空格切换", "Click or press Space")).font(.system(size: 11)).foregroundStyle(.secondary)
                             }
                             Spacer()
-                            Image(systemName: "power").font(.system(size: 16, weight: .bold))
+                            Image(systemName: "power").font(.system(size: 16, weight: .bold)).symbolEffect(.bounce, value: p.isOn)
+                                .foregroundStyle(p.isOn ? AnyShapeStyle(c) : AnyShapeStyle(.primary))
                         }
                         .padding(16)
-                        .background(RoundedRectangle(cornerRadius: 20).fill(LinearGradient(colors: [c.opacity(p.isOn ? 0.22 : 0.06), c.opacity(0.02)], startPoint: .topLeading, endPoint: .bottomTrailing)))
-                        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.stroke))
-                    }.buttonStyle(.plain)
+                        .background {
+                            let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            shape.fill(LinearGradient(colors: [c.opacity(p.isOn ? 0.22 : 0.06), c.opacity(0.02)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                .overlay(alignment: .topLeading) {
+                                    Circle().fill(RadialGradient(colors: [c.opacity(0.4), c.opacity(0)], center: .center, startRadius: 0, endRadius: 100))
+                                        .frame(width: 200, height: 200).offset(x: -60, y: -90).opacity(p.isOn ? 1 : 0)
+                                }
+                                .clipShape(shape)
+                                .overlay(shape.stroke(p.isOn ? c.opacity(0.35) : Theme.stroke))
+                        }
+                        .contentShape(RoundedRectangle(cornerRadius: 20))
+                        .animation(Motion.smooth, value: p.isOn)
+                    }.buttonStyle(.pressable)
                 }
                 if let spec = state.spec {
-                    ForEach(spec.controlServices.filter { !$0.properties.isEmpty || !$0.actions.isEmpty }, id: \.iid) { svc in
+                    let services = spec.controlServices.filter { !$0.properties.isEmpty || !$0.actions.isEmpty }
+                    ForEach(services, id: \.iid) { svc in
                         VStack(alignment: .leading, spacing: 8) {
                             Text(zhName(svc.name, fallback: svc.description)).font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
                             ForEach(svc.properties.filter { ($0.readable || $0.writable) && $0.key != spec.mainOnProperty?.key }, id: \.key) { p in
@@ -43,7 +51,7 @@ struct GenericDetailView: View {
                             }
                         }
                         .padding(12).frame(maxWidth: .infinity, alignment: .leading)
-                        .background(RoundedRectangle(cornerRadius: 14).fill(Theme.card))
+                        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.card))
                     }
                 } else {
                     Text(L("这个型号在 miot-spec.org 上没有公开规格，暂时只能查看。", "No public MIoT spec for this model."))
@@ -70,7 +78,9 @@ struct PropRow: View {
             Text(label).font(.system(size: 12)).lineLimit(1)
             Spacer(minLength: 6)
             control
-        }.frame(minHeight: 22)
+        }
+        .frame(minHeight: 22)
+        .animation(Motion.snappy, value: value)
     }
 
     @ViewBuilder var control: some View {
@@ -88,8 +98,9 @@ struct PropRow: View {
                        if !editing, let v = local { m.write(device, prop.key, PropValue.double(v).coerced(to: prop.format)); local = nil }
                    }).frame(width: 130).controlSize(.small)
             Text("\(PropValue.double(local ?? value?.doubleValue ?? r[0]))\(unit)").font(.system(size: 11)).monospacedDigit().frame(width: 52, alignment: .trailing)
+                .contentTransition(.numericText(value: local ?? value?.doubleValue ?? r[0]))
         } else {
-            Text(display).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary).lineLimit(1)
+            Text(display).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary).lineLimit(1).contentTransition(.numericText())
         }
     }
 
@@ -140,7 +151,7 @@ struct SettingsView: View {
                         }
                     }
                     group(L("设备管理", "Devices")) {
-                        Toggle(L("显示已隐藏的设备", "Show hidden devices"), isOn: $m.showHidden)
+                        Toggle(L("显示已隐藏的设备", "Show hidden devices"), isOn: Binding(get: { m.showHidden }, set: { _ in m.toggleShowHidden() }))
                         Text(L("默认隐藏：离线设备，以及云端最后在线时间超过 30 天的设备。右键设备可以手动隐藏/取消隐藏、收藏和重命名。",
                                "Hidden by default: offline devices and devices not seen online for 30+ days. Right-click a device to hide, favorite or rename."))
                             .font(.system(size: 11)).foregroundStyle(.secondary)
@@ -154,12 +165,14 @@ struct SettingsView: View {
                         }.pickerStyle(.segmented)
                         Toggle(L("每次写操作弹窗确认", "Confirm every write"), isOn: $m.agent.confirmWrites)
                         if m.agent.mode == .allowlist {
-                            Text(L("允许 Agent 控制的设备：", "Devices agents may control:")).font(.system(size: 11)).foregroundStyle(.secondary)
-                            ForEach(m.devices.filter { !m.isHidden($0) }) { d in
-                                Toggle(m.displayName(d), isOn: Binding(get: { m.agent.allowlist.contains(d.did) }, set: { on in
-                                    if on { m.agent.allowlist.append(d.did) } else { m.agent.allowlist.removeAll { $0 == d.did } }
-                                })).font(.system(size: 12))
-                            }
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(L("允许 Agent 控制的设备：", "Devices agents may control:")).font(.system(size: 11)).foregroundStyle(.secondary)
+                                ForEach(m.devices.filter { !m.isHidden($0) }) { d in
+                                    Toggle(m.displayName(d), isOn: Binding(get: { m.agent.allowlist.contains(d.did) }, set: { on in
+                                        if on { m.agent.allowlist.append(d.did) } else { m.agent.allowlist.removeAll { $0 == d.did } }
+                                    })).font(.system(size: 12))
+                                }
+                            }.transition(.pop(0.98, anchor: .top))
                         }
                         Text(m.cliPath).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary).textSelection(.enabled)
                         HStack {
@@ -174,16 +187,18 @@ struct SettingsView: View {
                             .foregroundStyle(.red)
                     }.buttonStyle(.plain).help("⌘Q")
                     group(L("关于", "About")) {
-                        row("MijiaBar") { Text("v0.1.4").foregroundStyle(.secondary) }
+                        row("MijiaBar") { Text("v0.1.5-rc2").foregroundStyle(.secondary) }
                         Link("github.com/neardws/MijiaBar", destination: URL(string: "https://github.com/neardws/MijiaBar")!)
 
                     }
                 }
-            }.scrollIndicators(.never)
+            }
+            .scrollIndicators(.never)
+            .animation(Motion.smooth, value: m.agent.mode)
         }
         .padding(12)
         .focusable().focusEffectDisabled()
-        .onKeyPress(.escape) { m.back(); return .handled }
+        .onKeyPress(.escape) { m.back(animated: false); return .handled }
     }
 
     func copy(_ s: String) { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(s, forType: .string) }
@@ -194,7 +209,7 @@ struct SettingsView: View {
         }
         .font(.system(size: 12))
         .padding(12).frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Theme.card))
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.card))
     }
     func row<C: View>(_ t: String, @ViewBuilder _ c: () -> C) -> some View { HStack { Text(t); Spacer(); c() } }
 }

@@ -194,14 +194,20 @@ final class AppModel: ObservableObject {
 
     // MARK: 管理
     func updatePrefs(_ d: Device, _ f: (inout DevicePrefs) -> Void) { var p = prefs.devices[d.did] ?? DevicePrefs(); f(&p); prefs.devices[d.did] = p }
-    func toggleFavorite(_ d: Device) { updatePrefs(d) { $0.favorite = !($0.favorite ?? false) } }
-    func setHidden(_ d: Device, _ h: Bool) { updatePrefs(d) { $0.hidden = h } }
+    func toggleFavorite(_ d: Device) { withAnimation(Motion.smooth) { updatePrefs(d) { $0.favorite = !($0.favorite ?? false) } } }
+    func setHidden(_ d: Device, _ h: Bool) { withAnimation(Motion.smooth) { updatePrefs(d) { $0.hidden = h } } }
+    func toggleShowHidden() { withAnimation(Motion.smooth) { showHidden.toggle() } }
     func rename(_ d: Device, _ name: String) {
         let n = name.trimmingCharacters(in: .whitespaces)
         updatePrefs(d) { $0.alias = n.isEmpty || n == d.name ? nil : n }
     }
-    func open(_ d: Device) { withAnimation(.easeInOut(duration: 0.2)) { page = .detail(d.did) } }
-    func back() { withAnimation(.easeInOut(duration: 0.2)) { page = .list } }
+    // 点击导航带推入动画，返回比进入快；键盘导航（↩ / Esc）瞬间切换
+    func open(_ d: Device, animated: Bool = true) { navigate(.detail(d.did), animated ? Motion.enter : nil) }
+    func back(animated: Bool = true) { navigate(.list, animated ? Motion.exit : nil) }
+    func openSettings() { navigate(.settings, Motion.enter) }
+    private func navigate(_ p: Page, _ a: Animation?) {
+        if let a { withAnimation(a) { page = p } } else { withoutAnimation { page = p } }
+    }
 
     func refresh() async {
         guard !mock, let cloud = controller.cloud else { return }

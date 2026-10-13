@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import MijiaCore
 
 // MARK: - 非空调设备的统一卡片：与空调卡片同一套布局
@@ -367,6 +368,10 @@ struct GradientSlider: View {
     let minLabel: String, maxLabel: String
     let onChange: (Double) -> Void
     let onCommit: (Double) -> Void
+    /// 拖动中 1:1 跟手，松手后吸附到档位；跨档时触控板轻触反馈（与 PR #1 的 TempSlider 一致）
+    @State private var dragFraction: Double?
+    @State private var hovering = false
+    @State private var lastStep: Double?
 
     func snap(_ f: Double) -> Double {
         let v = range.lowerBound + max(0, min(1, f)) * (range.upperBound - range.lowerBound)
@@ -376,17 +381,36 @@ struct GradientSlider: View {
         VStack(spacing: 4) {
             GeometryReader { g in
                 let w = g.size.width, knob: CGFloat = 24
-                let f = (value - range.lowerBound) / max(range.upperBound - range.lowerBound, 1)
+                let dragging = dragFraction != nil
+                let f = dragFraction ?? max(0, min(1, (value - range.lowerBound) / max(range.upperBound - range.lowerBound, 1)))
                 ZStack(alignment: .leading) {
                     Capsule().fill(LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing)).frame(height: 8).opacity(enabled ? 1 : 0.3)
+                        .scaleEffect(x: 1, y: dragging || hovering ? 1.25 : 1)
                     Circle().fill(Color.white).overlay(Circle().stroke(Color.black.opacity(0.12)))
-                        .frame(width: knob, height: knob).shadow(color: .black.opacity(0.3), radius: 4, y: 1)
-                        .offset(x: CGFloat(max(0, min(1, f))) * (w - knob))
+                        .frame(width: knob, height: knob).shadow(color: .black.opacity(dragging ? 0.4 : 0.3), radius: dragging ? 6 : 4, y: 1)
+                        .scaleEffect(dragging ? 1.08 : 1)
+                        .offset(x: CGFloat(f) * (w - knob))
                 }
-                .frame(height: knob).contentShape(Rectangle())
+                .frame(height: knob)
+                .animation(dragging ? nil : Motion.snappy, value: f)
+                .animation(Motion.press, value: dragging)
+                .animation(Motion.snappy, value: hovering)
+                .contentShape(Rectangle())
+                .onHover { hovering = $0 && enabled }
                 .gesture(DragGesture(minimumDistance: 0)
-                    .onChanged { v in onChange(snap(Double((v.location.x - knob / 2) / (w - knob)))) }
-                    .onEnded { v in onCommit(snap(Double((v.location.x - knob / 2) / (w - knob)))) })
+                    .onChanged { v in
+                        let raw = max(0, min(1, Double((v.location.x - knob / 2) / (w - knob))))
+                        dragFraction = raw
+                        let s = snap(raw)
+                        if s != lastStep, lastStep != nil { NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now) }
+                        lastStep = s
+                        onChange(s)
+                    }
+                    .onEnded { v in
+                        let s = snap(Double((v.location.x - knob / 2) / (w - knob)))
+                        dragFraction = nil; lastStep = nil
+                        onCommit(s)
+                    })
                 .allowsHitTesting(enabled)
             }.frame(height: 24)
             HStack { Text(minLabel); Spacer(); Text(maxLabel) }.font(.system(size: 10)).foregroundStyle(.secondary)

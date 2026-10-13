@@ -1,6 +1,8 @@
 import SwiftUI
 import AppKit
 import CoreImage.CIFilterBuiltins
+import ImageIO
+import UniformTypeIdentifiers
 import MijiaCore
 
 /// 演示数据 + 离屏截图（`MijiaBar --snapshot <dir>`），README 截图由此生成，不含任何真实设备信息
@@ -141,6 +143,58 @@ enum Snapshot {
             print(m.loginStatus)
             render(root, out.appendingPathComponent("login-live.png"))
         }
+        exit(0)
+    }
+
+    /// 录一段空调卡片动画（制冷 → 制热 → 关机 → 开机），README 动图由此生成
+    static func gif(to path: String, fps: Double = 20) {
+        let app = NSApplication.shared
+        app.setActivationPolicy(.accessory)
+        let m = AppModel(mock: true)
+        let size = CGSize(width: 360, height: 560)
+        let host = NSHostingView(rootView: RootView().environmentObject(m).frame(width: size.width, height: size.height))
+        host.frame = CGRect(origin: .zero, size: size)
+        let win = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+        win.appearance = NSAppearance(named: .darkAqua)
+        win.contentView = host
+        win.orderFrontRegardless()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.5))
+        guard let d1 = m.device("d1"), let d2 = m.device("d2") else { exit(1) }
+        // (时间点, 动作)
+        let script: [(Double, () -> Void)] = [
+            (0.4, { m.open(d1) }),
+            (2.6, { m.write(d1, "mode", .string("heat")); m.write(d1, "tar_temp", .int(28)) }),
+            (4.4, { m.write(d1, "ver_swing", .string("off")) }),
+            (5.4, { m.toggle(d1) }),
+            (6.6, { m.toggle(d1) }),
+            (8.2, { m.back() }),
+            (9.2, { m.open(d2) }),
+        ]
+        // 截图本身较慢，按每帧实际耗时写入延迟，回放速度与真实一致
+        var frames: [(CGImage, Double)] = []
+        let total = 10.4, start = Date()
+        var next = 0, last = start
+        while Date().timeIntervalSince(start) < total {
+            while next < script.count, script[next].0 <= Date().timeIntervalSince(start) { script[next].1(); next += 1 }
+            RunLoop.main.run(until: Date().addingTimeInterval(1 / fps))
+            host.layoutSubtreeIfNeeded()
+            // 1x 分辨率，控制动图体积
+            if let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size.width), pixelsHigh: Int(size.height), bitsPerSample: 8,
+                                          samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) {
+                rep.size = size
+                host.cacheDisplay(in: host.bounds, to: rep)
+                let now = Date()
+                if let img = rep.cgImage { frames.append((img, now.timeIntervalSince(last))) }
+                last = now
+            }
+        }
+        guard let dst = CGImageDestinationCreateWithURL(URL(fileURLWithPath: path) as CFURL, UTType.gif.identifier as CFString, frames.count, nil) else { exit(1) }
+        CGImageDestinationSetProperties(dst, [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFLoopCount: 0]] as CFDictionary)
+        for (f, delay) in frames {
+            CGImageDestinationAddImage(dst, f, [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFUnclampedDelayTime: delay, kCGImagePropertyGIFDelayTime: delay]] as CFDictionary)
+        }
+        CGImageDestinationFinalize(dst)
+        print("gif \(path) (\(frames.count) frames)")
         exit(0)
     }
 
