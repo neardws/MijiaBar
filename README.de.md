@@ -80,6 +80,8 @@ Ein Gerät wird standardmäßig ans Listenende eingeklappt, wenn eine Bedingung 
 - Dafür wird das mitgelieferte [go2rtc](https://github.com/AlexxIT/go2rtc) (MIT, offizielles Release, SHA-256 beim Build geprüft) genutzt, das nur während des Ansehens läuft: lauscht auf `127.0.0.1` mit zufälligem Port, RTSP / WebRTC / HomeKit (mDNS) sind aus, nur Player und `/api/ws` sind erreichbar; es stoppt 20 s nach dem Schließen und wird beim Beenden von MijiaBar beendet.
 - Die Anmeldung nutzt die QR-Sitzung: MijiaBar speichert das `passToken` aus dem QR-Login im Schlüsselbund und übergibt es go2rtc über eine temporäre `go2rtc.yaml` (Rechte 600, sofort nach dem Einlesen gelöscht). Sitzungen von vor v0.1.8 brauchen einen weiteren QR-Scan (**Einstellungen → Kamera-Livebild**).
 - Schlüssel kommen bei jeder Verbindung aus der Xiaomi-Cloud, das Video per Xiaomi-P2P von der Kamera. Es wird nichts aufgezeichnet. Akku-Türklingeln werden geweckt und entladen sich schneller. Agenten / MCP haben keinen Kamerazugriff.
+- Der Kopf der Detailkarte (und dezent die Listenzeile) zeigt, welcher Weg zuletzt genutzt wurde: **LAN** (direkt per miIO), **Cloud** (Rückfall) oder **BLE-Gateway**.
+- Erkennung „nicht zu Hause“: MijiaBar vergleicht die Subnetze des Mac mit den lokalen IPs der Geräte (bei jedem Netzwechsel neu, nichts gespeichert). Unterwegs wird LAN übersprungen und direkt die Cloud genutzt; Kamerakarten weisen darauf hin, dass Livebild nur zu Hause geht.
 
 <p align="center">
   <img src="docs/screenshots/camera-live-light.png" width="260" alt="">
