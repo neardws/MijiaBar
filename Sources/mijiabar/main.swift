@@ -2,7 +2,7 @@ import Foundation
 import MijiaCore
 
 // mijiabar —— 给人和 Agent 用的米家命令行 / MCP 服务器
-let version = "0.1.7-rc2"
+let version = "0.1.7"
 setvbuf(stdout, nil, _IOLBF, 0)
 
 // setup-prompt 不需要登录信息：在读取钥匙串之前处理，避免触发钥匙串授权弹窗
