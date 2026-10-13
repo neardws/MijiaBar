@@ -14,7 +14,7 @@ public func trValue(_ en: String) -> String {
              "keepwarm": "保温", "keep warm": "保温", "lighting": "照明", "night light": "夜灯", "tv": "电视", "warmth": "暖光", "ct": "色温",
              "normal": "正常", "non existent": "未插卡", "full": "已满", "formatting": "格式化中", "ejected": "已弹出", "fixing": "修复中",
              "no record": "不录制", "motion record": "移动时录制", "all record": "一直录制", "single cycle": "单曲循环", "no faults": "无故障",
-             "over temperature": "过热", "overload": "过载", "delay": "延迟"]
+             "over temperature": "过热", "overload": "过载", "delay": "延迟", "day": "日间", "night": "夜间"]
     return m[en.lowercased()].map { L($0, $0) } ?? en
 }
 

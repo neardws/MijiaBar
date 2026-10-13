@@ -147,7 +147,8 @@ enum Snapshot {
     }
 
     /// 录一段空调卡片动画（制冷 → 制热 → 关机 → 开机），README 动图由此生成
-    static func gif(to path: String, fps: Double = 20) {
+    /// scene: ac（默认，README 动图）、fan、light、plug —— 用来逐帧检查各类设备的状态动画
+    static func gif(to path: String, scene: String = "ac", fps: Double = 20) {
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
         let m = AppModel(mock: true)
@@ -159,20 +160,32 @@ enum Snapshot {
         win.contentView = host
         win.orderFrontRegardless()
         RunLoop.main.run(until: Date().addingTimeInterval(0.5))
-        guard let d1 = m.device("d1"), let d2 = m.device("d2") else { exit(1) }
+        guard let d1 = m.device("d1"), let d2 = m.device("d2"), let d3 = m.device("d3"), let d4 = m.device("d4"), let d5 = m.device("d5") else { exit(1) }
         // (时间点, 动作)
-        let script: [(Double, () -> Void)] = [
-            (0.4, { m.open(d1) }),
-            (2.6, { m.write(d1, "mode", .string("heat")); m.write(d1, "tar_temp", .int(28)) }),
-            (4.4, { m.write(d1, "ver_swing", .string("off")) }),
-            (5.4, { m.toggle(d1) }),
-            (6.6, { m.toggle(d1) }),
-            (8.2, { m.back() }),
-            (9.2, { m.open(d2) }),
+        let scripts: [String: [(Double, () -> Void)]] = [
+            "ac": [
+                (0.4, { m.open(d1) }),
+                (2.6, { m.write(d1, "mode", .string("heat")); m.write(d1, "tar_temp", .int(28)) }),
+                (4.4, { m.write(d1, "ver_swing", .string("off")) }),
+                (5.4, { m.toggle(d1) }),
+                (6.6, { m.toggle(d1) }),
+                (8.2, { m.back() }),
+                (9.2, { m.open(d2) }),
+            ],
+            // 风扇：开机加速 → 调到最高档 → 停止摆头 → 关机滑行
+            "fan": [(0.4, { m.open(d4) }), (1.2, { m.toggle(d4) }), (3.4, { m.write(d4, "2.2", .int(4)) }),
+                    (5.2, { m.write(d4, "2.4", .bool(false)) }), (6.6, { m.toggle(d4) })],
+            // 灯：调暗 → 冷白 → 关灯 → 开灯
+            "light": [(0.4, { m.open(d3) }), (1.6, { m.write(d3, "2.2", .int(20)) }), (3.0, { m.write(d3, "2.3", .int(6500)) }),
+                      (4.6, { m.toggle(d3) }), (6.2, { m.toggle(d3) })],
+            // 插座：大功率 → 断电 → 通电 → 小功率
+            "plug": [(0.4, { m.open(d5) }), (1.8, { m.write(d5, "11.2", .double(1800)) }), (3.6, { m.toggle(d5) }),
+                     (5.0, { m.toggle(d5) }), (6.6, { m.write(d5, "11.2", .double(3)) })],
         ]
+        guard let script = scripts[scene] else { print("unknown scene \(scene); use ac, fan, light or plug"); exit(1) }
         // 截图本身较慢，按每帧实际耗时写入延迟，回放速度与真实一致
         var frames: [(CGImage, Double)] = []
-        let total = 10.4, start = Date()
+        let total = scene == "ac" ? 10.4 : 9.0, start = Date()
         var next = 0, last = start
         while Date().timeIntervalSince(start) < total {
             while next < script.count, script[next].0 <= Date().timeIntervalSince(start) { script[next].1(); next += 1 }
