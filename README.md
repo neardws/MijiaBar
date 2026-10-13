@@ -29,13 +29,11 @@
 
 ## 安装
 
-1. 从 [Releases](https://github.com/neardws/MijiaBar/releases) 下载 `MijiaBar-x.y.z.dmg`，把 MijiaBar 拖进「应用程序」。
-2. 应用是 ad-hoc 签名（没有经过 Apple 公证），第一次打开前在终端执行：
-   ```bash
-   xattr -dr com.apple.quarantine /Applications/MijiaBar.app
-   ```
-   或者在 Finder 里右键 →「打开」。
-3. 第一次控制设备时，macOS 会询问「本地网络」权限，请允许（局域网直连需要）。
+1. 从 [Releases](https://github.com/neardws/MijiaBar/releases) 下载 `MijiaBar-x.y.z.dmg`，把 MijiaBar 拖进「应用程序」，直接打开即可。正式版 DMG 已用 Developer ID 签名并通过 Apple 公证。
+2. 第一次控制设备时，macOS 会询问「本地网络」权限，请允许（局域网直连需要）。
+
+> GitHub Actions 自动构建的 `*-unsigned.dmg` 和自己用源码打包的版本是 ad-hoc 签名、没有公证，首次打开前需要执行
+> `xattr -dr com.apple.quarantine /Applications/MijiaBar.app`，或者在 Finder 里右键 →「打开」。
 
 系统要求：macOS 14 及以上，Apple 芯片和 Intel 都支持。
 
@@ -116,7 +114,8 @@ Claude Code：`claude mcp add mijia -- /Applications/MijiaBar.app/Contents/Resou
 ```bash
 git clone https://github.com/neardws/MijiaBar && cd MijiaBar
 swift build                         # 调试构建
-scripts/package.sh                  # 生成 dist/MijiaBar.app 和 dist/MijiaBar-0.1.0.dmg
+scripts/package.sh                  # 生成 dist/MijiaBar.app 和 DMG（有 Developer ID 时自动签名+公证）
+# 可选环境变量：SIGN_IDENTITY（"-" 强制 ad-hoc）、NOTARY_PROFILE（notarytool 钥匙串配置名，默认 MijiaBar-notary）、VERSION
 .build/debug/MijiaBarApp --snapshot docs/screenshots   # 用演示数据重新生成截图
 ```
 
@@ -144,4 +143,4 @@ scripts/package.sh                  # 生成 dist/MijiaBar.app 和 dist/MijiaBar
 - Favorites, rooms, search, rename, and auto-hiding of offline or long-unused devices.
 - Agent interface: `mijiabar list|get|set|action` CLI and an stdio MCP server (`mijiabar mcp`) with a disabled / read-only / allowlist / full policy and optional confirmation dialogs.
 
-Install: download the DMG from Releases, drag the app to Applications, then run `xattr -dr com.apple.quarantine /Applications/MijiaBar.app` (the app is ad-hoc signed). Requires macOS 14+. MIT licensed.
+Install: download the DMG from Releases, drag the app to Applications, and open it — release DMGs are Developer ID signed and notarized (CI `-unsigned` builds need `xattr -dr com.apple.quarantine /Applications/MijiaBar.app`). Requires macOS 14+. MIT licensed.
