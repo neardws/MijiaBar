@@ -14,7 +14,7 @@ struct ACCardView: View {
         if ac.isCooling { return min(0.3, t) }
         return t
     }
-    var tint: Color { ac.power ? Theme.warm(warmth) : Color(white: 0.45) }
+    var tint: Color { ac.power ? Theme.warm(warmth) : Color.secondary }
 
     var topLabel: String {
         if let r = ac.roomTemp { return L("室温 ", "Room ") + "\(PropValue.double(r))°" }
@@ -32,9 +32,9 @@ struct ACCardView: View {
                 }
                 Spacer()
                 Button { m.write(device, ac.powerKey, ac.power ? ac.offValue : ac.onValue) } label: {
-                    Image(systemName: "power").font(.system(size: 16, weight: .bold)).foregroundStyle(.white)
+                    Image(systemName: "power").font(.system(size: 16, weight: .bold)).foregroundStyle(ac.power ? Color.white : Color.primary)
                         .frame(width: 40, height: 40)
-                        .background(Circle().fill(ac.power ? tint : Color.white.opacity(0.12)))
+                        .background(Circle().fill(ac.power ? tint : Theme.tile))
                         .shadow(color: ac.power ? tint.opacity(0.6) : .clear, radius: 10)
                 }.buttonStyle(.plain).help(L("开关（空格）", "Power (Space)"))
             }
@@ -78,7 +78,7 @@ struct ACCardView: View {
         .padding(18)
         .background(
             RoundedRectangle(cornerRadius: 26)
-                .fill(LinearGradient(colors: [tint.opacity(ac.power ? 0.32 : 0.12), Theme.bg2], startPoint: .top, endPoint: .bottom))
+                .fill(LinearGradient(colors: [tint.opacity(ac.power ? 0.28 : 0.08), tint.opacity(0.02)], startPoint: .top, endPoint: .bottom))
         )
         .overlay(RoundedRectangle(cornerRadius: 26).stroke(Theme.stroke))
         .animation(.easeInOut(duration: 0.4), value: ac.power)
@@ -103,6 +103,7 @@ struct ACIllustration: View {
                 RoundedRectangle(cornerRadius: 16)
                     .fill(LinearGradient(colors: [Color(white: 0.97), Color(white: 0.80)], startPoint: .top, endPoint: .bottom))
                     .frame(width: 230, height: 58)
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.black.opacity(0.08)))
                 RoundedRectangle(cornerRadius: 3).fill(Color.black.opacity(0.22)).frame(width: 190, height: 6).offset(y: 17)
                 RoundedRectangle(cornerRadius: 1).fill(Color.black.opacity(0.08)).frame(width: 150, height: 2).offset(y: -6)
                 Circle().fill(on ? tint : Color.gray.opacity(0.6)).frame(width: 6, height: 6).offset(x: 96, y: -14)
@@ -153,7 +154,7 @@ struct TempSlider: View {
                 let f = (value - range.lowerBound) / max(range.upperBound - range.lowerBound, 1)
                 ZStack(alignment: .leading) {
                     Capsule().fill(Theme.sliderGradient).frame(height: 8).opacity(enabled ? 1 : 0.3)
-                    Circle().fill(.white).frame(width: knob, height: knob).shadow(color: .black.opacity(0.35), radius: 4, y: 1)
+                    Circle().fill(Color.white).overlay(Circle().stroke(Color.black.opacity(0.12))).frame(width: knob, height: knob).shadow(color: .black.opacity(0.35), radius: 4, y: 1)
                         .offset(x: CGFloat(f) * (w - knob))
                 }
                 .frame(height: knob)
@@ -181,7 +182,7 @@ struct TileFace: View {
             Text(value).font(.system(size: 11, weight: .semibold)).lineLimit(1)
         }
         .frame(maxWidth: .infinity).padding(.vertical, 10)
-        .background(RoundedRectangle(cornerRadius: 14).fill(active ? tint.opacity(0.30) : Color.white.opacity(0.07)))
+        .background(RoundedRectangle(cornerRadius: 14).fill(active ? tint.opacity(0.30) : Theme.tile))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.stroke))
         .contentShape(RoundedRectangle(cornerRadius: 14))
     }

@@ -1,11 +1,15 @@
 import SwiftUI
+import AppKit
 import MijiaCore
 
 enum Theme {
-    static let bg = Color(red: 0.075, green: 0.08, blue: 0.10)
-    static let bg2 = Color(red: 0.11, green: 0.12, blue: 0.15)
-    static let card = Color.white.opacity(0.06)
-    static let stroke = Color.white.opacity(0.08)
+    // 全部使用系统语义色，自动适配浅色/深色外观
+    static let bg = Color(nsColor: .windowBackgroundColor)
+    static let bg2 = Color(nsColor: .controlBackgroundColor)
+    static let card = Color.primary.opacity(0.045)
+    static let hover = Color.primary.opacity(0.09)
+    static let stroke = Color.primary.opacity(0.08)
+    static let tile = Color.primary.opacity(0.06)
     static let cool = Color(red: 0.30, green: 0.62, blue: 1.0)
     static let heat = Color(red: 1.0, green: 0.55, blue: 0.22)
     /// 0 = 冷（蓝）… 1 = 热（橙）

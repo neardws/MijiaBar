@@ -5,14 +5,19 @@
 > 非小米官方项目。使用与米家 App 相同的云端接口和局域网 miIO 协议。
 
 <p align="center">
-  <img src="docs/screenshots/list.png" width="260" alt="设备列表">
-  <img src="docs/screenshots/ac-cool.png" width="260" alt="空调（制冷）">
-  <img src="docs/screenshots/ac-heat.png" width="260" alt="空调（制热）">
+  <img src="docs/screenshots/list-light.png" width="260" alt="设备列表">
+  <img src="docs/screenshots/ac-cool-light.png" width="260" alt="空调（制冷）">
+  <img src="docs/screenshots/ac-heat-light.png" width="260" alt="空调（制热）">
+</p>
+<p align="center"><b>深色模式 / Dark</b><br>
+  <img src="docs/screenshots/list-dark.png" width="260" alt="深色列表">
+  <img src="docs/screenshots/ac-cool-dark.png" width="260" alt="深色空调">
+  <img src="docs/screenshots/ac-heat-dark.png" width="260" alt="深色制热">
 </p>
 <p align="center">
-  <img src="docs/screenshots/light.png" width="260" alt="灯">
-  <img src="docs/screenshots/settings.png" width="260" alt="设置">
-  <img src="docs/screenshots/login.png" width="260" alt="扫码登录">
+  <img src="docs/screenshots/light-light.png" width="260" alt="灯">
+  <img src="docs/screenshots/settings-light.png" width="260" alt="设置">
+  <img src="docs/screenshots/login-light.png" width="260" alt="扫码登录">
 </p>
 
 ## 功能
@@ -22,7 +27,7 @@
 - **双通道控制**：MIoT 设备走小米云 `miotspec` 接口，失败时回落到局域网 miIO；空调伴侣（`lumi.acpartner.*`）使用旧版命令并优先走局域网。
 - **按规格自动生成控件**：从 [miot-spec.org](https://home.miot-spec.com/) 拉取每个型号的规格，开关、滑块、选项菜单都自动生成；空调使用专门设计的大卡片。
 - **设备管理**：按房间分组、收藏置顶、搜索、重命名、手动隐藏；离线和久未使用的设备默认收起。
-- **好看也好用**：深色圆角卡片，温度大字和蓝到橙的渐变滑条，空调出风动画，底部一排模式/风速/睡眠/扫风按钮；菜单栏显示收藏空调的温度。
+- **好看也好用**：自动跟随系统浅色/深色外观；圆角卡片，温度大字和蓝到橙的渐变滑条，空调出风动画，底部一排模式/风速/睡眠/扫风按钮；菜单栏显示收藏空调的温度。
 - **键盘操作**：`↑/↓` 选择，`↩` 打开，`空格` 开关，`/` 搜索，`Esc` 返回，详情页 `←/→` 调温度。
 - **乐观更新**：点了立刻生效，失败自动回滚并提示。
 - **Agent 接口**：`mijiabar` CLI 和 `mijiabar mcp`（stdio MCP），有关闭/只读/白名单/全部四档权限，写操作可以弹窗确认。

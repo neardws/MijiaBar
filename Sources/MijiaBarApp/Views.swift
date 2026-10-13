@@ -6,7 +6,6 @@ struct RootView: View {
     @EnvironmentObject var m: AppModel
     var body: some View {
         ZStack {
-            Theme.bg.ignoresSafeArea()
             Group {
                 if m.session == nil { LoginView() }
                 else {
@@ -22,13 +21,14 @@ struct RootView: View {
         .overlay(alignment: .bottom) {
             if let t = m.toast {
                 Text(t).font(.system(size: 12, weight: .medium)).padding(.horizontal, 14).padding(.vertical, 8)
-                    .background(Capsule().fill(Color.black.opacity(0.85))).overlay(Capsule().stroke(Theme.stroke))
+                    .background(.regularMaterial, in: Capsule()).overlay(Capsule().stroke(Theme.stroke))
+                    .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
                     .padding(.bottom, 14).transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .animation(.spring(duration: 0.3), value: m.toast)
-        .frame(width: 360, height: 600)
-        .preferredColorScheme(.dark)
+        .frame(width: 360, height: 560)
+        .background(Theme.bg)
         .onAppear { NSApp.activate(ignoringOtherApps: true) }
     }
 }
@@ -77,12 +77,12 @@ struct LoginView: View {
 struct DeviceListView: View {
     @EnvironmentObject var m: AppModel
     @FocusState private var searchFocused: Bool
-    @State private var cursor = 0
+    @State private var cursor = -1
 
     var body: some View {
         let flat = m.flatVisible
-        VStack(spacing: 10) {
-            header
+        VStack(spacing: 8) {
+            header.padding(.horizontal, 14).padding(.top, 12)
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                 TextField(L("搜索设备、房间、型号", "Search devices, rooms, models"), text: $m.search)
@@ -90,8 +90,10 @@ struct DeviceListView: View {
                     .onSubmit { searchFocused = false; cursor = 0 }
                 if !m.search.isEmpty { Button { m.search = "" } label: { Image(systemName: "xmark.circle.fill") }.buttonStyle(.plain).foregroundStyle(.secondary) }
             }
-            .font(.system(size: 13)).padding(.horizontal, 10).padding(.vertical, 7)
-            .background(RoundedRectangle(cornerRadius: 10).fill(Theme.card))
+            .font(.system(size: 12)).padding(.horizontal, 9).padding(.vertical, 6)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Theme.card))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.stroke))
+            .padding(.horizontal, 14)
 
             if m.devices.isEmpty {
                 Spacer()
@@ -101,24 +103,33 @@ struct DeviceListView: View {
             } else {
                 ScrollViewReader { proxy in
                     ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 6) {
+                        LazyVStack(alignment: .leading, spacing: 2) {
+                            let favACs = m.favoriteACs
+                            if !favACs.isEmpty {
+                                SectionTitle(L("收藏", "Favorites"))
+                                LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                                    ForEach(favACs) { d in ACMiniCard(device: d).onTapGesture { m.open(d) } }
+                                }.padding(.bottom, 4)
+                            }
                             ForEach(m.sections) { sec in
-                                Text(sec.title).font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary).padding(.top, 6).padding(.leading, 4)
-                                ForEach(sec.devices) { d in
-                                    DeviceRow(device: d, focused: flat.indices.contains(cursor) && flat[cursor] == d.did)
-                                        .id(d.did)
-                                        .onTapGesture { m.open(d) }
+                                if !(sec.id == "fav" && sec.devices.isEmpty) {
+                                    if sec.id != "fav" || favACs.isEmpty { SectionTitle(sec.title) }
+                                    ForEach(sec.id == "fav" ? sec.devices.filter { $0.category != .ac } : sec.devices) { d in
+                                        DeviceRow(device: d, focused: flat.indices.contains(cursor) && flat[cursor] == d.did)
+                                            .id(d.did)
+                                            .onTapGesture { m.open(d) }
+                                    }
                                 }
                             }
                             footer
                         }
+                        .padding(.horizontal, 10).padding(.bottom, 12)
                     }
-                    .scrollIndicators(.never)
+                    .scrollIndicators(.automatic)
                     .onChange(of: cursor) { _, c in if flat.indices.contains(c) { withAnimation { proxy.scrollTo(flat[c], anchor: .center) } } }
                 }
             }
         }
-        .padding(12)
         .focusable()
         .focusEffectDisabled()
         .onKeyPress(.downArrow) { cursor = min(cursor + 1, max(flat.count - 1, 0)); return .handled }
@@ -129,17 +140,20 @@ struct DeviceListView: View {
     }
 
     var header: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             Menu {
-                Button(L("全部家庭", "All homes")) { m.prefs.selectedHome = nil }
-                ForEach(m.homes) { h in Button(h.name) { m.prefs.selectedHome = h.id } }
+                ForEach(m.homes) { h in
+                    Button { m.prefs.selectedHome = h.id } label: {
+                        if h.id == m.currentHomeId { Label(h.name, systemImage: "checkmark") } else { Text(h.name) }
+                    }
+                }
             } label: {
                 HStack(spacing: 4) {
-                    Text(m.homes.first { $0.id == m.prefs.selectedHome }?.name ?? L("米家", "Mi Home")).font(.system(size: 17, weight: .bold))
-                    Image(systemName: "chevron.down").font(.system(size: 10, weight: .bold)).foregroundStyle(.secondary)
+                    Text(m.currentHomeName).font(.system(size: 15, weight: .semibold)).foregroundStyle(.primary)
+                    if m.homes.count > 1 { Image(systemName: "chevron.up.chevron.down").font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary) }
                 }
             }
-            .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+            .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().disabled(m.homes.count < 2)
             Spacer()
             if m.refreshing { ProgressView().controlSize(.small) }
             IconButton(icon: "arrow.clockwise", help: L("刷新", "Refresh")) { Task { await m.refresh() } }
@@ -159,13 +173,47 @@ struct DeviceListView: View {
     }
 }
 
+struct SectionTitle: View {
+    let text: String
+    init(_ t: String) { text = t }
+    var body: some View {
+        Text(text).font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
+            .padding(.top, 10).padding(.bottom, 3).padding(.leading, 6)
+    }
+}
+
 struct IconButton: View {
     let icon: String; let help: String; let action: () -> Void
+    @State private var hover = false
     var body: some View {
         Button(action: action) {
-            Image(systemName: icon).font(.system(size: 13, weight: .medium)).frame(width: 28, height: 28)
-                .background(Circle().fill(Theme.card))
-        }.buttonStyle(.plain).help(help)
+            Image(systemName: icon).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+                .frame(width: 26, height: 26)
+                .background(RoundedRectangle(cornerRadius: 7).fill(hover ? Theme.hover : .clear))
+        }.buttonStyle(.plain).help(help).onHover { hover = $0 }
+    }
+}
+
+/// 自绘开关：开启时填充设备颜色，关闭时为中性灰，浅色/深色都清晰
+struct MiniSwitch: View {
+    let isOn: Bool; let tint: Color; let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            ZStack(alignment: isOn ? .trailing : .leading) {
+                Capsule().fill(isOn ? tint : Color.primary.opacity(0.14)).frame(width: 30, height: 18)
+                Circle().fill(Color.white).shadow(color: .black.opacity(0.2), radius: 1, y: 0.5).frame(width: 14, height: 14).padding(2)
+            }
+            .animation(.snappy(duration: 0.18), value: isOn)
+        }.buttonStyle(.plain).accessibilityLabel(isOn ? L("已开启", "On") : L("已关闭", "Off"))
+    }
+}
+
+struct StatusChip: View {
+    let text: String; let color: Color
+    var body: some View {
+        Text(text).font(.system(size: 10, weight: .medium)).foregroundStyle(color)
+            .padding(.horizontal, 6).padding(.vertical, 2)
+            .background(Capsule().fill(color.opacity(0.14)))
     }
 }
 
@@ -173,37 +221,78 @@ struct DeviceRow: View {
     @EnvironmentObject var m: AppModel
     let device: Device
     let focused: Bool
+    @State private var hover = false
     var body: some View {
         let power = m.powerInfo(device)
         let on = power?.isOn ?? false
         let c = device.category.color
         HStack(spacing: 10) {
-            ZStack {
-                Circle().fill(on ? c : c.opacity(0.16))
-                Image(systemName: device.category.icon).font(.system(size: 14, weight: .medium)).foregroundStyle(on ? Color.white : c)
-            }.frame(width: 34, height: 34)
-            VStack(alignment: .leading, spacing: 2) {
+            Image(systemName: device.category.icon).font(.system(size: 13, weight: .medium))
+                .foregroundStyle(on ? c : Color.secondary)
+                .frame(width: 26, height: 26)
+                .background(RoundedRectangle(cornerRadius: 7).fill(on ? c.opacity(0.16) : Theme.card))
+            VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 4) {
-                    Text(m.displayName(device)).font(.system(size: 13, weight: .medium)).lineLimit(1)
-                    if m.isFavorite(device) { Image(systemName: "star.fill").font(.system(size: 9)).foregroundStyle(.yellow) }
-                    if m.prefs.devices[device.did]?.hidden == true || (m.showHidden && m.isHidden(device)) {
-                        Image(systemName: "eye.slash").font(.system(size: 9)).foregroundStyle(.secondary)
-                    }
+                    Text(m.displayName(device)).font(.system(size: 13)).foregroundStyle(.primary).lineLimit(1)
+                    if m.isFavorite(device) { Image(systemName: "star.fill").font(.system(size: 8)).foregroundStyle(.yellow) }
                 }
-                Text(m.subtitle(device)).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                let sub = m.subtitle(device)
+                if !sub.isEmpty { Text(sub).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1) }
             }
             Spacer(minLength: 4)
             if m.busy.contains(device.did) { ProgressView().controlSize(.mini) }
+            if !device.isOnline { StatusChip(text: L("离线", "Offline"), color: .secondary) }
+            else if m.isHidden(device) { StatusChip(text: L("已隐藏", "Hidden"), color: .secondary) }
             if let power, device.isOnline {
-                Toggle("", isOn: Binding(get: { power.isOn }, set: { _ in m.toggle(device) }))
-                    .toggleStyle(.switch).controlSize(.mini).labelsHidden().tint(c)
+                MiniSwitch(isOn: power.isOn, tint: c) { m.toggle(device) }
+            } else if device.isOnline {
+                Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary)
             }
         }
-        .padding(.horizontal, 10).padding(.vertical, 8)
-        .background(RoundedRectangle(cornerRadius: 12).fill(focused ? Color.white.opacity(0.13) : Theme.card))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(focused ? c.opacity(0.6) : .clear))
-        .opacity(device.isOnline ? 1 : 0.5)
+        .padding(.horizontal, 8).frame(height: 44)
+        .background(RoundedRectangle(cornerRadius: 9).fill(focused ? Theme.hover : hover ? Theme.card : .clear))
+        .opacity(device.isOnline ? 1 : 0.55)
         .contentShape(Rectangle())
+        .onHover { hover = $0 }
+        .task { m.loadStateIfNeeded(device) }
+        .contextMenu { DeviceMenu(device: device) }
+    }
+}
+
+/// 收藏区的空调迷你卡片
+struct ACMiniCard: View {
+    @EnvironmentObject var m: AppModel
+    let device: Device
+    @State private var hover = false
+    var body: some View {
+        let ac = m.states[device.did].flatMap(ACState.make)
+        let on = ac?.power ?? false
+        let tint = on ? (ac!.isHeating ? Theme.heat : Theme.cool) : Color.secondary
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Image(systemName: ac?.isHeating == true ? "sun.max.fill" : "snowflake").font(.system(size: 12, weight: .semibold)).foregroundStyle(tint)
+                Spacer()
+                if let ac {
+                    Button { m.write(device, ac.powerKey, on ? ac.offValue : ac.onValue) } label: {
+                        Image(systemName: "power").font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(on ? Color.white : Color.secondary)
+                            .frame(width: 22, height: 22).background(Circle().fill(on ? tint : Theme.tile))
+                    }.buttonStyle(.plain)
+                } else if !device.isOnline { StatusChip(text: L("离线", "Offline"), color: .secondary) }
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 1) {
+                Text(ac?.target.map { "\(Int($0))" } ?? "--").font(.system(size: 26, weight: .light, design: .rounded)).monospacedDigit()
+                Text("°C").font(.system(size: 11)).foregroundStyle(.secondary)
+            }.foregroundStyle(on ? Color.primary : Color.secondary)
+            Text(m.displayName(device)).font(.system(size: 12, weight: .medium)).lineLimit(1)
+            Text(ac.map { on ? "\($0.modeLabel) · \(L("风速", "Fan")) \($0.fanLabel)" : L("已关机", "Off") } ?? (device.roomName ?? ""))
+                .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 12).fill(LinearGradient(colors: [tint.opacity(on ? 0.18 : 0.05), tint.opacity(on ? 0.06 : 0.02)], startPoint: .topLeading, endPoint: .bottomTrailing)))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(hover ? tint.opacity(0.5) : Theme.stroke))
+        .contentShape(RoundedRectangle(cornerRadius: 12))
+        .onHover { hover = $0 }
         .task { m.loadStateIfNeeded(device) }
         .contextMenu { DeviceMenu(device: device) }
     }
@@ -232,7 +321,7 @@ struct RenameOverlay: View {
     @FocusState private var focused: Bool
     var body: some View {
         ZStack {
-            Color.black.opacity(0.5).ignoresSafeArea().onTapGesture { m.renaming = nil }
+            Color.black.opacity(0.25).ignoresSafeArea().onTapGesture { m.renaming = nil }
             VStack(spacing: 12) {
                 Text(L("重命名", "Rename")).font(.headline)
                 TextField(device.name, text: $text).textFieldStyle(.roundedBorder).focused($focused).onSubmit(save)
@@ -243,7 +332,7 @@ struct RenameOverlay: View {
                 }
             }
             .padding(18).frame(width: 280)
-            .background(RoundedRectangle(cornerRadius: 16).fill(Theme.bg2)).overlay(RoundedRectangle(cornerRadius: 16).stroke(Theme.stroke))
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(Theme.stroke))
         }
         .onAppear { focused = true }
     }
@@ -266,7 +355,7 @@ struct DetailView: View {
                 Spacer()
                 if m.busy.contains(device.did) { ProgressView().controlSize(.small) }
                 IconButton(icon: m.isFavorite(device) ? "star.fill" : "star", help: L("收藏", "Favorite")) { m.toggleFavorite(device) }
-                Menu { DeviceMenu(device: device) } label: { Image(systemName: "ellipsis").frame(width: 28, height: 28).background(Circle().fill(Theme.card)) }
+                Menu { DeviceMenu(device: device) } label: { Image(systemName: "ellipsis").foregroundStyle(.secondary).frame(width: 26, height: 26) }
                     .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
             }
             if let st = m.states[device.did] {

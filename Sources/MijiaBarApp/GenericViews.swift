@@ -26,7 +26,7 @@ struct GenericDetailView: View {
                             Image(systemName: "power").font(.system(size: 16, weight: .bold))
                         }
                         .padding(16)
-                        .background(RoundedRectangle(cornerRadius: 20).fill(LinearGradient(colors: [c.opacity(p.isOn ? 0.28 : 0.08), Theme.bg2], startPoint: .topLeading, endPoint: .bottomTrailing)))
+                        .background(RoundedRectangle(cornerRadius: 20).fill(LinearGradient(colors: [c.opacity(p.isOn ? 0.22 : 0.06), c.opacity(0.02)], startPoint: .topLeading, endPoint: .bottomTrailing)))
                         .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.stroke))
                     }.buttonStyle(.plain)
                 }
@@ -150,7 +150,7 @@ struct SettingsView: View {
                         }
                     }
                     group(L("关于", "About")) {
-                        row("MijiaBar") { Text("v0.1.1").foregroundStyle(.secondary) }
+                        row("MijiaBar") { Text("v0.1.2").foregroundStyle(.secondary) }
                         Link("github.com/neardws/MijiaBar", destination: URL(string: "https://github.com/neardws/MijiaBar")!)
                         Button(L("退出 MijiaBar", "Quit MijiaBar")) { NSApp.terminate(nil) }
                     }
