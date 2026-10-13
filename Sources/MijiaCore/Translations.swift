@@ -280,6 +280,9 @@ public let uiTable: [String: [String]] = [
     "Last read/control went through the Xiaomi cloud (automatic fallback when LAN isn't available or the device is cloud-only)": ["Letztes Lesen/Steuern lief über die Xiaomi-Cloud (automatischer Rückfall, wenn LAN nicht verfügbar ist oder das Gerät nur Cloud kann)", "Dernière lecture/commande via le cloud Xiaomi (repli automatique si le LAN est indisponible ou si l'appareil est cloud uniquement)", "La última lectura/control fue por la nube de Xiaomi (recurso automático si la LAN no está disponible o el dispositivo solo usa la nube)", "Ultima lettura/comando tramite il cloud Xiaomi (ripiego automatico se la LAN non è disponibile o il dispositivo è solo cloud)", "Последнее чтение/управление шло через облако Xiaomi (автоматически, если LAN недоступна или устройство работает только через облако)", "直近の読み取り/操作は Xiaomi クラウド経由です（LAN が使えない場合やクラウド専用デバイスでは自動で切り替え）"],
     "Bluetooth device: relayed through the Xiaomi cloud by a BLE gateway": ["Bluetooth-Gerät: über die Xiaomi-Cloud von einem BLE-Gateway weitergeleitet", "Appareil Bluetooth : relayé via le cloud Xiaomi par une passerelle BLE", "Dispositivo Bluetooth: retransmitido por una pasarela BLE a través de la nube de Xiaomi", "Dispositivo Bluetooth: inoltrato tramite il cloud Xiaomi da un gateway BLE", "Bluetooth-устройство: через облако Xiaomi и BLE-шлюз", "Bluetooth デバイス：Xiaomi クラウド経由で BLE ゲートウェイが中継"],
     "Not on your home network, live view isn't available (it only works on the same local network as the camera)": ["Nicht im Heimnetz – Livebild nicht verfügbar (funktioniert nur im selben lokalen Netzwerk wie die Kamera)", "Hors du réseau domestique, direct indisponible (il ne fonctionne que sur le même réseau local que la caméra)", "Fuera de la red de casa, el directo no está disponible (solo funciona en la misma red local que la cámara)", "Non sei sulla rete di casa, live non disponibile (funziona solo sulla stessa rete locale della videocamera)", "Вы не в домашней сети — трансляция недоступна (работает только в той же локальной сети, что и камера)", "自宅のネットワークにいないためライブ映像は使えません（カメラと同じローカルネットワークでのみ利用できます）"],
+    "Not supported": ["Nicht unterstützt", "Non pris en charge", "No compatible", "Non supportato", "Не поддерживается", "非対応"],
+    "Switch": ["Schalter", "Interrupteur", "Interruptor", "Interruttore", "Выключатель", "スイッチ"],
+    "Power on/off": ["Ein/Aus", "Marche/arrêt", "Encendido/apagado", "Accensione/spegnimento", "Питание", "電源"],
 ]
 
 /// 设备状态取值（键为小写英文）
@@ -774,4 +777,5 @@ public let hantTable: [String: String] = [
     "最近一次读取或控制走小米云（局域网不可用或该设备只支持云端时自动回退）": "最近一次讀取或控制走小米雲端（區域網路無法使用或該裝置只支援雲端時自動改用）",
     "蓝牙设备：经小米云由蓝牙网关转发": "藍牙裝置：經小米雲端由藍牙閘道轉發",
     "不在家庭网络，无法看直播（直播只能在同一局域网内连接摄像头）": "不在家庭網路，無法看直播（直播只能在同一個區域網路內連線攝影機）",
+    "电源": "電源",
 ]
