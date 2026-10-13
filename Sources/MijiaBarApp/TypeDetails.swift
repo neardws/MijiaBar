@@ -56,7 +56,7 @@ struct FanDetail: View {
                 PropTile(dc: dc, prop: dc.p("mode", in: "fan"), title: L("模式", "Mode"), icon: "wind", tint: tint)
                 PropTile(dc: dc, prop: swing, title: L("摆头", "Oscillate"), icon: "arrow.left.and.right", tint: tint)
                 PropTile(dc: dc, prop: dc.p("horizontal-swing-included-angle") ?? dc.p("horizontal-angle"), title: L("摆头角度", "Angle"), icon: "angle", tint: tint)
-                PropTile(dc: dc, prop: dc.p("physical-controls-locked"), title: L("童锁", "Child lock"), icon: "lock.fill", tint: tint)
+                PropTile(dc: dc, prop: dc.p("physical-controls-locked"), title: L("童锁", "Child lock"), icon: "lock", tint: tint)
             }
         }
     }
@@ -81,14 +81,14 @@ struct LightDetail: View {
             HStack(spacing: 8) {
                 if let ct, let r = ct.range, r.count >= 2 {
                     let clamp = { (v: Double) in min(max(v, r[0]), r[1]) }
-                    PresetTile(dc: dc, prop: ct, title: L("色温", "Color temp"), icon: "thermometer.sun.fill", tint: tint,
+                    PresetTile(dc: dc, prop: ct, title: L("色温", "Color temp"), icon: "thermometer.sun", tint: tint,
                                presets: [(L("暖光", "Warm"), clamp(2700)), (L("柔和", "Soft"), clamp(3500)), (L("自然", "Neutral"), clamp(4500)), (L("冷白", "Cool"), clamp(6500))])
                 }
                 if let mode = dc.p("mode", in: "light"), (mode.options?.count ?? 0) > 1 {
                     PropTile(dc: dc, prop: mode, title: L("场景", "Scene"), icon: "sparkles", tint: tint)
                 }
                 if let bri {
-                    PresetTile(dc: dc, prop: bri, title: L("亮度预设", "Presets"), icon: "sun.max.fill", tint: tint,
+                    PresetTile(dc: dc, prop: bri, title: L("亮度预设", "Presets"), icon: "sun.max", tint: tint,
                                presets: [(L("夜灯 10%", "10%"), 10), (L("柔光 40%", "40%"), 40), (L("明亮 70%", "70%"), 70), (L("最亮 100%", "100%"), 100)])
                 }
             }
@@ -113,9 +113,9 @@ struct PlugDetail: View {
             ReadoutRow(items: [("thermometer.medium", dc.num(dc.p("temperature")).map { "\(Int($0))°C" }),
                                ("chart.bar.fill", dc.num(dc.p("power-consumption")).map { L("累计 ", "Total ") + fmt1($0) })], tint: tint)
             HStack(spacing: 8) {
-                PropTile(dc: dc, prop: dc.p("on", in: "indicator-light"), title: L("指示灯", "Indicator"), icon: "lightbulb.led.fill", tint: tint)
-                PropTile(dc: dc, prop: dc.p("physical-controls-locked"), title: L("童锁", "Child lock"), icon: "lock.fill", tint: tint)
-                PresetTile(dc: dc, prop: dc.p("default-power-on-state"), title: L("来电状态", "Power-on"), icon: "arrow.clockwise.circle.fill", tint: tint,
+                PropTile(dc: dc, prop: dc.p("on", in: "indicator-light"), title: L("指示灯", "Indicator"), icon: "lightbulb.led", tint: tint)
+                PropTile(dc: dc, prop: dc.p("physical-controls-locked"), title: L("童锁", "Child lock"), icon: "lock", tint: tint)
+                PresetTile(dc: dc, prop: dc.p("default-power-on-state"), title: L("来电状态", "Power-on"), icon: "arrow.clockwise.circle", tint: tint,
                            presets: [(L("断电", "Off"), 0), (L("通电", "On"), 1), (L("记忆", "Last"), 2)])
             }
         }
@@ -143,11 +143,11 @@ struct TVDetail: View {
             }
             HStack(spacing: 8) {
                 PropTile(dc: dc, prop: input, title: L("信号源", "Input"), icon: "rectangle.connected.to.line.below", tint: tint)
-                PropTile(dc: dc, prop: dc.p("mute", in: "speaker"), title: L("静音", "Mute"), icon: "speaker.slash.fill", tint: tint)
+                PropTile(dc: dc, prop: dc.p("mute", in: "speaker"), title: L("静音", "Mute"), icon: "speaker.slash", tint: tint)
                 if let a = dc.a(playing ? "pause" : "play", in: "play-control") {
                     ActionTile(title: playing ? L("暂停", "Pause") : L("播放", "Play"), icon: playing ? "pause.fill" : "play.fill", tint: tint) { m.runAction(d, a) }
                 }
-                PropTile(dc: dc, prop: dc.p("no-disturb"), title: L("免打扰", "Do not disturb"), icon: "moon.fill", tint: tint)
+                PropTile(dc: dc, prop: dc.p("no-disturb"), title: L("免打扰", "Do not disturb"), icon: "moon", tint: tint)
             }
         }
     }
@@ -175,7 +175,7 @@ struct SpeakerDetail: View {
                     ActionTile(title: playing ? L("暂停", "Pause") : L("播放", "Play"), icon: playing ? "pause.fill" : "play.fill", tint: tint, active: playing) { m.runAction(d, a) }
                 }
                 if let a = dc.a("next") { ActionTile(title: L("下一首", "Next"), icon: "forward.fill", tint: tint) { m.runAction(d, a) } }
-                PropTile(dc: dc, prop: dc.p("mute", in: "speaker"), title: L("静音", "Mute"), icon: "speaker.slash.fill", tint: tint)
+                PropTile(dc: dc, prop: dc.p("mute", in: "speaker"), title: L("静音", "Mute"), icon: "speaker.slash", tint: tint)
             }
         }
     }
@@ -197,10 +197,10 @@ struct CameraDetail: View {
             ReadoutRow(items: [("sdcard.fill", dc.text(dc.p("status", in: "memory-card-management")).map { L("存储卡 ", "SD ") + $0 }),
                                ("battery.75percent", dc.num(dc.p("battery-level")).map { L("电量 ", "Battery ") + "\(Int($0))%" })], tint: tint)
             HStack(spacing: 8) {
-                PropTile(dc: dc, prop: dc.p("night-shot"), title: L("夜视", "Night"), icon: "moon.stars.fill", tint: tint)
+                PropTile(dc: dc, prop: dc.p("night-shot"), title: L("夜视", "Night"), icon: "moon.stars", tint: tint)
                 PropTile(dc: dc, prop: dc.p("motion-detection", in: "motion-detection"), title: L("移动侦测", "Motion"), icon: "figure.walk.motion", tint: tint)
                 PropTile(dc: dc, prop: dc.p("recording-mode"), title: L("录制", "Record"), icon: "record.circle", tint: tint)
-                PropTile(dc: dc, prop: dc.p("on", in: "indicator-light"), title: L("指示灯", "Indicator"), icon: "lightbulb.led.fill", tint: tint)
+                PropTile(dc: dc, prop: dc.p("on", in: "indicator-light"), title: L("指示灯", "Indicator"), icon: "lightbulb.led", tint: tint)
             }
         }
     }
@@ -249,7 +249,7 @@ struct CookerDetail: View {
                                ("flame.fill", dc.num(dc.p("heat-level")).map { L("火力 ", "Heat ") + "\(Int($0))" })], tint: tint)
             HStack(spacing: 8) {
                 PropTile(dc: dc, prop: dc.p("mode"), title: L("模式", "Mode"), icon: "fork.knife", tint: tint)
-                PropTile(dc: dc, prop: dc.p("alarm"), title: L("提示音", "Sound"), icon: "bell.fill", tint: tint)
+                PropTile(dc: dc, prop: dc.p("alarm"), title: L("提示音", "Sound"), icon: "bell", tint: tint)
             }
         }
     }
@@ -300,9 +300,9 @@ struct ApplianceDetail: View {
                                ("humidity.fill", hum.map { L("湿度 ", "Humidity ") + "\(Int($0))%" })], tint: tint)
             HStack(spacing: 8) {
                 PropTile(dc: dc, prop: dc.p("mode"), title: L("模式", "Mode"), icon: "slider.horizontal.3", tint: tint)
-                PropTile(dc: dc, prop: heater ? dc.p("heat-level") : dc.p("fan-level"), title: heater ? L("档位", "Level") : L("风速", "Fan"), icon: heater ? "flame.fill" : "wind", tint: tint)
-                PropTile(dc: dc, prop: dc.p("physical-controls-locked"), title: L("童锁", "Child lock"), icon: "lock.fill", tint: tint)
-                PropTile(dc: dc, prop: dc.p("alarm"), title: L("提示音", "Sound"), icon: "bell.fill", tint: tint)
+                PropTile(dc: dc, prop: heater ? dc.p("heat-level") : dc.p("fan-level"), title: heater ? L("档位", "Level") : L("风速", "Fan"), icon: heater ? "flame" : "wind", tint: tint)
+                PropTile(dc: dc, prop: dc.p("physical-controls-locked"), title: L("童锁", "Child lock"), icon: "lock", tint: tint)
+                PropTile(dc: dc, prop: dc.p("alarm"), title: L("提示音", "Sound"), icon: "bell", tint: tint)
             }
         }
     }

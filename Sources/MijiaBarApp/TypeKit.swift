@@ -57,7 +57,7 @@ struct TypeShell<Art: View, Content: View>: View {
                 }
                 art().frame(height: 136).frame(maxWidth: .infinity)
                     .saturation(isOn ? 1 : 0.85).animation(Motion.smooth, value: isOn)
-                content()
+                content().environment(\.cardAccent, isOn ? tint : nil)
             }
             .padding(18)
             .frame(width: cardWidth)
@@ -82,7 +82,14 @@ struct TypeShell<Art: View, Content: View>: View {
 }
 
 /// 大号主数值；没有读数时显示中性占位
+/// 详情卡片的强调色：TypeShell 在设备开着时设置，卡片里的大号数值据此做与空调温度一致的色调渐变和光晕
+private struct CardAccentKey: EnvironmentKey { static let defaultValue: Color? = nil }
+extension EnvironmentValues {
+    var cardAccent: Color? { get { self[CardAccentKey.self] } set { self[CardAccentKey.self] = newValue } }
+}
+
 struct BigValue: View {
+    @Environment(\.cardAccent) private var accent
     let value: String?
     var unit: String = ""
     let caption: String
@@ -93,6 +100,8 @@ struct BigValue: View {
                 HStack(alignment: .firstTextBaseline, spacing: 2) {
                     Text(value).font(.system(size: value.count > 4 ? 40 : 60, weight: .thin, design: .rounded))
                         .monospacedDigit().contentTransition(.numericText()).lineLimit(1).minimumScaleFactor(0.5)
+                        .foregroundStyle(LinearGradient(colors: [.primary, .primary, accent.map { dim ? Color.primary : $0 } ?? .primary], startPoint: .top, endPoint: .bottom))
+                        .shadow(color: (dim ? nil : accent)?.opacity(0.4) ?? .clear, radius: 20)
                     if !unit.isEmpty { Text(unit).font(.system(size: 18, weight: .light)).foregroundStyle(.secondary) }
                 }
             } else {
