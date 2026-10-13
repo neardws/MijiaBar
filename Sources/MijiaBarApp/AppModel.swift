@@ -72,6 +72,19 @@ final class AppModel: ObservableObject {
         }
         return out
     }
+    struct Summary { var on = 0; var offline = 0; var acs: [(String, Int, Bool)] = []; var env: String? }
+    var summary: Summary {
+        var s = Summary()
+        for d in devices where d.homeId == currentHomeId {
+            if !d.isOnline { s.offline += 1; continue }
+            guard let st = states[d.did] else { continue }
+            if let ac = ACState.make(st) {
+                if ac.power { s.on += 1; if s.acs.count < 2, let t = ac.target { s.acs.append((displayName(d), Int(t), ac.isHeating)) } }
+            } else if powerInfo(d)?.isOn == true { s.on += 1 }
+            if s.env == nil, d.category == .sensor, let t = sensorText(st) { s.env = t }
+        }
+        return s
+    }
     /// 收藏的空调以迷你卡片显示
     var favoriteACs: [Device] { sections.first { $0.id == "fav" }?.devices.filter { $0.category == .ac } ?? [] }
     var flatVisible: [String] { sections.flatMap { $0.devices.map(\.did) } }

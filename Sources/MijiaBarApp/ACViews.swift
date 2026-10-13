@@ -178,7 +178,7 @@ struct TileFace: View {
     var body: some View {
         VStack(spacing: 4) {
             Image(systemName: icon).font(.system(size: 15, weight: .medium)).frame(height: 18)
-            Text(title).font(.system(size: 10)).foregroundStyle(.secondary)
+            Text(title).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
             Text(value).font(.system(size: 11, weight: .semibold)).lineLimit(1)
         }
         .frame(maxWidth: .infinity).padding(.vertical, 10)

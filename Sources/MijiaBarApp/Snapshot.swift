@@ -85,12 +85,28 @@ enum Snapshot {
             // 真实登录数据（只读），用于本机自检，不要提交
             let m = AppModel()
             let root = RootView().environmentObject(m)
+            func wait(_ secs: Double, until: () -> Bool = { false }) {
+                let end = Date().addingTimeInterval(secs)
+                while Date() < end && !until() { RunLoop.main.run(until: Date().addingTimeInterval(0.1)) }
+            }
+            appearance = NSAppearance(named: .aqua)
+            m.page = .list
+            render(root, out.appendingPathComponent("warmup.png")); wait(10)
+            var picks: [Device] = []
+            for c in [DeviceCategory.light, .plug, .fan, .sensor, .heater, .dehumidifier, .speaker, .camera, .tv, .other, .kitchen] {
+                if let d = m.devices.first(where: { $0.category == c && $0.isOnline && $0.homeId == m.currentHomeId }) ?? m.devices.first(where: { $0.category == c && $0.isOnline }) { picks.append(d) }
+            }
+            for d in picks where m.states[d.did] == nil {
+                var done = false
+                Task { await m.loadState(d); done = true }
+                wait(15) { done }
+            }
             for (suffix, name) in [("light", NSAppearance.Name.aqua), ("dark", NSAppearance.Name.darkAqua)] {
                 appearance = NSAppearance(named: name)
-                let host = NSHostingView(rootView: root.frame(width: 360, height: 560))
-                _ = host; RunLoop.main.run(until: Date().addingTimeInterval(suffix == "light" ? 12 : 2))
-                render(root, out.appendingPathComponent("real-list-\(suffix).png"))
+                m.page = .list; render(root, out.appendingPathComponent("real-list-\(suffix).png"))
+                for d in picks { m.page = .detail(d.did); render(root, out.appendingPathComponent("real-\(d.category.rawValue)-\(suffix).png")) }
             }
+            print(picks.map { "\($0.category.rawValue)=\($0.model)" }.joined(separator: " "))
             exit(0)
         }
         let m = AppModel(mock: true)
@@ -104,6 +120,8 @@ enum Snapshot {
             m.page = .detail("d2"); m.states["d2"]?.values["power"] = .string("on"); m.states["d2"]?.values["load_power"] = .double(1260); render(root, f("ac-heat"))
             m.states["d2"]?.values["power"] = .string("off")
             m.page = .detail("d3"); render(root, f("light"))
+            m.page = .detail("d5"); render(root, f("plug"))
+            m.page = .detail("d4"); m.states["d4"]?.values["2.1"] = .bool(true); render(root, f("fan"))
             m.page = .settings; render(root, f("settings"))
             m.page = .list; m.showHidden = true; render(root, f("list-hidden")); m.showHidden = false
             m.session = nil; m.qrImage = qr("https://github.com/neardws/MijiaBar"); m.loginStatus = L("打开米家 App 扫一扫，并在手机上确认登录", "Scan with the Mi Home app")

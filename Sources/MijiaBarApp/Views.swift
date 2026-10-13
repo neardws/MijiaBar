@@ -10,9 +10,11 @@ struct RootView: View {
                 if m.session == nil { LoginView() }
                 else {
                     switch m.page {
-                    case .list: DeviceListView()
-                    case .detail(let did): if let d = m.device(did) { DetailView(device: d).id(did) } else { DeviceListView() }
-                    case .settings: SettingsView()
+                    case .list: DeviceListView().transition(.asymmetric(insertion: .move(edge: .leading).combined(with: .opacity), removal: .opacity))
+                    case .detail(let did):
+                        if let d = m.device(did) { DetailView(device: d).id(did).transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .opacity)) }
+                        else { DeviceListView() }
+                    case .settings: SettingsView().transition(.move(edge: .trailing).combined(with: .opacity))
                     }
                 }
             }
@@ -27,6 +29,8 @@ struct RootView: View {
             }
         }
         .animation(.spring(duration: 0.3), value: m.toast)
+        .animation(.easeInOut(duration: 0.22), value: m.page)
+        .clipped()
         .frame(width: 360, height: 560)
         .background(Theme.bg)
         .onAppear { NSApp.activate(ignoringOtherApps: true) }
@@ -82,7 +86,10 @@ struct DeviceListView: View {
     var body: some View {
         let flat = m.flatVisible
         VStack(spacing: 8) {
-            header.padding(.horizontal, 14).padding(.top, 12)
+            VStack(alignment: .leading, spacing: 8) {
+                header
+                SummaryBar()
+            }.padding(.horizontal, 14).padding(.top, 12)
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                 TextField(L("搜索设备、房间、型号", "Search devices, rooms, models"), text: $m.search)
@@ -148,12 +155,9 @@ struct DeviceListView: View {
                     }
                 }
             } label: {
-                HStack(spacing: 4) {
-                    Text(m.currentHomeName).font(.system(size: 15, weight: .semibold)).foregroundStyle(.primary)
-                    if m.homes.count > 1 { Image(systemName: "chevron.up.chevron.down").font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary) }
-                }
+                Text(m.currentHomeName).font(.system(size: 17, weight: .bold)).foregroundStyle(.primary)
             }
-            .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().disabled(m.homes.count < 2)
+            .menuStyle(.borderlessButton).menuIndicator(m.homes.count > 1 ? .visible : .hidden).fixedSize().disabled(m.homes.count < 2)
             Spacer()
             if m.refreshing { ProgressView().controlSize(.small) }
             IconButton(icon: "arrow.clockwise", help: L("刷新", "Refresh")) { Task { await m.refresh() } }
@@ -169,6 +173,35 @@ struct DeviceListView: View {
                                   : L("已隐藏 \(m.hiddenCount) 台离线或久未使用的设备 · 显示", "\(m.hiddenCount) offline/unused hidden · Show"))
                     .font(.system(size: 11)).foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.vertical, 10)
             }.buttonStyle(.plain)
+        }
+    }
+}
+
+/// 一眼概览：开启数量、空调温度、室内温湿度、离线数量
+struct SummaryBar: View {
+    @EnvironmentObject var m: AppModel
+    var body: some View {
+        let s = m.summary
+        HStack(spacing: 6) {
+            Chip(icon: "power", text: L("\(s.on) 台开启", "\(s.on) on"), color: s.on > 0 ? .green : .secondary)
+            ForEach(s.acs, id: \.0) { name, t, heat in
+                Chip(icon: heat ? "sun.max.fill" : "snowflake", text: "\(name) \(t)°", color: heat ? Theme.heat : Theme.cool)
+            }
+            if let env = s.env { Chip(icon: "thermometer.medium", text: env, color: .mint) }
+            if s.offline > 0 { Chip(icon: "wifi.slash", text: L("\(s.offline) 离线", "\(s.offline) offline"), color: .secondary) }
+            Spacer(minLength: 0)
+        }
+        .animation(.easeInOut(duration: 0.25), value: s.on)
+    }
+    struct Chip: View {
+        let icon: String, text: String, color: Color
+        var body: some View {
+            HStack(spacing: 4) {
+                Image(systemName: icon).font(.system(size: 9, weight: .bold)).foregroundStyle(color)
+                Text(text).font(.system(size: 11, weight: .medium)).foregroundStyle(.primary.opacity(0.85)).lineLimit(1)
+            }
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .background(Capsule().fill(color.opacity(0.12)))
         }
     }
 }
@@ -360,7 +393,7 @@ struct DetailView: View {
             }
             if let st = m.states[device.did] {
                 if let ac = ACState.make(st) { ACCardView(device: device, ac: ac); Spacer(minLength: 0) }
-                else { GenericDetailView(device: device, state: st) }
+                else { DeviceCardView(device: device, state: st) }
             } else if let e = m.stateErrors[device.did] {
                 Spacer()
                 Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(.orange)

@@ -150,7 +150,7 @@ struct SettingsView: View {
                         }
                     }
                     group(L("关于", "About")) {
-                        row("MijiaBar") { Text("v0.1.2").foregroundStyle(.secondary) }
+                        row("MijiaBar") { Text("v0.1.3").foregroundStyle(.secondary) }
                         Link("github.com/neardws/MijiaBar", destination: URL(string: "https://github.com/neardws/MijiaBar")!)
                         Button(L("退出 MijiaBar", "Quit MijiaBar")) { NSApp.terminate(nil) }
                     }
