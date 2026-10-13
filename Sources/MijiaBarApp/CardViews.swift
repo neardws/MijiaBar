@@ -314,10 +314,9 @@ struct HeroView: View {
         TimelineView(.animation(paused: !isOn || !animated)) { tl in
             let t = tl.date.timeIntervalSinceReferenceDate
             ZStack {
-                Circle().fill(tint.opacity(isOn ? 0.10 + 0.18 * level : 0.05)).frame(width: 96, height: 96)
-                    .blur(radius: isOn ? 6 : 0)
+                Glow(tint, isOn ? 0.10 + 0.18 * level : 0.05, diameter: 96, softness: isOn ? 6 : 0)
                 if isOn && category == .light {
-                    Circle().fill(tint.opacity(0.25 * level)).frame(width: 96 + 40 * level, height: 96 + 40 * level).blur(radius: 18)
+                    Glow(tint, 0.25 * level, diameter: 96 + 40 * level, softness: 18)
                 }
                 Circle().fill(Color(nsColor: .controlBackgroundColor)).frame(width: 74, height: 74)
                     .overlay(Circle().stroke(tint.opacity(isOn ? 0.45 : 0.15), lineWidth: 1.5))

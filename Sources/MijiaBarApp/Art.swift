@@ -6,6 +6,20 @@ import MijiaCore
 private let metal = LinearGradient(colors: [Color(white: 0.92), Color(white: 0.72)], startPoint: .top, endPoint: .bottom)
 private let darkBody = LinearGradient(colors: [Color(white: 0.30), Color(white: 0.12)], startPoint: .top, endPoint: .bottom)
 
+/// 柔和光晕：直径 diameter 的圆向外羽化 softness，效果接近 `.blur(radius: softness)`。
+/// 用径向渐变而不是 `.blur`：截图（cacheDisplay）画不出模糊，且在 TimelineView 里每帧模糊开销很大。
+/// 只占 diameter 的布局尺寸，羽化部分画在外面。
+func Glow(_ color: Color, _ opacity: Double, diameter d: CGFloat, softness s: CGFloat) -> some View {
+    let r = d / 2 + s
+    let solid = max(0, (d / 2 - s) / r)
+    return Color.clear.frame(width: d, height: d).overlay(
+        Circle().fill(RadialGradient(gradient: Gradient(stops: [.init(color: color.opacity(opacity), location: 0),
+                                                                .init(color: color.opacity(opacity), location: solid),
+                                                                .init(color: color.opacity(0), location: 1)]),
+                                     center: .center, startRadius: 0, endRadius: r))
+            .frame(width: 2 * r, height: 2 * r))
+}
+
 /// 落地扇：叶片转速跟随风速，摆头时左右摇摆
 struct FanArt: View {
     let on: Bool, level: Double, swing: Bool, tint: Color
@@ -36,7 +50,7 @@ struct FanArt: View {
                     Circle().fill(metal).frame(width: 16, height: 16).shadow(radius: 1)
                 }
                 .frame(width: 92, height: 92)
-                .rotation3DEffect(.degrees(yaw), axis: (x: 0, y: 1, z: 0), perspective: 0.6)
+                .scaleEffect(x: cos(yaw * .pi / 180), y: 1)   // 用水平压缩模拟摆头（rotation3DEffect 在截图里位置会错）
                 .offset(y: -18)
             }
             .frame(width: 140, height: 136)
@@ -51,7 +65,7 @@ struct BulbArt: View {
     var body: some View {
         let col = kelvinColor(kelvin ?? 3500)
         ZStack {
-            Circle().fill(col.opacity(on ? 0.55 * brightness : 0)).frame(width: 150, height: 150).blur(radius: 28)
+            Glow(col, on ? 0.55 * brightness : 0, diameter: 150, softness: 28)
             VStack(spacing: 0) {
                 ZStack {
                     Circle().fill(on ? AnyShapeStyle(RadialGradient(colors: [Color.white, col], center: .center, startRadius: 4, endRadius: 46))
