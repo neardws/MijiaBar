@@ -1,9 +1,50 @@
 import Foundation
 import CryptoKit
 
-public let isChinese: Bool = (Locale.preferredLanguages.first ?? "en").hasPrefix("zh")
+/// 界面语言。简体为原文，繁体由简体自动转换，其余语言暂时回退英文。
+public enum AppLang: String, CaseIterable, Codable {
+    case zhHans = "zh-Hans", zhHant = "zh-Hant", en, de, fr, es, it, ru, ja
+    public var nativeName: String {
+        switch self {
+        case .zhHans: return "简体中文"; case .zhHant: return "繁體中文"; case .en: return "English"
+        case .de: return "Deutsch"; case .fr: return "Français"; case .es: return "Español"
+        case .it: return "Italiano"; case .ru: return "Русский"; case .ja: return "日本語"
+        }
+    }
+    /// 是否有完整翻译（否则回退英文）
+    public var isComplete: Bool { self == .zhHans || self == .zhHant || self == .en }
+    /// 各小米服务器地区建议的语言，第一个为默认
+    public static func suggested(forRegion r: String) -> [AppLang] {
+        switch r {
+        case "cn": return [.zhHans, .zhHant, .en]
+        case "sg": return [.en, .zhHant, .zhHans]
+        case "de": return [.en, .de, .fr, .es, .it]
+        case "ru": return [.ru, .en]
+        default: return [.en, .zhHans, .zhHant]   // us, i2
+        }
+    }
+    static func system() -> AppLang {
+        let p = Locale.preferredLanguages.first ?? "en"
+        if p.hasPrefix("zh") { return (p.contains("Hant") || p.contains("TW") || p.contains("HK") || p.contains("MO")) ? .zhHant : .zhHans }
+        return AppLang(rawValue: String(p.prefix(2))) ?? .en
+    }
+}
+
+/// 当前语言：用户在设置中选择的 > 系统语言（CLI 与 App 共用 UserDefaults 键 MijiaBarLang）
+public var currentLang: AppLang = ProcessInfo.processInfo.environment["MIJIABAR_LANG"].flatMap(AppLang.init(rawValue:)) ?? UserDefaults.standard.string(forKey: "MijiaBarLang").flatMap(AppLang.init(rawValue:)) ?? AppLang.system()
+public var isChinese: Bool { currentLang == .zhHans || currentLang == .zhHant }
+private var hantCache: [String: String] = [:]
 /// 简易本地化：中文系统显示中文，其它语言回退英文
-public func L(_ zh: String, _ en: String) -> String { isChinese ? zh : en }
+public func L(_ zh: String, _ en: String) -> String {
+    switch currentLang {
+    case .zhHans: return zh
+    case .zhHant:
+        if let c = hantCache[zh] { return c }
+        let t = zh.applyingTransform(StringTransform("Hans-Hant"), reverse: false) ?? zh
+        hantCache[zh] = t; return t
+    default: return en
+    }
+}
 
 public func anyString(_ a: Any?) -> String {
     if let s = a as? String { return s }

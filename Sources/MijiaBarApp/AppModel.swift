@@ -236,8 +236,19 @@ final class AppModel: ObservableObject {
             }
         }
     }
+    @Published var lang: AppLang = currentLang
+    /// 用户是否手动选过语言；没选过时切换地区会跟随地区默认语言
+    var langManual: Bool { UserDefaults.standard.bool(forKey: "MijiaBarLangManual") }
+    func setLang(_ l: AppLang, manual: Bool = true) {
+        currentLang = l; lang = l
+        UserDefaults.standard.set(l.rawValue, forKey: "MijiaBarLang")
+        if manual { UserDefaults.standard.set(true, forKey: "MijiaBarLangManual") }
+    }
+    /// 完全退出：结束 App 本身（MCP 服务由 Agent 客户端各自启动的 CLI 进程提供，App 不常驻任何后台子进程）
+    func quitApp() { NSApp.terminate(nil) }
     func setRegion(_ r: String) {
         prefs.region = r
+        if !langManual, let d = AppLang.suggested(forRegion: r).first { setLang(d, manual: false) }
         if var s = session { s.region = r; s.save(); session = s; controller.cloud = XiaomiCloud(session: s); states = [:]; Task { await refresh() } }
     }
     func logout() {

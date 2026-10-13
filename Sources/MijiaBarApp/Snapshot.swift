@@ -93,8 +93,8 @@ enum Snapshot {
             m.page = .list
             render(root, out.appendingPathComponent("warmup.png")); wait(10)
             var picks: [Device] = []
-            for c in [DeviceCategory.light, .plug, .fan, .sensor, .heater, .dehumidifier, .speaker, .camera, .tv, .other, .kitchen] {
-                if let d = m.devices.first(where: { $0.category == c && $0.isOnline && $0.homeId == m.currentHomeId }) ?? m.devices.first(where: { $0.category == c && $0.isOnline }) { picks.append(d) }
+            for c in [DeviceCategory.ac, .light, .plug, .fan, .sensor, .heater, .dehumidifier, .speaker, .camera, .tv, .printer, .purifier, .other, .kitchen] {
+                if let d = m.devices.first(where: { $0.category == c && $0.isOnline && $0.homeId == m.currentHomeId }) ?? m.devices.first(where: { $0.category == c && $0.isOnline }) ?? m.devices.first(where: { $0.category == c }) { picks.append(d) }
             }
             for d in picks where m.states[d.did] == nil {
                 var done = false

@@ -89,7 +89,7 @@ struct CardModel {
         default: gradient = [cat.color.opacity(0.35), cat.color]
         }
         guard let spec = state.spec else { return }
-        let all = spec.controlServices.flatMap(\.properties).filter { $0.readable || $0.writable }
+        let all = spec.controlServices.flatMap(\.properties).filter { ($0.readable || $0.writable) && zhHas($0.name) }
         let pk = power?.key
         let candidates = all.filter { $0.key != pk && $0.format != "string" }
         for n in Self.primaryNames[cat] ?? [] { if let p = candidates.first(where: { $0.name == n }) { primary = p; break } }
@@ -112,7 +112,7 @@ struct CardModel {
         tiles = Array(sorted.filter { seen.insert(Self.label($0, spec)).inserted }.prefix(4))
         tiles.forEach { used.insert($0.key) }
         rest = all.filter { !used.contains($0.key) && !Self.skipTiles.contains($0.name) }
-        actions = spec.controlServices.flatMap(\.actions).filter { $0.inputs.isEmpty }
+        actions = spec.controlServices.flatMap(\.actions).filter { $0.inputs.isEmpty && zhHas($0.name) }
     }
 
     /// 属性显示名：非主服务里的 on/mode 用服务名区分（如「指示灯」）
@@ -297,6 +297,8 @@ func zhCategory(_ c: DeviceCategory) -> String {
     case .camera: return L("摄像机", "Camera")
     case .speaker: return L("音箱", "Speaker")
     case .kitchen: return L("厨房电器", "Kitchen")
+    case .printer: return L("打印机", "Printer")
+    case .purifier: return L("净水器", "Water purifier")
     case .other: return L("设备", "Device")
     }
 }

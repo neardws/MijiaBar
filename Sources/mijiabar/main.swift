@@ -2,7 +2,7 @@ import Foundation
 import MijiaCore
 
 // mijiabar —— 给人和 Agent 用的米家命令行 / MCP 服务器
-let version = "0.1.3"
+let version = "0.1.4"
 setvbuf(stdout, nil, _IOLBF, 0)
 
 func eprint(_ s: String) { FileHandle.standardError.write(Data((s + "\n").utf8)) }

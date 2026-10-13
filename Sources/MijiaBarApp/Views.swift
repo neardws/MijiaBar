@@ -5,6 +5,10 @@ import MijiaCore
 struct RootView: View {
     @EnvironmentObject var m: AppModel
     var body: some View {
+        content.id(m.lang)
+            .background(Button("") { m.quitApp() }.keyboardShortcut("q", modifiers: .command).opacity(0).allowsHitTesting(false))
+    }
+    @ViewBuilder var content: some View {
         ZStack {
             Group {
                 if m.session == nil { LoginView() }
@@ -392,8 +396,8 @@ struct DetailView: View {
                     .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
             }
             if let st = m.states[device.did] {
-                if let ac = ACState.make(st) { ACCardView(device: device, ac: ac); Spacer(minLength: 0) }
-                else { DeviceCardView(device: device, state: st) }
+                if let ac = ACState.make(st) { ACCardView(device: device, ac: ac).frame(width: cardWidth).probe(device.model); Spacer(minLength: 0) }
+                else { TypeDetailView(device: device, state: st) }
             } else if let e = m.stateErrors[device.did] {
                 Spacer()
                 Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(.orange)

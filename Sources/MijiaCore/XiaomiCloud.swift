@@ -15,10 +15,10 @@ public enum CloudError: LocalizedError {
     }
 }
 
-public let xiaomiRegions: [(id: String, name: String)] = [
+public var xiaomiRegions: [(id: String, name: String)] { [
     ("cn", L("中国大陆", "Mainland China")), ("de", L("欧洲", "Europe")), ("us", L("美国", "United States")),
     ("ru", L("俄罗斯", "Russia")), ("sg", L("新加坡", "Singapore")), ("i2", L("印度", "India")),
-]
+] }
 
 /// 小米云 API（与米家 App 相同的 RC4 加密签名接口）
 public final class XiaomiCloud {

@@ -36,6 +36,8 @@ extension DeviceCategory {
         case .camera: return "video"
         case .speaker: return "hifispeaker"
         case .kitchen: return "frying.pan"
+        case .printer: return "printer"
+        case .purifier: return "drop"
         case .other: return "square.grid.2x2"
         }
     }
@@ -52,6 +54,8 @@ extension DeviceCategory {
         case .camera: return .purple
         case .speaker: return .pink
         case .kitchen: return .orange
+        case .printer: return .gray
+        case .purifier: return .blue
         case .other: return .gray
         }
     }
@@ -68,5 +72,5 @@ func zhName(_ name: String, fallback: String) -> String {
              "switch": "开关", "light": "灯", "fan": "风扇", "air-conditioner": "空调", "heater": "取暖器", "dehumidifier": "除湿机",
              "environment": "环境", "battery": "电池", "fan-control": "风速控制", "power-consumption-service": "电量统计", "toggle": "切换",
              "electric-current": "电流", "default-power-on-state": "上电状态", "horizontal-swing-included-angle": "摆风角度", "brightness-delay": "渐变时长", "night-light": "夜灯", "volume": "音量", "mute": "静音", "power-off-delay-time": "延时关闭", "anion": "负离子", "child-lock": "童锁", "filter-life-level": "滤芯寿命", "dry-after-off": "关机烘干", "fan-percent": "风速", "speed": "转速", "illumination": "光照", "motion-state": "有人移动", "submersion-state": "浸水", "contact-state": "开合", "gas-concentration": "燃气浓度", "voltage": "电压", "temperature-humidity-sensor": "温湿度传感器", "screen": "屏幕", "flow-rate": "流速"]
-    return m[name] ?? (fallback.isEmpty ? name : fallback)
+    return m[name].map { L($0, $0) } ?? (fallback.isEmpty ? name : fallback)
 }
