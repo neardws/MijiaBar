@@ -346,6 +346,7 @@ struct DeviceRow: View {
                 HStack(spacing: 4) {
                     Text(m.displayName(device)).font(.system(size: 13)).foregroundStyle(.primary).lineLimit(1)
                     if m.isFavorite(device) { Image(systemName: "star.fill").font(.system(size: 8)).foregroundStyle(.yellow).transition(.pop(0.9)) }
+                    if let t = m.transports[device.did], device.isOnline { TransportBadge(t: t, compact: true) }
                 }
                 let sub = m.subtitle(device)
                 if !sub.isEmpty { Text(sub).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).contentTransition(.numericText()) }
@@ -471,7 +472,10 @@ struct DetailView: View {
                 IconButton(icon: "chevron.left", help: L("返回", "Back")) { m.back() }
                 VStack(alignment: .leading, spacing: 1) {
                     Text(m.displayName(device)).font(.system(size: 15, weight: .semibold)).lineLimit(1)
-                    Text([device.roomName, device.model].compactMap { $0 }.joined(separator: " · ")).font(.system(size: 10)).foregroundStyle(.secondary)
+                    HStack(spacing: 4) {
+                        if let t = m.transports[device.did] { TransportBadge(t: t) }
+                        Text([device.roomName, device.model].compactMap { $0 }.joined(separator: " · ")).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
+                    }
                 }
                 Spacer()
                 if m.busy.contains(device.did) { ProgressView().controlSize(.small).transition(.opacity) }
@@ -535,5 +539,34 @@ struct DetailView: View {
         guard let k = ac.tempKey, let t = ac.target else { return .ignored }
         withoutAnimation { m.write(device, k, ac.tempValue(min(ac.maxT, max(ac.minT, t + d * ac.step)))) }
         return .handled
+    }
+}
+
+/// 最近一次读写走的通道：局域网直连 / 云端 / 蓝牙经网关
+struct TransportBadge: View {
+    let t: Transport
+    var compact = false
+    var icon: String { switch t { case .lan: return "wifi"; case .cloud: return "cloud"; case .ble: return "dot.radiowaves.left.and.right" } }
+    var label: String { switch t { case .lan: return L("局域网", "LAN"); case .cloud: return L("云端", "Cloud"); case .ble: return L("蓝牙网关", "BLE gateway") } }
+    var tip: String {
+        switch t {
+        case .lan: return L("最近一次读取或控制走局域网直连（miIO），不经过小米云", "Last read/control went directly over the local network (miIO), not through the Xiaomi cloud")
+        case .cloud: return L("最近一次读取或控制走小米云（局域网不可用或该设备只支持云端时自动回退）", "Last read/control went through the Xiaomi cloud (automatic fallback when LAN isn't available or the device is cloud-only)")
+        case .ble: return L("蓝牙设备：经小米云由蓝牙网关转发", "Bluetooth device: relayed through the Xiaomi cloud by a BLE gateway")
+        }
+    }
+    var body: some View {
+        Group {
+            if compact {
+                Image(systemName: icon).font(.system(size: 8, weight: .semibold)).foregroundStyle(.tertiary)
+            } else {
+                Label(label, systemImage: icon).labelStyle(.titleAndIcon).font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(t == .lan ? Color.green : Color.secondary)
+                    .padding(.horizontal, 5).padding(.vertical, 1)
+                    .background(Capsule().fill((t == .lan ? Color.green : Color.secondary).opacity(0.12)))
+                    .fixedSize()
+            }
+        }
+        .help(tip).accessibilityLabel(label)
     }
 }

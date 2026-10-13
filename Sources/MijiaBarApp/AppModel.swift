@@ -24,6 +24,9 @@ final class AppModel: ObservableObject {
     @Published var loginStatus = ""
     @Published var loggingIn = false
     @Published var renaming: Device?
+    @Published var transports: [String: Transport] = [:]
+    /// 是否在家庭局域网（nil = 未知）
+    @Published var atHome: Bool?
 
     let mock: Bool
     let controller = Controller(cloud: nil)
@@ -38,6 +41,8 @@ final class AppModel: ObservableObject {
         session = Session.load()
         if let s = session { controller.cloud = XiaomiCloud(session: s) }
         if let c = DeviceCache.load() { homes = c.homes; devices = c.devices }
+        controller.onNetworkChange = { [weak self] in Task { @MainActor in self?.updateHome() } }
+        updateHome()
         if session != nil { Task { await refresh() } }
         Task { await menuLoop() }
     }
@@ -148,6 +153,7 @@ final class AppModel: ObservableObject {
         do {
             let s = try await controller.readState(d)
             if !busy.contains(d.did) { states[d.did] = s }
+            if let t = Transport.from(s.source, device: d) { transports[d.did] = t }
             stateErrors[d.did] = nil
         } catch {
             stateErrors[d.did] = error.localizedDescription
@@ -163,7 +169,7 @@ final class AppModel: ObservableObject {
         if mock { return }
         busy.insert(d.did)
         Task {
-            do { try await controller.set(d, key: key, value: value) }
+            do { if let t = Transport.from(try await controller.set(d, key: key, value: value), device: d) { transports[d.did] = t } }
             catch {
                 states[d.did]?.values[key] = old
                 showToast(L("操作失败：", "Failed: ") + error.localizedDescription)
@@ -215,11 +221,16 @@ final class AppModel: ObservableObject {
         do {
             let hs = try await cloud.homes(); var all: [Device] = []
             for h in hs { for d in try await cloud.devices(in: h) where !all.contains(where: { $0.did == d.did }) { all.append(d) } }
-            homes = hs; devices = all
+            homes = hs; devices = all; updateHome()
             DeviceCache(homes: hs, devices: all, updated: Date()).save()
         } catch {
             showToast(L("刷新失败：", "Refresh failed: ") + error.localizedDescription); handleAuth(error)
         }
+    }
+
+    func updateHome() {
+        controller.setDeviceIPs(devices.filter { $0.isOnline }.compactMap(\.ip))
+        atHome = controller.atHome
     }
 
     // MARK: 登录

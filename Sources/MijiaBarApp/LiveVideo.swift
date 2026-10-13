@@ -79,13 +79,21 @@ final class LiveManager: ObservableObject {
     }
 
     /// 观看者进入：确保助手正在为这台设备运行，返回端口
-    func acquire(_ d: Device, session: Session?) async throws -> Int {
+    /// 电池门铃平时休眠：先经小米云唤醒，再让 go2rtc 建立 P2P（go2rtc 自己也会发一次 wakeup，但紧接着就拨号，门铃常常还没醒）
+    static func wake(_ d: Device, cloud: XiaomiCloud?) async {
+        guard d.model.contains(".cateye."), let cloud else { return }
+        let r = try? await cloud.rpc(did: d.did, method: "wakeup", params: ["video": "1"])
+        if r == nil { _ = try? await cloud.rpc(did: d.did, method: "wakeup_host", params: [String: String]()) }
+        try? await Task.sleep(nanoseconds: 2_500_000_000)
+    }
+
+    func acquire(_ d: Device, session: Session?, cloud: XiaomiCloud? = nil) async throws -> Int {
         viewers += 1; stopTask?.cancel(); stopTask = nil
         if let port, did == d.did, proc?.isRunning == true { return port }
         if let t = startTask, did == d.did { return try await t.value }
         stopNow()
         did = d.did
-        let t = Task { try await self.launch(d, session) }
+        let t = Task { await Self.wake(d, cloud: cloud); return try await self.launch(d, session) }
         startTask = t
         defer { startTask = nil }
         do { let p = try await t.value; port = p; return p }
@@ -277,6 +285,8 @@ struct LivePlayerView: View {
     @State private var visible = false
     @State private var holding = false
     @State private var attempt = 0
+    @State private var autoRetries = 0
+    @State private var showDetail = false
     static let maxWatch: UInt64 = 10 * 60 * 1_000_000_000
     /// 自检时允许在演示数据模式下真实启动
     static var realInMock = false
@@ -285,7 +295,17 @@ struct LivePlayerView: View {
         ZStack {
             Color.black
             if let port, visible, phase != .paused {
-                LiveWebView(port: port) { phase = $0; if Self.realInMock { print("phase \($0)") } }.id(attempt)
+                LiveWebView(port: port) { p in
+                    if Self.realInMock { print("phase \(p)") }
+                    if case .error(let e) = p, LiveErrorText.isTimeout(e), autoRetries < (device.model.contains(".cateye.") ? 2 : 1) {
+                        // P2P 打洞超时：设备可能刚被唤醒，稍等后自动重连
+                        autoRetries += 1; phase = .loading
+                        Task { try? await Task.sleep(nanoseconds: 2_000_000_000); attempt += 1 }
+                        return
+                    }
+                    if p == .live { autoRetries = 0 }
+                    phase = p
+                }.id(attempt)
             }
             overlay
         }
@@ -316,14 +336,24 @@ struct LivePlayerView: View {
         case .paused:
             retry(L("直播已自动暂停", "Live view paused"), icon: "pause.circle")
         case .error(let e):
-            retry(e.isEmpty ? L("无法播放", "Can't play") : e, icon: "exclamationmark.triangle")
+            retry(LiveErrorText.friendly(e, device: device), icon: "exclamationmark.triangle", detail: e)
         }
     }
-    func retry(_ text: String, icon: String) -> some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon).font(.system(size: 18)).foregroundStyle(.white.opacity(0.8))
+    func retry(_ text: String, icon: String, detail: String = "") -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: icon).font(.system(size: 16)).foregroundStyle(.white.opacity(0.8))
             Text(text).font(.system(size: 11)).foregroundStyle(.white.opacity(0.85)).multilineTextAlignment(.center).lineLimit(3).padding(.horizontal, 12)
-            Button(L("重试", "Retry")) { phase = .starting; attempt += 1; start() }.controlSize(.small)
+            if showDetail, !detail.isEmpty {
+                Text(detail).font(.system(size: 9, design: .monospaced)).foregroundStyle(.white.opacity(0.6))
+                    .lineLimit(3).multilineTextAlignment(.center).padding(.horizontal, 12).textSelection(.enabled)
+            }
+            HStack(spacing: 8) {
+                Button(L("重试", "Retry")) { phase = .starting; autoRetries = 0; attempt += 1; start() }.controlSize(.small)
+                if !detail.isEmpty {
+                    Button(showDetail ? L("隐藏详情", "Hide details") : L("详情", "Details")) { showDetail.toggle() }
+                        .buttonStyle(.borderless).controlSize(.small).foregroundStyle(.white.opacity(0.7))
+                }
+            }
         }
     }
 
@@ -333,7 +363,7 @@ struct LivePlayerView: View {
         holding = true; phase = .starting
         Task {
             do {
-                let p = try await LiveManager.shared.acquire(device, session: m.session)
+                let p = try await LiveManager.shared.acquire(device, session: m.session, cloud: m.controller.cloud)
                 port = p; if phase == .starting { phase = .loading }
             } catch {
                 if Self.realInMock { print("start error \(error.localizedDescription)") }
@@ -346,6 +376,27 @@ struct LivePlayerView: View {
         guard holding else { return }
         holding = false; port = nil
         LiveManager.shared.release()
+    }
+}
+
+/// 把 go2rtc 的原始错误翻译成用户能看懂的话（原文放在「详情」里）
+enum LiveErrorText {
+    static func isTimeout(_ e: String) -> Bool { e.contains("i/o timeout") || e.contains("read punch") }
+    static func friendly(_ raw: String, device: Device) -> String {
+        let e = raw.lowercased()
+        let bell = device.model.contains(".cateye.")
+        if isTimeout(e) {
+            return bell ? L("门铃没有响应：可能还在休眠，或这台 Mac 和门铃不在同一个局域网。按一下门铃唤醒后再重试", "The doorbell didn't respond: it may still be asleep, or this Mac isn't on the same network. Press the doorbell to wake it, then retry")
+                        : L("摄像头没有响应：请确认它在线，并且和这台 Mac 在同一个局域网", "The camera didn't respond: make sure it's online and on the same local network as this Mac")
+        }
+        if e.contains("no available vendor") || e.contains("unsupported") || e.contains("not supported") {
+            return L("这个型号暂不支持直播", "Live view isn't supported for this model yet")
+        }
+        if e.contains("rpc response") { return bell ? L("小米云没能唤醒门铃，请按一下门铃后重试", "Xiaomi cloud couldn't wake the doorbell. Press the doorbell, then retry") : L("小米云拒绝了连接请求，请稍后重试", "Xiaomi cloud refused the connection, try again later") }
+        if e.contains("401") || e.contains("passtoken") || e.contains("login") || e.contains("auth") { return LiveError.noAuth.localizedDescription }
+        if e.contains("no such host") || e.contains("dial tcp") || e.contains("network is unreachable") { return L("无法连接小米云，请检查网络", "Can't reach the Xiaomi cloud, check your internet connection") }
+        if e.contains("codec") || e.contains("mse") && e.contains("not") { return L("这台设备的视频格式暂时无法播放", "This device's video format can't be played yet") }
+        return raw.isEmpty ? L("无法播放", "Can't play") : L("无法连接摄像头", "Can't connect to the camera")
     }
 }
 
@@ -405,6 +456,13 @@ struct LiveControls: View {
     var isDoorbell: Bool { device.model.contains(".cateye.") }
     var body: some View {
         VStack(spacing: 6) {
+            if m.atHome == false && !watching {
+                Label(L("不在家庭网络，无法看直播（直播只能在同一局域网内连接摄像头）", "Not on your home network, live view isn't available (it only works on the same local network as the camera)"),
+                      systemImage: "house.slash")
+                    .font(.system(size: 11)).foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.vertical, 9)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.1)))
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
             Button {
                 if watching { withAnimation(Motion.smooth) { watching = false }; return }
                 if !m.mock, m.session?.canLiveStream != true { m.showToast(LiveError.noAuth.localizedDescription); m.openSettings(); return }
@@ -415,6 +473,7 @@ struct LiveControls: View {
                     .background(RoundedRectangle(cornerRadius: 12).fill(tint.opacity(0.16)))
                     .foregroundStyle(tint)
             }.buttonStyle(.plain).disabled(!device.isOnline)
+            }
             if isDoorbell {
                 Label(L("门铃靠电池供电，看直播会唤醒设备并明显耗电，请尽量短时间观看", "The doorbell runs on battery. Live view wakes it up and drains the battery, keep it short"),
                       systemImage: "battery.25percent")

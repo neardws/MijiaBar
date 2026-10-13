@@ -55,6 +55,7 @@ extension AppModel {
         states["d10"] = DeviceState(values: ["2.1": .bool(true), "2.3": .int(0)], spec: cam, legacy: false, source: "cloud")
         let bell = DeviceSpec(type: "", description: "", services: [S(2, "battery", [P(2, 1, "battery-level", "uint8", ["read"], range: [0, 100, 1], unit: "percentage")])])
         states["d11"] = DeviceState(values: ["2.1": .int(64)], spec: bell, legacy: false, source: "cloud")
+        for d in devices { if let st = states[d.did], let t = Transport.from(st.source, device: d) { transports[d.did] = t } }
     }
 }
 
@@ -131,6 +132,7 @@ enum Snapshot {
             m.page = .detail("d5"); render(root, f("plug"))
             m.page = .detail("d4"); m.states["d4"]?.values["2.1"] = .bool(true); render(root, f("fan"))
             m.page = .detail("d10"); render(root, f("camera"))
+            m.atHome = false; render(root, f("camera-away")); m.atHome = nil
             LiveControls.snapshotWatching = true
             render(root, f("camera-live")); m.page = .detail("d11"); render(root, f("doorbell-live"))
             LiveControls.snapshotWatching = false
