@@ -18,7 +18,7 @@
 
 <p align="center"><img src="docs/screenshots/demo.gif" width="300" alt="demo"></p>
 
-[Fonctionnalités](#fonctionnalités) · [Captures](#captures) · [Installation](#installation) · [Connexion](#connexion) · [Appareils masqués automatiquement](#appareils-masqués-automatiquement) · [Agents / MCP](#agents--mcp) · [Compiler depuis les sources](#compiler-depuis-les-sources) · [Où sont stockées les données](#où-sont-stockées-les-données) · [Remerciements](#remerciements)
+[Fonctionnalités](#fonctionnalités) · [Captures](#captures) · [Installation](#installation) · [Connexion](#connexion) · [Appareils masqués automatiquement](#appareils-masqués-automatiquement) · [Vidéo en direct (caméras)](#vidéo-en-direct-caméras) · [Agents / MCP](#agents--mcp) · [Compiler depuis les sources](#compiler-depuis-les-sources) · [Où sont stockées les données](#où-sont-stockées-les-données) · [Remerciements](#remerciements)
 
 ## Fonctionnalités
 
@@ -73,6 +73,20 @@ Un appareil est replié en bas de la liste par défaut si l’une de ces conditi
 - le cloud renvoie une dernière connexion (`last_online` / `lastOnline` / `last_online_time`) de plus de 30 jours.
 
 Clique sur l’œil ou **Afficher**, ou active **Réglages → Appareils → Afficher les appareils masqués**. Un clic droit sur un appareil permet de le masquer ou l’afficher manuellement — le choix manuel l’emporte toujours sur la règle automatique.
+
+## Vidéo en direct (caméras)
+
+- Les fiches des caméras et sonnettes ont un bouton **Voir en direct** : la vidéo se lit dans la fiche, et le bouton d'agrandissement l'ouvre dans une fenêtre redimensionnable.
+- La lecture utilise [go2rtc](https://github.com/AlexxIT/go2rtc) intégré (MIT, version officielle, SHA-256 vérifié à la compilation), lancé seulement pendant le visionnage : il écoute sur `127.0.0.1` avec un port aléatoire, RTSP / WebRTC / HomeKit (mDNS) désactivés, seuls le lecteur et `/api/ws` sont exposés ; il s'arrête 20 s après la fermeture du lecteur et est tué quand MijiaBar quitte.
+- La connexion réutilise la session QR : MijiaBar garde dans le trousseau le `passToken` renvoyé par la connexion QR et le transmet à go2rtc via un `go2rtc.yaml` temporaire (droits 600, supprimé dès sa lecture). Les sessions d'avant v0.1.8 demandent un nouveau scan (**Réglages → Caméra en direct**).
+- Les clés viennent du cloud Xiaomi à chaque connexion, la vidéo de la caméra via le P2P Xiaomi. Rien n'est enregistré. Les sonnettes sur batterie sont réveillées et se déchargent plus vite. Les agents / MCP n'ont pas accès aux caméras.
+- L'en-tête de la fiche (et discrètement la ligne de liste) indique le chemin de la dernière lecture/commande : **LAN** (miIO direct), **Cloud** (repli) ou **Passerelle BLE**.
+- Détection hors domicile : MijiaBar compare les sous-réseaux du Mac aux IP locales des appareils (réévalué à chaque changement de réseau, rien n'est stocké). Hors de chez vous, le LAN est ignoré et le cloud utilisé directement ; les fiches caméra indiquent que le direct n'est disponible qu'à la maison.
+
+<p align="center">
+  <img src="docs/screenshots/camera-live-light.png" width="260" alt="">
+  <img src="docs/screenshots/doorbell-live-dark.png" width="260" alt="">
+</p>
 
 ## Agents / MCP
 

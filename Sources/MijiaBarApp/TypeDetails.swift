@@ -185,6 +185,7 @@ struct SpeakerDetail: View {
 struct CameraDetail: View {
     @EnvironmentObject var m: AppModel
     let dc: DC
+    @State private var watching = LiveControls.snapshotWatching
     var body: some View {
         let d = dc.device, tint = Color.purple
         let pw = m.powerInfo(d)
@@ -192,8 +193,9 @@ struct CameraDetail: View {
         TypeShell(device: d, tint: tint, isOn: on, title: on ? L("监控中", "Watching") : L("隐私模式", "Privacy mode"),
                   subtitle: joined([d.model.contains("cateye") ? L("智能门铃", "Doorbell") : L("摄像机", "Camera"), dc.text(dc.p("status", in: "video-doorbell"))]),
                   powerOn: on, onPower: powerHandler(m, d)) {
-            CameraArt(on: on, tint: tint)
+            CameraLiveArt(device: d, watching: $watching) { CameraArt(on: on, tint: tint) }
         } content: {
+            LiveControls(device: d, watching: $watching, tint: tint)
             ReadoutRow(items: [("sdcard.fill", dc.text(dc.p("status", in: "memory-card-management")).map { L("存储卡 ", "SD ") + $0 }),
                                ("battery.75percent", dc.num(dc.p("battery-level")).map { L("电量 ", "Battery ") + "\(Int($0))%" })], tint: tint)
             HStack(spacing: 8) {

@@ -153,6 +153,24 @@ struct SettingsView: View {
                                "Hidden by default: offline devices and devices not seen online for 30+ days. Right-click a device to hide, favorite or rename."))
                             .font(.system(size: 11)).foregroundStyle(.secondary)
                     }
+                    group(L("摄像头直播", "Camera live view")) {
+                        let ok = m.mock || m.session?.canLiveStream == true
+                        row(L("摄像头登录", "Camera sign-in")) {
+                            Label(ok ? L("已授权", "Authorized") : L("未授权", "Not authorized"), systemImage: ok ? "checkmark.seal.fill" : "exclamationmark.circle")
+                                .foregroundStyle(ok ? .green : .orange)
+                        }
+                        if m.loggingIn {
+                            if let img = m.qrImage {
+                                Image(nsImage: img).resizable().interpolation(.none).frame(width: 140, height: 140).frame(maxWidth: .infinity)
+                            }
+                            Text(m.loginStatus).font(.system(size: 11)).foregroundStyle(.secondary)
+                        } else if !ok {
+                            Button(L("重新扫码授权直播", "Scan QR to enable live view")) { m.startLogin() }
+                        }
+                        Text(L("直播由内置的 go2rtc 在本机播放：只监听 127.0.0.1，按需启动，关闭画面后自动停止。密钥向小米云获取，视频经小米 P2P 从摄像头传来；凭据只保存在钥匙串。Agent / MCP 无法访问摄像头画面。",
+                               "Live video is played locally by the built-in go2rtc: it listens on 127.0.0.1 only, starts on demand and stops when you close the player. Keys come from the Xiaomi cloud and video from the camera over Xiaomi P2P; credentials stay in the Keychain. Agents / MCP can't access camera video."))
+                            .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
                     AgentSettingsSection()
                     Button { m.quitApp() } label: {
                         Label(L("完全退出 MijiaBar", "Quit MijiaBar"), systemImage: "power")
@@ -161,7 +179,7 @@ struct SettingsView: View {
                             .foregroundStyle(.red)
                     }.buttonStyle(.plain).help("⌘Q")
                     group(L("关于", "About")) {
-                        row("MijiaBar") { Text("v0.1.7").foregroundStyle(.secondary) }
+                        row("MijiaBar") { Text("v0.1.8").foregroundStyle(.secondary) }
                         Link("github.com/neardws/MijiaBar", destination: URL(string: "https://github.com/neardws/MijiaBar")!)
 
                     }

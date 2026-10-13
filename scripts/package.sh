@@ -9,7 +9,7 @@
 #   NOTARY_PROFILE  notarytool 钥匙串配置名（默认 MijiaBar-notary）；设为空跳过公证
 set -euo pipefail
 cd "$(dirname "$0")/.."
-VERSION="${VERSION:-0.1.7}"
+VERSION="${VERSION:-0.1.8}"
 ARCHS="${ARCHS:---arch arm64 --arch x86_64}"
 NOTARY_PROFILE="${NOTARY_PROFILE-MijiaBar-notary}"
 ENT=Resources/MijiaBar.entitlements
@@ -25,12 +25,29 @@ else
   DMG="dist/MijiaBar-$VERSION.dmg"; echo "🔏 签名身份: $SIGN_IDENTITY"
 fi
 
+# 内置 go2rtc（MIT，github.com/AlexxIT/go2rtc）：构建时下载官方发布包并校验 SHA-256，二进制不进仓库
+GO2RTC_VERSION=v1.9.14
+GO2RTC_SHA_arm64=919b78adc759d6b3883d1e1b2ac915ac0985bb903ff1897b4d228527bd64690c
+GO2RTC_SHA_amd64=9b0b9a27a4dc3a5b8b93376e7e8fc2787c6af624a512842622be84aec0171c7a
+G2=.build/go2rtc/$GO2RTC_VERSION && mkdir -p "$G2"
+for a in arm64 amd64; do
+  z="$G2/go2rtc_mac_$a.zip"; want=$(eval echo \$GO2RTC_SHA_$a)
+  [ -f "$z" ] || curl -fsSL -o "$z" "https://github.com/AlexxIT/go2rtc/releases/download/$GO2RTC_VERSION/go2rtc_mac_$a.zip"
+  got=$(shasum -a 256 "$z" | cut -d' ' -f1)
+  [ "$got" = "$want" ] || { echo "❌ go2rtc_mac_$a.zip 校验失败: $got"; rm -f "$z"; exit 1; }
+  rm -rf "$G2/$a" && mkdir -p "$G2/$a" && unzip -q -o "$z" -d "$G2/$a"
+done
+[ -f "$G2/LICENSE" ] || curl -fsSL -o "$G2/LICENSE" "https://raw.githubusercontent.com/AlexxIT/go2rtc/$GO2RTC_VERSION/LICENSE"
+lipo -create "$G2/arm64/go2rtc" "$G2/amd64/go2rtc" -output "$G2/go2rtc" && chmod 755 "$G2/go2rtc"
+
 swift build -c release $ARCHS
 BIN="$(swift build -c release $ARCHS --show-bin-path)"
 
 rm -rf dist && mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/bin"
 cp "$BIN/MijiaBarApp" "$APP/Contents/MacOS/MijiaBar"
 cp "$BIN/mijiabar" "$APP/Contents/Resources/bin/mijiabar"
+cp "$G2/go2rtc" "$APP/Contents/Resources/bin/go2rtc"
+cp "$G2/LICENSE" "$APP/Contents/Resources/go2rtc-LICENSE.txt"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 sed "s/__VERSION__/$VERSION/g" Resources/Info.plist > "$APP/Contents/Info.plist"
 
@@ -38,8 +55,9 @@ sign() {
   if [ "$SIGN_IDENTITY" = "-" ]; then codesign --force --sign - --timestamp=none "$@"
   else codesign --force --sign "$SIGN_IDENTITY" --options runtime --timestamp "$@"; fi
 }
-# 由内向外签名：先 CLI，再 app
+# 由内向外签名：先 CLI 和 go2rtc，再 app
 sign --identifier com.neardws.MijiaBar.cli --entitlements "$ENT" "$APP/Contents/Resources/bin/mijiabar"
+sign --identifier com.neardws.MijiaBar.go2rtc --entitlements "$ENT" "$APP/Contents/Resources/bin/go2rtc"
 sign --entitlements "$ENT" "$APP"
 codesign --verify --strict --verbose=2 "$APP"
 

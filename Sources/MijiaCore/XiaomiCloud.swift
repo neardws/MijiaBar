@@ -196,7 +196,8 @@ public final class QRLogin {
             let userId = anyString(o["userId"])
             _ = try await http.data(from: loc)
             guard let token = cookies.cookies?.first(where: { $0.name == "serviceToken" })?.value else { throw CloudError.noServiceToken }
-            return Session(userId: userId, ssecurity: ssecurity, serviceToken: token, region: region, cUserId: o["cUserId"] as? String)
+            let pass = (o["passToken"] as? String) ?? cookies.cookies?.first(where: { $0.name == "passToken" })?.value
+            return Session(userId: userId, ssecurity: ssecurity, serviceToken: token, region: region, cUserId: o["cUserId"] as? String, passToken: pass)
         }
     }
 }
