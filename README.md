@@ -8,14 +8,19 @@
   <img src="docs/screenshots/demo.gif" width="300" alt="动效演示：制冷 → 制热 → 关机 → 开机">
 </p>
 <p align="center">
-  <img src="docs/screenshots/list.png" width="260" alt="设备列表">
-  <img src="docs/screenshots/ac-cool.png" width="260" alt="空调（制冷）">
-  <img src="docs/screenshots/ac-heat.png" width="260" alt="空调（制热）">
+  <img src="docs/screenshots/list-light.png" width="260" alt="设备列表">
+  <img src="docs/screenshots/ac-cool-light.png" width="260" alt="空调（制冷）">
+  <img src="docs/screenshots/ac-heat-light.png" width="260" alt="空调（制热）">
+</p>
+<p align="center"><b>深色模式 / Dark</b><br>
+  <img src="docs/screenshots/list-dark.png" width="260" alt="深色列表">
+  <img src="docs/screenshots/ac-cool-dark.png" width="260" alt="深色空调">
+  <img src="docs/screenshots/ac-heat-dark.png" width="260" alt="深色制热">
 </p>
 <p align="center">
-  <img src="docs/screenshots/light.png" width="260" alt="灯">
-  <img src="docs/screenshots/settings.png" width="260" alt="设置">
-  <img src="docs/screenshots/login.png" width="260" alt="扫码登录">
+  <img src="docs/screenshots/light-light.png" width="260" alt="灯">
+  <img src="docs/screenshots/settings-light.png" width="260" alt="设置">
+  <img src="docs/screenshots/login-light.png" width="260" alt="扫码登录">
 </p>
 
 ## 功能
@@ -25,7 +30,7 @@
 - **双通道控制**：MIoT 设备走小米云 `miotspec` 接口，失败时回落到局域网 miIO；空调伴侣（`lumi.acpartner.*`）使用旧版命令并优先走局域网。
 - **按规格自动生成控件**：从 [miot-spec.org](https://home.miot-spec.com/) 拉取每个型号的规格，开关、滑块、选项菜单都自动生成；空调使用专门设计的大卡片。
 - **设备管理**：按房间分组、收藏置顶、搜索、重命名、手动隐藏；离线和久未使用的设备默认收起。
-- **好看也好用**：深色圆角卡片，温度大字和蓝到橙的渐变滑条，底部一排模式/风速/睡眠/扫风按钮；菜单栏显示收藏空调的温度。
+- **好看也好用**：自动跟随系统浅色/深色外观；圆角卡片，温度大字和蓝到橙的渐变滑条，空调出风动画，底部一排模式/风速/睡眠/扫风按钮；菜单栏显示收藏空调的温度。
 - **克制的动效**：动画只用来反馈和表达状态，统一使用无回弹的快速弹簧（< 300ms），退出比进入快。空调气流随模式变化（制冷冰晶、制热暖光、除湿水滴），风速决定流速，扫风时导风板和气流一起摆动；温度数字按方向滚动，开关有一圈涟漪；滑条 1:1 跟手、松手吸附，每跨一档触控板轻触一下。键盘操作（↑↓ ↩ Esc ← → 空格）一律瞬间响应；系统开启「减弱动态效果」时只保留淡入淡出。
 - **键盘操作**：`↑/↓` 选择，`↩` 打开，`空格` 开关，`/` 搜索，`Esc` 返回，详情页 `←/→` 调温度。
 - **乐观更新**：点了立刻生效，失败自动回滚并提示。
@@ -33,13 +38,11 @@
 
 ## 安装
 
-1. 从 [Releases](https://github.com/neardws/MijiaBar/releases) 下载 `MijiaBar-x.y.z.dmg`，把 MijiaBar 拖进「应用程序」。
-2. 应用是 ad-hoc 签名（没有经过 Apple 公证），第一次打开前在终端执行：
-   ```bash
-   xattr -dr com.apple.quarantine /Applications/MijiaBar.app
-   ```
-   或者在 Finder 里右键 →「打开」。
-3. 第一次控制设备时，macOS 会询问「本地网络」权限，请允许（局域网直连需要）。
+1. 从 [Releases](https://github.com/neardws/MijiaBar/releases) 下载 `MijiaBar-x.y.z.dmg`，把 MijiaBar 拖进「应用程序」，直接打开即可。正式版 DMG 已用 Developer ID 签名并通过 Apple 公证。
+2. 第一次控制设备时，macOS 会询问「本地网络」权限，请允许（局域网直连需要）。
+
+> GitHub Actions 自动构建的 `*-unsigned.dmg` 和自己用源码打包的版本是 ad-hoc 签名、没有公证，首次打开前需要执行
+> `xattr -dr com.apple.quarantine /Applications/MijiaBar.app`，或者在 Finder 里右键 →「打开」。
 
 系统要求：macOS 14 及以上，Apple 芯片和 Intel 都支持。
 
@@ -120,7 +123,8 @@ Claude Code：`claude mcp add mijia -- /Applications/MijiaBar.app/Contents/Resou
 ```bash
 git clone https://github.com/neardws/MijiaBar && cd MijiaBar
 swift build                         # 调试构建
-scripts/package.sh                  # 生成 dist/MijiaBar.app 和 dist/MijiaBar-0.1.0.dmg
+scripts/package.sh                  # 生成 dist/MijiaBar.app 和 DMG（有 Developer ID 时自动签名+公证）
+# 可选环境变量：SIGN_IDENTITY（"-" 强制 ad-hoc）、NOTARY_PROFILE（notarytool 钥匙串配置名，默认 MijiaBar-notary）、VERSION
 .build/debug/MijiaBarApp --snapshot docs/screenshots   # 用演示数据重新生成截图
 .build/debug/MijiaBarApp --gif docs/screenshots/demo.gif   # 录制空调卡片动效演示
 ```
@@ -150,4 +154,4 @@ scripts/package.sh                  # 生成 dist/MijiaBar.app 和 dist/MijiaBar
 - Favorites, rooms, search, rename, and auto-hiding of offline or long-unused devices.
 - Agent interface: `mijiabar list|get|set|action` CLI and an stdio MCP server (`mijiabar mcp`) with a disabled / read-only / allowlist / full policy and optional confirmation dialogs.
 
-Install: download the DMG from Releases, drag the app to Applications, then run `xattr -dr com.apple.quarantine /Applications/MijiaBar.app` (the app is ad-hoc signed). Requires macOS 14+. MIT licensed.
+Install: download the DMG from Releases, drag the app to Applications, and open it — release DMGs are Developer ID signed and notarized (CI `-unsigned` builds need `xattr -dr com.apple.quarantine /Applications/MijiaBar.app`). Requires macOS 14+. MIT licensed.

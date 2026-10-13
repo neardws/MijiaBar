@@ -7,8 +7,15 @@ public func trValue(_ en: String) -> String {
     guard isChinese else { return en }
     let m = ["auto": "自动", "cool": "制冷", "cooling": "制冷", "heat": "制热", "heating": "制热", "dry": "除湿", "dehumidify": "除湿",
              "fan": "送风", "wind": "送风", "low": "低", "medium": "中", "middle": "中", "high": "高", "sleep": "睡眠", "silent": "静音",
-             "favorite": "喜爱", "straight wind": "直吹", "natural wind": "自然风", "level1": "一档", "level2": "二档", "level3": "三档", "level4": "四档"]
-    return m[en.lowercased()] ?? en
+             "favorite": "喜爱", "straight wind": "直吹", "natural wind": "自然风", "level1": "一档", "level2": "二档", "level3": "三档", "level4": "四档",
+             "playing": "播放中", "pause": "已暂停", "paused": "已暂停", "stop": "已停止", "stopped": "已停止", "idle": "空闲", "busy": "忙碌",
+             "initializing": "初始化中", "processing": "打印中", "off": "关", "on": "开", "error": "故障", "standby": "待机", "default": "默认",
+             "timer": "预约中", "completed": "已完成", "hotpot": "火锅", "cooking": "烹饪", "soup": "煲汤", "porridge": "煮粥", "noodles": "煮面",
+             "keepwarm": "保温", "keep warm": "保温", "lighting": "照明", "night light": "夜灯", "tv": "电视", "warmth": "暖光", "ct": "色温",
+             "normal": "正常", "non existent": "未插卡", "full": "已满", "formatting": "格式化中", "ejected": "已弹出", "fixing": "修复中",
+             "no record": "不录制", "motion record": "移动时录制", "all record": "一直录制", "single cycle": "单曲循环", "no faults": "无故障",
+             "over temperature": "过热", "overload": "过载", "delay": "延迟"]
+    return m[en.lowercased()].map { L($0, $0) } ?? en
 }
 
 /// 把不同协议的空调抽象成统一状态，供 UI 渲染

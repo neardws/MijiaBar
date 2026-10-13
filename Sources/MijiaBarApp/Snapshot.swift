@@ -9,7 +9,7 @@ import MijiaCore
 extension AppModel {
     func loadMock() {
         session = Session(userId: "demo", ssecurity: "", serviceToken: "", region: "cn")
-        homes = [Home(id: "h1", name: L("我的家", "My Home"), ownerId: "0", rooms: [])]
+        homes = [Home(id: "h1", name: L("我的家", "My Home"), ownerId: "0", rooms: []), Home(id: "h2", name: L("父母家", "Parents"), ownerId: "0", rooms: [])]
         func dev(_ id: String, _ n: String, _ model: String, _ room: String, online: Bool = true) -> Device {
             Device(did: id, name: n, model: model, isOnline: online, homeId: "h1", homeName: "", roomName: room)
         }
@@ -25,6 +25,7 @@ extension AppModel {
             dev("d9", L("旧打印机", "Old printer"), "hannto.printer.honey", L("书房", "Study"), online: false),
         ]
         prefs.devices["d1"] = { var p = DevicePrefs(); p.favorite = true; return p }()
+        prefs.devices["d2"] = { var p = DevicePrefs(); p.favorite = true; return p }()
         prefs.devices["d3"] = { var p = DevicePrefs(); p.favorite = true; return p }()
         states["d1"] = DeviceState(values: ["power": .string("on"), "mode": .string("cool"), "tar_temp": .int(24), "fan_level": .string("large_fan"),
                                             "ver_swing": .string("on"), "load_power": .double(680)], spec: nil, legacy: true, source: "lan")
@@ -53,11 +54,12 @@ extension AppModel {
 
 @MainActor
 enum Snapshot {
-    static func render<V: View>(_ v: V, _ url: URL, size: CGSize = CGSize(width: 360, height: 600)) {
+    static var appearance = NSAppearance(named: .darkAqua)
+    static func render<V: View>(_ v: V, _ url: URL, size: CGSize = CGSize(width: 360, height: 560)) {
         let host = NSHostingView(rootView: v.frame(width: size.width, height: size.height))
         host.frame = CGRect(origin: .zero, size: size)
         let win = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
-        win.appearance = NSAppearance(named: .darkAqua)
+        win.appearance = appearance
         win.contentView = host
         win.setFrameOrigin(NSPoint(x: 40, y: 40))
         win.orderFrontRegardless()
@@ -81,16 +83,52 @@ enum Snapshot {
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
         let out = URL(fileURLWithPath: dir); try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
+        if CommandLine.arguments.contains("--real") {
+            // 真实登录数据（只读），用于本机自检，不要提交
+            let m = AppModel()
+            let root = RootView().environmentObject(m)
+            func wait(_ secs: Double, until: () -> Bool = { false }) {
+                let end = Date().addingTimeInterval(secs)
+                while Date() < end && !until() { RunLoop.main.run(until: Date().addingTimeInterval(0.1)) }
+            }
+            appearance = NSAppearance(named: .aqua)
+            m.page = .list
+            render(root, out.appendingPathComponent("warmup.png")); wait(10)
+            var picks: [Device] = []
+            for c in [DeviceCategory.ac, .light, .plug, .fan, .sensor, .heater, .dehumidifier, .speaker, .camera, .tv, .printer, .purifier, .other, .kitchen] {
+                if let d = m.devices.first(where: { $0.category == c && $0.isOnline && $0.homeId == m.currentHomeId }) ?? m.devices.first(where: { $0.category == c && $0.isOnline }) ?? m.devices.first(where: { $0.category == c }) { picks.append(d) }
+            }
+            for d in picks where m.states[d.did] == nil {
+                var done = false
+                Task { await m.loadState(d); done = true }
+                wait(15) { done }
+            }
+            for (suffix, name) in [("light", NSAppearance.Name.aqua), ("dark", NSAppearance.Name.darkAqua)] {
+                appearance = NSAppearance(named: name)
+                m.page = .list; render(root, out.appendingPathComponent("real-list-\(suffix).png"))
+                for d in picks { m.page = .detail(d.did); render(root, out.appendingPathComponent("real-\(d.category.rawValue)-\(suffix).png")) }
+            }
+            print(picks.map { "\($0.category.rawValue)=\($0.model)" }.joined(separator: " "))
+            exit(0)
+        }
         let m = AppModel(mock: true)
         let root = RootView().environmentObject(m)
-        m.page = .list; render(root, out.appendingPathComponent("list.png"))
-        m.page = .detail("d1"); render(root, out.appendingPathComponent("ac-cool.png"))
-        m.page = .detail("d2"); m.states["d2"]?.values["power"] = .string("on"); m.states["d2"]?.values["load_power"] = .double(1260); render(root, out.appendingPathComponent("ac-heat.png"))
-        m.page = .detail("d3"); render(root, out.appendingPathComponent("light.png"))
-        m.page = .settings; render(root, out.appendingPathComponent("settings.png"))
-        m.page = .list; m.showHidden = true; render(root, out.appendingPathComponent("list-hidden.png")); m.showHidden = false
-        m.session = nil; m.qrImage = qr("https://github.com/neardws/MijiaBar"); m.loginStatus = L("打开米家 App 扫一扫，并在手机上确认登录", "Scan with the Mi Home app")
-        render(root, out.appendingPathComponent("login.png"))
+        for (suffix, name) in [("light", NSAppearance.Name.aqua), ("dark", NSAppearance.Name.darkAqua)] {
+            appearance = NSAppearance(named: name)
+            func f(_ n: String) -> URL { out.appendingPathComponent("\(n)-\(suffix).png") }
+            m.session = Session(userId: "demo", ssecurity: "", serviceToken: "", region: "cn")
+            m.page = .list; m.showHidden = false; render(root, f("list"))
+            m.page = .detail("d1"); render(root, f("ac-cool"))
+            m.page = .detail("d2"); m.states["d2"]?.values["power"] = .string("on"); m.states["d2"]?.values["load_power"] = .double(1260); render(root, f("ac-heat"))
+            m.states["d2"]?.values["power"] = .string("off")
+            m.page = .detail("d3"); render(root, f("light"))
+            m.page = .detail("d5"); render(root, f("plug"))
+            m.page = .detail("d4"); m.states["d4"]?.values["2.1"] = .bool(true); render(root, f("fan"))
+            m.page = .settings; render(root, f("settings"))
+            m.page = .list; m.showHidden = true; render(root, f("list-hidden")); m.showHidden = false
+            m.session = nil; m.qrImage = qr("https://github.com/neardws/MijiaBar"); m.loginStatus = L("打开米家 App 扫一扫，并在手机上确认登录", "Scan with the Mi Home app")
+            render(root, f("login"))
+        }
         if liveQR {
             // 真实请求 account.xiaomi.com 拿二维码（不轮询、不登录），验证二维码页面能渲染
             var done = false
@@ -113,7 +151,7 @@ enum Snapshot {
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
         let m = AppModel(mock: true)
-        let size = CGSize(width: 360, height: 600)
+        let size = CGSize(width: 360, height: 560)
         let host = NSHostingView(rootView: RootView().environmentObject(m).frame(width: size.width, height: size.height))
         host.frame = CGRect(origin: .zero, size: size)
         let win = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)

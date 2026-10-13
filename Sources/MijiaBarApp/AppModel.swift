@@ -48,8 +48,14 @@ final class AppModel: ObservableObject {
     func isFavorite(_ d: Device) -> Bool { prefs.devices[d.did]?.favorite ?? false }
     func isHidden(_ d: Device) -> Bool { prefs.isHidden(d) }
 
+    /// 当前家庭：用户选的，否则第一个有设备的家庭
+    var currentHomeId: String? {
+        if let h = prefs.selectedHome, homes.contains(where: { $0.id == h }) { return h }
+        return homes.first { h in devices.contains { $0.homeId == h.id } }?.id ?? homes.first?.id
+    }
+    var currentHomeName: String { homes.first { $0.id == currentHomeId }?.name ?? L("米家", "Mi Home") }
     private func matches(_ d: Device) -> Bool {
-        (prefs.selectedHome == nil || d.homeId == prefs.selectedHome) &&
+        (currentHomeId == nil || d.homeId == currentHomeId) &&
         (search.isEmpty || [displayName(d), d.name, d.model, d.roomName ?? ""].contains { $0.localizedCaseInsensitiveContains(search) })
     }
     var hiddenCount: Int { devices.filter { matches($0) && isHidden($0) }.count }
@@ -59,31 +65,41 @@ final class AppModel: ObservableObject {
         var out: [DeviceSection] = []
         let favs = list.filter(isFavorite)
         if !favs.isEmpty { out.append(.init(id: "fav", title: L("收藏", "Favorites"), devices: favs)) }
-        let multi = homes.count > 1 && prefs.selectedHome == nil
-        let groups = Dictionary(grouping: list.filter { !isFavorite($0) }) { d -> String in
-            let r = d.roomName ?? L("未分配房间", "No room")
-            return multi ? "\(d.homeName) · \(r)" : r
-        }
+        let groups = Dictionary(grouping: list.filter { !isFavorite($0) }) { $0.roomName ?? L("未分配房间", "No room") }
         for k in groups.keys.sorted() {
             out.append(.init(id: "room-" + k, title: k, devices: groups[k]!.sorted {
                 ($0.isOnline ? 0 : 1, displayName($0)) < ($1.isOnline ? 0 : 1, displayName($1)) }))
         }
         return out
     }
+    struct Summary { var on = 0; var offline = 0; var acs: [(String, Int, Bool)] = []; var env: String? }
+    var summary: Summary {
+        var s = Summary()
+        for d in devices where d.homeId == currentHomeId {
+            if !d.isOnline { s.offline += 1; continue }
+            guard let st = states[d.did] else { continue }
+            if let ac = ACState.make(st) {
+                if ac.power { s.on += 1; if s.acs.count < 2, let t = ac.target { s.acs.append((displayName(d), Int(t), ac.isHeating)) } }
+            } else if powerInfo(d)?.isOn == true { s.on += 1 }
+            if s.env == nil, d.category == .sensor, let t = sensorText(st) { s.env = t }
+        }
+        return s
+    }
+    /// 收藏的空调以迷你卡片显示
+    var favoriteACs: [Device] { sections.first { $0.id == "fav" }?.devices.filter { $0.category == .ac } ?? [] }
     var flatVisible: [String] { sections.flatMap { $0.devices.map(\.did) } }
 
     func subtitle(_ d: Device) -> String {
         var parts: [String] = []
-        if let r = d.roomName { parts.append(r) }
-        if !d.isOnline { parts.append(L("离线", "Offline")) }
+        if !d.isOnline { return d.roomName ?? "" }
         else if let s = states[d.did] {
             if let ac = ACState.make(s) {
                 parts.append(ac.power ? "\(ac.modeLabel) \(ac.target.map { "\(Int($0))°" } ?? "")" : L("已关机", "Off"))
             } else if let p = powerInfo(d) { parts.append(p.isOn ? L("已开启", "On") : L("已关闭", "Off")) }
             if let t = sensorText(s) { parts.append(t) }
         } else if stateErrors[d.did] != nil { parts.append(L("无法读取", "Unavailable")) }
-        else { parts.append(d.model) }
-        return parts.joined(separator: " · ")
+        else if !d.isOnline { } else { parts.append(L("读取中…", "Loading…")) }
+        return parts.isEmpty ? (states[d.did] != nil ? L("在线", "Online") : "") : parts.joined(separator: " · ")
     }
 
     func sensorText(_ s: DeviceState) -> String? {
@@ -226,8 +242,19 @@ final class AppModel: ObservableObject {
             }
         }
     }
+    @Published var lang: AppLang = currentLang
+    /// 用户是否手动选过语言；没选过时切换地区会跟随地区默认语言
+    var langManual: Bool { UserDefaults.standard.bool(forKey: "MijiaBarLangManual") }
+    func setLang(_ l: AppLang, manual: Bool = true) {
+        currentLang = l; lang = l
+        UserDefaults.standard.set(l.rawValue, forKey: "MijiaBarLang")
+        if manual { UserDefaults.standard.set(true, forKey: "MijiaBarLangManual") }
+    }
+    /// 完全退出：结束 App 本身（MCP 服务由 Agent 客户端各自启动的 CLI 进程提供，App 不常驻任何后台子进程）
+    func quitApp() { NSApp.terminate(nil) }
     func setRegion(_ r: String) {
         prefs.region = r
+        if !langManual, let d = AppLang.suggested(forRegion: r).first { setLang(d, manual: false) }
         if var s = session { s.region = r; s.save(); session = s; controller.cloud = XiaomiCloud(session: s); states = [:]; Task { await refresh() } }
     }
     func logout() {

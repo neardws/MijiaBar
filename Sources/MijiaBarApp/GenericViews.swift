@@ -25,7 +25,7 @@ struct GenericDetailView: View {
                         .padding(16)
                         .background {
                             let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            shape.fill(LinearGradient(colors: [c.opacity(p.isOn ? 0.28 : 0.08), Theme.bg2], startPoint: .topLeading, endPoint: .bottomTrailing))
+                            shape.fill(LinearGradient(colors: [c.opacity(p.isOn ? 0.22 : 0.06), c.opacity(0.02)], startPoint: .topLeading, endPoint: .bottomTrailing))
                                 .overlay(alignment: .topLeading) {
                                     Circle().fill(RadialGradient(colors: [c.opacity(0.4), c.opacity(0)], center: .center, startRadius: 0, endRadius: 100))
                                         .frame(width: 200, height: 200).offset(x: -60, y: -90).opacity(p.isOn ? 1 : 0)
@@ -132,6 +132,24 @@ struct SettingsView: View {
                         }
                         Button(L("退出登录", "Sign out"), role: .destructive) { m.logout() }
                     }
+                    group(L("语言", "Language")) {
+                        let sug = AppLang.suggested(forRegion: m.prefs.region)
+                        row(L("界面语言", "Language")) {
+                            Picker("", selection: Binding(get: { m.lang }, set: { m.setLang($0) })) {
+                                Section(L("当前地区推荐", "Suggested for region")) { ForEach(sug, id: \.self) { Text($0.nativeName).tag($0) } }
+                                Section(L("其他", "Other")) { ForEach(AppLang.allCases.filter { !sug.contains($0) }, id: \.self) { Text($0.nativeName).tag($0) } }
+                            }.labelsHidden().fixedSize()
+                        }
+                        if !m.lang.isComplete {
+                            Text("\(m.lang.nativeName): translation in progress, showing English for now.").font(.system(size: 10)).foregroundStyle(.secondary)
+                        }
+                        if m.langManual {
+                            Button(L("跟随地区默认", "Follow region default")) {
+                                UserDefaults.standard.set(false, forKey: "MijiaBarLangManual")
+                                if let d = sug.first { m.setLang(d, manual: false) }
+                            }
+                        }
+                    }
                     group(L("设备管理", "Devices")) {
                         Toggle(L("显示已隐藏的设备", "Show hidden devices"), isOn: Binding(get: { m.showHidden }, set: { _ in m.toggleShowHidden() }))
                         Text(L("默认隐藏：离线设备，以及云端最后在线时间超过 30 天的设备。右键设备可以手动隐藏/取消隐藏、收藏和重命名。",
@@ -162,10 +180,16 @@ struct SettingsView: View {
                             Button(L("复制 CLI 路径", "Copy CLI path")) { copy(m.cliPath); m.showToast(L("已复制", "Copied")) }
                         }
                     }
+                    Button { m.quitApp() } label: {
+                        Label(L("完全退出 MijiaBar", "Quit MijiaBar"), systemImage: "power")
+                            .font(.system(size: 13, weight: .semibold)).frame(maxWidth: .infinity).padding(.vertical, 9)
+                            .background(RoundedRectangle(cornerRadius: 12).fill(Color.red.opacity(0.14)))
+                            .foregroundStyle(.red)
+                    }.buttonStyle(.plain).help("⌘Q")
                     group(L("关于", "About")) {
-                        row("MijiaBar") { Text("v0.1.0").foregroundStyle(.secondary) }
+                        row("MijiaBar") { Text("v0.1.5-rc1").foregroundStyle(.secondary) }
                         Link("github.com/neardws/MijiaBar", destination: URL(string: "https://github.com/neardws/MijiaBar")!)
-                        Button(L("退出 MijiaBar", "Quit MijiaBar")) { NSApp.terminate(nil) }
+
                     }
                 }
             }

@@ -36,7 +36,7 @@ struct ACCardView: View {
         if ac.isCooling { return min(0.3, t) }
         return t
     }
-    var tint: Color { ac.power ? Theme.warm(warmth) : Color(white: 0.45) }
+    var tint: Color { ac.power ? Theme.warm(warmth) : Color.secondary }
 
     var topLabel: String {
         if let r = ac.roomTemp { return L("室温 ", "Room ") + "\(PropValue.double(r))°" }
@@ -91,13 +91,13 @@ struct ACCardView: View {
         .padding(18)
         .background {
             let shape = RoundedRectangle(cornerRadius: 26, style: .continuous)
-            shape.fill(LinearGradient(colors: [tint.opacity(ac.power ? 0.32 : 0.12), Theme.bg2], startPoint: .top, endPoint: .bottom))
+            shape.fill(LinearGradient(colors: [tint.opacity(ac.power ? 0.28 : 0.08), tint.opacity(0.02)], startPoint: .top, endPoint: .bottom))
                 .overlay(alignment: .top) {
                     Rectangle().fill(EllipticalGradient(colors: [tint.opacity(0.45), tint.opacity(0)])).frame(width: 340, height: 220).offset(y: -80)
                         .opacity(ac.power ? 1 : 0)
                 }
                 .clipShape(shape)
-                .overlay(shape.stroke(LinearGradient(colors: [ac.power ? tint.opacity(0.45) : Color.white.opacity(0.14), Color.white.opacity(0.04)],
+                .overlay(shape.stroke(LinearGradient(colors: [ac.power ? tint.opacity(0.45) : Theme.stroke, Theme.stroke.opacity(0.4)],
                                                      startPoint: .top, endPoint: .bottom), lineWidth: 1))
         }
         .animation(Motion.smooth, value: ac.power)
@@ -124,18 +124,18 @@ struct PowerButton: View {
     let action: () -> Void
     var body: some View {
         Button(action: action) {
-            Image(systemName: "power").font(.system(size: size * 0.4, weight: .bold)).foregroundStyle(.white)
+            Image(systemName: "power").font(.system(size: size * 0.4, weight: .bold)).foregroundStyle(on ? Color.white : Color.primary)
                 .symbolEffect(.bounce, value: on)
                 .frame(width: size, height: size)
                 .background {
                     ZStack {
-                        Circle().fill(Color.white.opacity(0.12))
+                        Circle().fill(Theme.tile)
                         Circle().fill(tint).opacity(on ? 1 : 0)
                         Circle().fill(LinearGradient(colors: [.white.opacity(0.35), .clear], startPoint: .top, endPoint: .center)).opacity(on ? 1 : 0)
                     }
                 }
                 .shadow(color: on ? tint.opacity(0.6) : .clear, radius: 10)
-                .ripple(on, color: on ? tint : .white)
+                .ripple(on, color: on ? tint : .secondary)
         }
         .buttonStyle(.pressable(0.95)).hoverHighlight()
     }
@@ -151,7 +151,7 @@ struct TempReadout: View {
                 .contentTransition(.numericText(value: temp)).monospacedDigit()
             Text("°C").font(.system(size: 20, weight: .light)).padding(.top, 16)
         }
-        .foregroundStyle(LinearGradient(colors: [.white, .white, on ? tint : .white], startPoint: .top, endPoint: .bottom))
+        .foregroundStyle(LinearGradient(colors: [.primary, .primary, on ? tint : .primary], startPoint: .top, endPoint: .bottom))
         .shadow(color: on ? tint.opacity(0.4) : .clear, radius: 20)
         .opacity(on ? 1 : 0.45)
         .animation(Motion.snappy, value: Int(temp.rounded()))
@@ -201,6 +201,7 @@ struct ACIllustration: View {
         return ZStack {
             body.fill(LinearGradient(colors: [Color(white: 0.97), Color(white: 0.80)], startPoint: .top, endPoint: .bottom))
                 .overlay(body.stroke(LinearGradient(colors: [.white, .white.opacity(0)], startPoint: .top, endPoint: .bottom), lineWidth: 1))
+                .overlay(body.stroke(Color.black.opacity(0.08)))
                 .frame(width: 230, height: 58)
                 .shadow(color: on ? tint.opacity(0.5 * k) : .black.opacity(0.3), radius: on ? 6 + 10 * k : 6, y: 4)
             RoundedRectangle(cornerRadius: 1).fill(Color.black.opacity(0.08)).frame(width: 150, height: 2).offset(y: -6)
@@ -312,7 +313,7 @@ struct TempSlider: View {
                 let x = CGFloat(f) * (w - knob)
                 ZStack(alignment: .leading) {
                     ZStack(alignment: .leading) {
-                        Capsule().fill(Color.white.opacity(enabled ? 0.12 : 0.06))
+                        Capsule().fill(Theme.tile.opacity(enabled ? 1 : 0.5))
                         Capsule().fill(Theme.sliderGradient)
                             .mask(alignment: .leading) { Rectangle().frame(width: x + knob / 2) }
                             .opacity(enabled ? 1 : 0.3)
@@ -320,7 +321,7 @@ struct TempSlider: View {
                     .frame(height: 8)
                     .scaleEffect(x: 1, y: dragging || hovering ? 1.25 : 1)
                     ZStack {
-                        Circle().fill(.white).shadow(color: .black.opacity(dragging ? 0.4 : 0.3), radius: dragging ? 6 : 4, y: 1)
+                        Circle().fill(Color.white).overlay(Circle().stroke(Color.black.opacity(0.12))).shadow(color: .black.opacity(dragging ? 0.4 : 0.3), radius: dragging ? 6 : 4, y: 1)
                         Circle().fill(Theme.warm(f)).frame(width: 9, height: 9)
                             .scaleEffect(dragging || hovering ? 1 : 0.6).opacity(dragging || hovering ? 1 : 0)
                     }
@@ -373,13 +374,13 @@ struct TileFace: View {
             Image(systemName: icon).font(.system(size: 15, weight: .medium)).frame(height: 18)
                 .contentTransition(.symbolEffect(.replace))
                 .symbolEffect(.bounce, value: value)
-            Text(title).font(.system(size: 10)).foregroundStyle(.secondary)
+            Text(title).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
             Text(value).font(.system(size: 11, weight: .semibold)).lineLimit(1).contentTransition(.numericText())
         }
         .frame(maxWidth: .infinity).padding(.vertical, 10)
         .background {
             ZStack {
-                shape.fill(Color.white.opacity(hovering ? 0.11 : 0.07))
+                shape.fill(hovering ? Theme.hover : Theme.tile)
                 shape.fill(tint.opacity(0.30)).opacity(active ? 1 : 0)
             }
         }
