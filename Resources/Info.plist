@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key><string>com.neardws.MijiaBar</string>
+  <key>CFBundleName</key><string>MijiaBar</string>
+  <key>CFBundleDisplayName</key><string>MijiaBar</string>
+  <key>CFBundleExecutable</key><string>MijiaBar</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>__VERSION__</string>
+  <key>CFBundleVersion</key><string>__VERSION__</string>
+  <key>CFBundleDevelopmentRegion</key><string>zh_CN</string>
+  <key>CFBundleLocalizations</key><array><string>zh-Hans</string><string>en</string></array>
+  <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>LSUIElement</key><true/>
+  <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
+  <key>NSLocalNetworkUsageDescription</key><string>MijiaBar 需要访问局域网，直接与米家设备通信（miIO 协议，UDP 54321）。</string>
+  <key>NSHumanReadableCopyright</key><string>© 2026 neardws · MIT License</string>
+</dict>
+</plist>
