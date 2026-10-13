@@ -1,11 +1,11 @@
 import Foundation
 
-public struct ValueOption: Codable, Hashable { public let value: Int; public let description: String
+public struct ValueOption: Codable, Hashable, Sendable { public let value: Int; public let description: String
     public init(value: Int, description: String) { self.value = value; self.description = description } }
 
 public func urnName(_ t: String) -> String { let p = t.split(separator: ":"); return p.count > 3 ? String(p[3]) : t }
 
-public struct SpecProperty: Codable, Hashable {
+public struct SpecProperty: Codable, Hashable, Sendable {
     public let siid: Int, iid: Int
     public let type: String, description: String, format: String
     public let access: [String]
@@ -22,14 +22,14 @@ public struct SpecProperty: Codable, Hashable {
         self.access = access; self.unit = unit; self.range = range; self.options = options
     }
 }
-public struct SpecAction: Codable, Hashable {
+public struct SpecAction: Codable, Hashable, Sendable {
     public let siid: Int, iid: Int
     public let type: String, description: String
     public let inputs: [Int]
     public var name: String { urnName(type) }
     public var key: String { "\(siid).\(iid)" }
 }
-public struct SpecService: Codable, Hashable {
+public struct SpecService: Codable, Hashable, Sendable {
     public let iid: Int
     public let type: String, description: String
     public let properties: [SpecProperty]
@@ -40,7 +40,7 @@ public struct SpecService: Codable, Hashable {
         self.iid = iid; self.type = type; self.description = description; self.properties = properties; self.actions = actions
     }
 }
-public struct DeviceSpec: Codable, Hashable {
+public struct DeviceSpec: Codable, Hashable, Sendable {
     public let type: String, description: String
     public let services: [SpecService]
     public var name: String { urnName(type) }
@@ -74,8 +74,8 @@ public struct DeviceSpec: Codable, Hashable {
     }
 }
 
-/// 从 miot-spec.org 拉取并缓存设备规格
-public final class SpecStore {
+/// 从 miot-spec.org 拉取并缓存设备规格（可变状态都由 lock 保护）
+public final class SpecStore: @unchecked Sendable {
     public static let shared = SpecStore()
     private var mem: [String: DeviceSpec] = [:]
     private var indexTask: Task<[String: String], Error>?

@@ -21,8 +21,8 @@ public var xiaomiRegions: [(id: String, name: String)] { [
 ] }
 
 /// 小米云 API（与米家 App 相同的 RC4 加密签名接口）
-public final class XiaomiCloud {
-    public var session: Session
+public final class XiaomiCloud: Sendable {
+    public let session: Session
     private let agent: String
     private let http: URLSession
 
@@ -101,7 +101,7 @@ public final class XiaomiCloud {
 
     public func devices(in home: Home) async throws -> [Device] {
         let r = try await call("/v2/home/home_device_list", [
-            "home_owner": Int64(home.ownerId) ?? 0, "home_id": Int64(home.id) ?? 0,
+            "home_owner": Int64(home.ownerId) ?? Int64(0), "home_id": Int64(home.id) ?? Int64(0),
             "limit": 200, "get_split_device": true, "support_smart_home": true,
         ]) as? [String: Any] ?? [:]
         let infos = r["device_info"] as? [[String: Any]] ?? []
@@ -147,7 +147,7 @@ public final class XiaomiCloud {
 
 /// 扫码登录：account.xiaomi.com/longPolling/loginUrl → 用米家 App 扫码 → 长轮询拿 ssecurity → 访问 location 拿 serviceToken
 public final class QRLogin {
-    public struct Ticket { public let qrURL: URL; public let loginURL: String; public let lpURL: URL; public let timeout: TimeInterval }
+    public struct Ticket: Sendable { public let qrURL: URL; public let loginURL: String; public let lpURL: URL; public let timeout: TimeInterval }
     private let http: URLSession
     private let cookies: HTTPCookieStorage
 
