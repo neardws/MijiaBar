@@ -54,18 +54,18 @@ final class FakeDevice: @unchecked Sendable {
     @Test func requestReachesDeviceAndReturnsResult() async throws {
         let fake = FakeDevice()
         fake.reply = { ["id": $0["id"]!, "result": ["on", "cool", 26]] }
-        let r = try await fake.makeDevice().send(method: "get_prop", params: ["power", "mode", "tar_temp"]) as? [Any]
+        let r = try await fake.makeDevice().send(method: "get_prop", params: [.string("power"), .string("mode"), .string("tar_temp")])
         #expect(fake.lastRequest?["method"] as? String == "get_prop")
         #expect(fake.lastRequest?["params"] as? [String] == ["power", "mode", "tar_temp"])
-        #expect(r?.count == 3 && r?[0] as? String == "on")
+        #expect(r == [.string("on"), .string("cool"), .int(26)])
     }
 
     @Test func handshakeIsReusedAcrossRequests() async throws {
         let fake = FakeDevice()
         let d = try fake.makeDevice()
-        _ = try await d.send(method: "get_prop", params: ["power"])
-        _ = try await d.send(method: "set_power", params: ["on"])
-        _ = try await d.send(method: "get_prop", params: ["power"])
+        _ = try await d.send(method: "get_prop", params: [.string("power")])
+        _ = try await d.send(method: "set_power", params: [.string("on")])
+        _ = try await d.send(method: "get_prop", params: [.string("power")])
         #expect(fake.hellos == 1)
         #expect(fake.requests == 3)
     }
@@ -73,9 +73,9 @@ final class FakeDevice: @unchecked Sendable {
     @Test func staleHandshakeIsRefreshedOnce() async throws {
         let fake = FakeDevice()
         let d = try fake.makeDevice()
-        _ = try await d.send(method: "get_prop", params: ["power"])
+        _ = try await d.send(method: "get_prop", params: [.string("power")])
         fake.reboot()
-        _ = try await d.send(method: "get_prop", params: ["power"])
+        _ = try await d.send(method: "get_prop", params: [.string("power")])
         #expect(fake.hellos == 2)
     }
 
@@ -89,7 +89,7 @@ final class FakeDevice: @unchecked Sendable {
         let fake = FakeDevice()
         fake.reply = { ["id": $0["id"]!, "error": ["code": -5001, "message": "invalid arg"]] }
         do {
-            _ = try await fake.makeDevice().send(method: "set_mode", params: ["bogus"])
+            _ = try await fake.makeDevice().send(method: "set_mode", params: [.string("bogus")])
             Issue.record("expected a device error")
         } catch {
             #expect(!MiIODevice.isUnreachable(error))
@@ -133,14 +133,15 @@ final class FakeDevice: @unchecked Sendable {
         let a = try #require(c.lan(ac)), b = try #require(c.lan(ac))
         #expect(a === b)
         var moved = ac; moved.ip = "192.0.2.9"
-        #expect(try #require(c.lan(moved)) !== a)
+        let c2 = try #require(c.lan(moved))
+        #expect(c2 !== a)
     }
 
     @Test func skipsLANAfterTimeoutWhenCloudIsAvailable() async throws {
         let fake = FakeDevice(); fake.unreachable = true
         let c = controller(fake, cloud: cloud)
         let m = try #require(c.lan(ac))
-        _ = try? await c.viaLAN(ac, m) { (d: MiIODevice) -> Any in try await d.send(method: "get_prop", params: []) }
+        _ = try? await c.viaLAN(ac, m) { (d: MiIODevice) -> [PropValue] in try await d.send(method: "get_prop", params: []) }
         #expect(c.lan(ac) == nil)
     }
 
@@ -148,7 +149,7 @@ final class FakeDevice: @unchecked Sendable {
         let fake = FakeDevice(); fake.unreachable = true
         let c = controller(fake, cloud: nil)
         let m = try #require(c.lan(ac))
-        _ = try? await c.viaLAN(ac, m) { (d: MiIODevice) -> Any in try await d.send(method: "get_prop", params: []) }
+        _ = try? await c.viaLAN(ac, m) { (d: MiIODevice) -> [PropValue] in try await d.send(method: "get_prop", params: []) }
         #expect(c.lan(ac) != nil)
     }
 
@@ -157,7 +158,7 @@ final class FakeDevice: @unchecked Sendable {
         fake.reply = { ["id": $0["id"]!, "error": "busy"] }
         let c = controller(fake, cloud: cloud)
         let m = try #require(c.lan(ac))
-        _ = try? await c.viaLAN(ac, m) { (d: MiIODevice) -> Any in try await d.send(method: "set_power", params: ["on"]) }
+        _ = try? await c.viaLAN(ac, m) { (d: MiIODevice) -> [PropValue] in try await d.send(method: "set_power", params: [.string("on")]) }
         #expect(c.lan(ac) != nil)
     }
 }

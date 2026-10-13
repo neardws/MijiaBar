@@ -19,11 +19,12 @@ func json(_ a: Any) -> String {
     return String(data: d, encoding: .utf8) ?? ""
 }
 
+// 顶层变量属于主 actor，用到它们的函数都标了 @MainActor（命令行本来就是单线程）
 let prefs = Prefs.load()
 let policy = AgentPolicy.load()
 let controller = Controller(cloud: Session.load().map { XiaomiCloud(session: $0) })
 
-func devices(refresh: Bool = false) async throws -> [Device] {
+@MainActor func devices(refresh: Bool = false) async throws -> [Device] {
     if !refresh, let c = DeviceCache.load(), !c.devices.isEmpty { return c.devices }
     guard let cloud = controller.cloud else { throw CloudError.notLoggedIn }
     let hs = try await cloud.homes(); var all: [Device] = []
@@ -32,7 +33,7 @@ func devices(refresh: Bool = false) async throws -> [Device] {
     return all
 }
 
-func resolve(_ q: String) async throws -> Device {
+@MainActor func resolve(_ q: String) async throws -> Device {
     let ds = try await devices()
     if let d = ds.first(where: { $0.did == q }) { return d }
     if let d = ds.first(where: { prefs.name($0) == q || $0.name == q }) { return d }
@@ -41,7 +42,7 @@ func resolve(_ q: String) async throws -> Device {
     throw MijiaError.deviceNotFound(q + (m.count > 1 ? L("（匹配到多个：", " (ambiguous: ") + m.map { prefs.name($0) }.joined(separator: ", ") + ")" : ""))
 }
 
-func deviceInfo(_ d: Device) -> [String: Any] {
+@MainActor func deviceInfo(_ d: Device) -> [String: Any] {
     var o: [String: Any] = ["did": d.did, "name": prefs.name(d), "model": d.model, "online": d.isOnline,
                             "category": d.category.rawValue, "home": d.homeName, "hidden": prefs.isHidden(d),
                             "favorite": prefs.devices[d.did]?.favorite ?? false,
@@ -50,13 +51,13 @@ func deviceInfo(_ d: Device) -> [String: Any] {
     return o
 }
 
-func stateInfo(_ d: Device, _ s: DeviceState) -> [String: Any] {
+@MainActor func stateInfo(_ d: Device, _ s: DeviceState) -> [String: Any] {
     var o = deviceInfo(d); o["source"] = s.source
     if s.legacy {
         o["protocol"] = "miio-legacy"
         o["properties"] = Controller.legacyProps.map { k -> [String: Any] in
             ["key": k, "value": s.values[k]?.any ?? NSNull(), "writable": k != "load_power"] }
-        if let ac = ACState.make(s) { o["summary"] = ["power": ac.power, "mode": ac.modeLabel, "target_temperature": ac.target ?? NSNull(), "fan": ac.fanLabel] }
+        if let ac = ACState.make(s) { o["summary"] = ["power": ac.power, "mode": ac.modeLabel, "target_temperature": ac.target.map { $0 as Any } ?? NSNull(), "fan": ac.fanLabel] }
     } else if let spec = s.spec {
         o["protocol"] = "miot"
         o["properties"] = spec.controlServices.flatMap { svc in svc.properties.filter { $0.readable || $0.writable }.map { p -> [String: Any] in
@@ -72,7 +73,7 @@ func stateInfo(_ d: Device, _ s: DeviceState) -> [String: Any] {
 }
 
 /// 属性可以写成 "2.1"、"on"、"air-conditioner.on"；空调伴侣还支持 power/mode/tar_temp/fan_level/ver_swing
-func resolveKey(_ d: Device, _ name: String) async throws -> (String, String?) {
+@MainActor func resolveKey(_ d: Device, _ name: String) async throws -> (String, String?) {
     if Controller.isLegacyAC(d.model) {
         let alias = ["on": "power", "target-temperature": "tar_temp", "fan-level": "fan_level", "vertical-swing": "ver_swing"]
         let k = alias[name] ?? name
@@ -98,7 +99,7 @@ func confirm(_ msg: String) -> Bool {
     return p.terminationStatus == 0 && out.contains(L("允许", "Allow")) && !out.contains("gave up:true")
 }
 
-func checkWrite(_ d: Device, _ what: String) throws {
+@MainActor func checkWrite(_ d: Device, _ what: String) throws {
     guard policy.canWrite(d.did) else {
         throw MijiaError.denied(LF("当前 Agent 模式为「%@」，请在 MijiaBar 设置里开启写权限或把设备加入白名单",
                                    "agent mode is %@; enable writes or allowlist the device in MijiaBar settings", policy.mode.rawValue))
@@ -108,16 +109,16 @@ func checkWrite(_ d: Device, _ what: String) throws {
     }
 }
 
-func listDevices(all: Bool, refresh: Bool) async throws -> [[String: Any]] {
+@MainActor func listDevices(all: Bool, refresh: Bool) async throws -> [[String: Any]] {
     guard policy.canRead else { throw MijiaError.denied("disabled") }
     return try await devices(refresh: refresh).filter { all || !prefs.isHidden($0) }.map(deviceInfo)
 }
-func getState(_ q: String) async throws -> [String: Any] {
+@MainActor func getState(_ q: String) async throws -> [String: Any] {
     guard policy.canRead else { throw MijiaError.denied("disabled") }
     let d = try await resolve(q)
     return stateInfo(d, try await controller.readState(d))
 }
-func setProperty(_ q: String, _ prop: String, _ value: PropValue) async throws -> [String: Any] {
+@MainActor func setProperty(_ q: String, _ prop: String, _ value: PropValue) async throws -> [String: Any] {
     let d = try await resolve(q)
     let (key, format) = try await resolveKey(d, prop)
     let v = format.map { value.coerced(to: $0) } ?? value
@@ -125,7 +126,7 @@ func setProperty(_ q: String, _ prop: String, _ value: PropValue) async throws -
     try await controller.set(d, key: key, value: v)
     return ["ok": true, "device": prefs.name(d), "key": key, "value": v.any]
 }
-func runAction(_ q: String, _ act: String, _ inputs: [Any]) async throws -> [String: Any] {
+@MainActor func runAction(_ q: String, _ act: String, _ inputs: [PropValue]) async throws -> [String: Any] {
     let d = try await resolve(q)
     guard let spec = try await controller.specs.spec(for: d.model) else { throw MijiaError.noSpec(d.model) }
     var a = spec.action(key: act)
@@ -134,7 +135,7 @@ func runAction(_ q: String, _ act: String, _ inputs: [Any]) async throws -> [Str
     guard let a else { throw MijiaError.unknownProperty(act) }
     try checkWrite(d, L("动作 ", "action ") + act)
     let r = try await controller.action(d, key: a.key, inputs: inputs)
-    return ["ok": true, "device": prefs.name(d), "action": a.key, "result": PropValue(r).any]
+    return ["ok": true, "device": prefs.name(d), "action": a.key, "result": r.any]
 }
 
 // MARK: - MCP (stdio JSON-RPC)
@@ -150,17 +151,17 @@ let mcpTools: [[String: Any]] = [
      "inputSchema": ["type": "object", "properties": ["device": ["type": "string"], "action": ["type": "string"], "params": ["type": "array"]], "required": ["device", "action"]]],
 ]
 
-func callTool(_ name: String, _ a: [String: Any]) async throws -> Any {
+@MainActor func callTool(_ name: String, _ a: [String: Any]) async throws -> Any {
     switch name {
     case "list_devices": return try await listDevices(all: a["include_hidden"] as? Bool ?? false, refresh: a["refresh"] as? Bool ?? false)
     case "get_device_state": return try await getState(anyString(a["device"]))
     case "set_property": return try await setProperty(anyString(a["device"]), anyString(a["property"]), PropValue(a["value"]))
-    case "run_action": return try await runAction(anyString(a["device"]), anyString(a["action"]), a["params"] as? [Any] ?? [])
+    case "run_action": return try await runAction(anyString(a["device"]), anyString(a["action"]), (a["params"] as? [Any] ?? []).map { PropValue($0) })
     default: throw MijiaError.unknownProperty(name)
     }
 }
 
-func mcp() async {
+@MainActor func mcp() async {
     while let line = readLine() {
         guard let d = line.data(using: .utf8), let req = try? JSONSerialization.jsonObject(with: d) as? [String: Any] else { continue }
         guard let id = req["id"] else { continue }
@@ -216,7 +217,7 @@ do {
     case "set": guard args.count >= 4 else { fail(usage) }; print(json(try await setProperty(args[1], args[2], PropValue.parse(args[3]))))
     case "action":
         guard args.count >= 3 else { fail(usage) }
-        let ins = args.count > 3 ? (try? JSONSerialization.jsonObject(with: Data(args[3].utf8))) as? [Any] ?? [] : []
+        let ins = (args.count > 3 ? (try? JSONSerialization.jsonObject(with: Data(args[3].utf8))) as? [Any] ?? [] : []).map { PropValue($0) }
         print(json(try await runAction(args[1], args[2], ins)))
     case "mcp": await mcp()
     case "setup-prompt":

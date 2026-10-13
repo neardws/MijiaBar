@@ -1,6 +1,6 @@
 import Foundation
 
-public struct ACOption: Hashable { public let label: String; public let value: PropValue }
+public struct ACOption: Hashable, Sendable { public let label: String; public let value: PropValue }
 
 /// 中英文常见取值翻译
 public func trValue(_ en: String) -> String {
@@ -19,7 +19,7 @@ public func trValue(_ en: String) -> String {
 }
 
 /// 把不同协议的空调抽象成统一状态，供 UI 渲染
-public struct ACState {
+public struct ACState: Sendable {
     public var power = false
     public var powerKey = "power"
     public var onValue: PropValue = .string("on"), offValue: PropValue = .string("off")

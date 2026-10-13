@@ -2,6 +2,7 @@ import Foundation
 import Network
 import CommonCrypto
 import CryptoKit
+import os
 
 public enum MiIOError: LocalizedError {
     case timeout, badResponse, deviceError(String), invalidToken, noLAN
@@ -27,13 +28,13 @@ public actor MiIODevice {
     private var stampOffset: Int = 0
     private var msgID = Int.random(in: 1...9000)
     /// 发一个包、收一个包；默认走 UDP，测试时可以换成假设备
-    private let transport: (Data, TimeInterval) async throws -> Data
+    private let transport: @Sendable (Data, TimeInterval) async throws -> Data
 
     public init(ip: String, tokenHex: String, timeout: TimeInterval = 5) throws {
         try self.init(ip: ip, tokenHex: tokenHex, timeout: timeout, transport: nil)
     }
 
-    init(ip: String, tokenHex: String, timeout: TimeInterval, transport: ((Data, TimeInterval) async throws -> Data)?) throws {
+    init(ip: String, tokenHex: String, timeout: TimeInterval, transport: (@Sendable (Data, TimeInterval) async throws -> Data)?) throws {
         guard let t = Data(hex: tokenHex), t.count == 16 else { throw MiIOError.invalidToken }
         self.ip = ip; self.timeout = timeout; codec = MiIOCodec(token: t)
         self.transport = transport ?? { p, timeout in try await MiIODevice.udp(ip: ip, p, timeout: timeout) }
@@ -49,12 +50,11 @@ public actor MiIODevice {
         let queue = DispatchQueue(label: "miio")
         return try await withCheckedThrowingContinuation { cont in
             let conn = NWConnection(host: NWEndpoint.Host(ip), port: 54321, using: .udp)
-            var done = false
-            let finish: (Result<Data, Error>) -> Void = { r in
-                queue.async {
-                    guard !done else { return }; done = true
-                    conn.cancel(); cont.resume(with: r)
-                }
+            // 失败、收到回包、超时可能先后触发，只取第一个
+            let done = OSAllocatedUnfairLock(initialState: false)
+            let finish: @Sendable (Result<Data, Error>) -> Void = { r in
+                guard !done.withLock({ d in defer { d = true }; return d }) else { return }
+                conn.cancel(); cont.resume(with: r)
             }
             conn.stateUpdateHandler = { st in if case .failed(let e) = st { finish(.failure(e)) } }
             conn.start(queue: queue)
@@ -74,7 +74,13 @@ public actor MiIODevice {
         stampOffset = Int(r.be32(12)) - Int(Date().timeIntervalSince1970)
     }
 
-    public func send(method: String, params: Any) async throws -> Any {
+    /// 旧版 miIO 命令（例如空调伴侣的 get_prop / set_power），结果统一成数组
+    public func send(method: String, params: [PropValue]) async throws -> [PropValue] {
+        let r = try await call(method: method, params: params.map(\.any))
+        return (r as? [Any])?.map { PropValue($0) } ?? [PropValue(r)]
+    }
+
+    func call(method: String, params: Any) async throws -> Any {
         let cached = deviceID != 0
         if !cached { try await hello() }
         do { return try await request(method: method, params: params) }
@@ -97,20 +103,20 @@ public actor MiIODevice {
     }
 
     /// MIoT get_properties，返回键为 "siid.piid"
-    public func getProperties(_ ps: [(Int, Int)]) async throws -> [String: Any] {
+    public func getProperties(_ ps: [(Int, Int)]) async throws -> [String: PropValue] {
         let params = ps.map { ["did": "\($0.0).\($0.1)", "siid": $0.0, "piid": $0.1] as [String: Any] }
-        let res = try await send(method: "get_properties", params: params) as? [[String: Any]] ?? []
-        var out: [String: Any] = [:]
-        for r in res where (r["code"] as? Int ?? -1) == 0 { if let d = r["did"] as? String { out[d] = r["value"] } }
+        let res = try await call(method: "get_properties", params: params) as? [[String: Any]] ?? []
+        var out: [String: PropValue] = [:]
+        for r in res where (r["code"] as? Int ?? -1) == 0 { if let d = r["did"] as? String { out[d] = PropValue(r["value"]) } }
         return out
     }
 
-    public func setProperty(siid: Int, piid: Int, value: Any) async throws {
-        _ = try await send(method: "set_properties", params: [["did": "set", "siid": siid, "piid": piid, "value": value]])
+    public func setProperty(siid: Int, piid: Int, value: PropValue) async throws {
+        _ = try await call(method: "set_properties", params: [["did": "set", "siid": siid, "piid": piid, "value": value.any]])
     }
 
-    public func action(siid: Int, aiid: Int, inputs: [Any]) async throws -> Any {
-        try await send(method: "action", params: ["did": "call-\(siid)-\(aiid)", "siid": siid, "aiid": aiid, "in": inputs])
+    public func action(siid: Int, aiid: Int, inputs: [PropValue]) async throws -> PropValue {
+        PropValue(try await call(method: "action", params: ["did": "call-\(siid)-\(aiid)", "siid": siid, "aiid": aiid, "in": inputs.map(\.any)]))
     }
 }
 
