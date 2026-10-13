@@ -161,7 +161,7 @@ struct SettingsView: View {
                             .foregroundStyle(.red)
                     }.buttonStyle(.plain).help("⌘Q")
                     group(L("关于", "About")) {
-                        row("MijiaBar") { Text("v0.1.6").foregroundStyle(.secondary) }
+                        row("MijiaBar") { Text("v0.1.7-rc2").foregroundStyle(.secondary) }
                         Link("github.com/neardws/MijiaBar", destination: URL(string: "https://github.com/neardws/MijiaBar")!)
 
                     }
@@ -200,13 +200,11 @@ struct AgentPromptBox: View {
                        "Paste this into Claude Code, Codex, Cursor or any other agent — it will install and configure itself."))
                     .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
-            ScrollView {
-                Text(text).font(.system(size: 10, design: .monospaced)).textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading).padding(10)
-            }
-            .frame(height: 150)
-            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.tile))
-            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.stroke))
+            Text(text).font(.system(size: 10, design: .monospaced)).textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading).padding(10)
+                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.tile))
+                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.stroke))
             Button {
                 onCopy(text)
                 withAnimation(Motion.snappy) { copied = true }

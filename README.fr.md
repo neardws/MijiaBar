@@ -79,22 +79,12 @@ Clique sur l’œil ou **Afficher**, ou active **Réglages → Appareils → Aff
 Ouvre **Réglages → Interface agent**, clique sur **Copier les instructions** et colle le texte dans Claude Code, Codex, Cursor ou tout autre agent. L’agent trouve la CLI intégrée, enregistre le serveur MCP dans sa propre configuration et vérifie en listant tes appareils. Le même texte (chemin renseigné) est affiché par `mijiabar setup-prompt` :
 
 ```text
-Configure MijiaBar (une app de barre des menus macOS pour les appareils Xiaomi Mi Home) comme outil MCP pour toi-même. Fais-le toi-même, étape par étape :
-
-1. Trouve la CLI. Elle est fournie dans l’app : /Applications/MijiaBar.app/Contents/Resources/bin/mijiabar. Lance "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" --help pour vérifier qu’elle fonctionne. Pour l’utiliser dans un terminal, crée un lien : mkdir -p ~/.local/bin && ln -sf "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" ~/.local/bin/mijiabar
-2. Enregistre dans ta propre configuration un serveur MCP stdio nommé mijia, commande "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar", argument mcp :
-   - Claude Code: claude mcp add --scope user mijia -- "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" mcp
-   - Codex: codex mcp add mijia -- "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" mcp
-     (~/.codex/config.toml:
-      [mcp_servers.mijia]
-      command = "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar"
-      args = ["mcp"])
-   - Cursor (~/.cursor/mcp.json), Claude Desktop, …:
-     {"mcpServers": {"mijia": {"command": "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar", "args": ["mcp"]}}}
-   Recharge ensuite les serveurs MCP si nécessaire.
-3. Outils : list_devices, get_device_state, set_property, run_action. Je contrôle l’accès dans MijiaBar → Réglages → Interface agent : « Lecture » par défaut (les écritures sont refusées) ; « Liste autorisée » n’autorise que les appareils choisis ; « Complet » autorise tous les appareils. Si « Confirmer chaque écriture » est activé, chaque écriture affiche sur le Mac une fenêtre que je dois approuver. Ne modifie jamais l’état d’un appareil sans que je te le demande.
-4. Vérifie : lance "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" list (ou appelle list_devices) et montre-moi la liste des appareils. Si je ne suis pas connecté, demande-moi d’abord de me connecter par QR code dans MijiaBar.
+Lis https://raw.githubusercontent.com/neardws/MijiaBar/main/docs/AGENT_SETUP.fr.md et suis ces étapes pour configurer MijiaBar comme outil MCP.
+Chemin de la CLI : /Applications/MijiaBar.app/Contents/Resources/bin/mijiabar
+Ne modifie l’état d’aucun appareil sans mon accord.
 ```
+
+Instructions complètes pour les agents : [docs/AGENT_SETUP.fr.md](docs/AGENT_SETUP.fr.md)
 
 ### Autorisations
 

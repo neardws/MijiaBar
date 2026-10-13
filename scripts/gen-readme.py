@@ -172,6 +172,8 @@ X={
  "Où sont stockées les données",["Session de connexion : trousseau macOS, service `com.neardws.MijiaBar` (compte `session`). Supprimée à la déconnexion.",f"Cache des appareils `devices.json`, préférences `prefs.json` (favoris, alias, masquage, région), politique agent `agent.json` et cache des spécifications MIoT `spec-index.json` + `specs/<modèle>.json` — tout dans `{S}`, avec les droits 600.","Langue de l’interface : `MijiaBarLang` dans les UserDefaults (partagée par l’app et la CLI ; `MIJIABAR_LANG` a priorité).","Aucune donnée n’est envoyée ailleurs qu’aux serveurs Xiaomi, à tes appareils sur le réseau local et à miot-spec.org (spécifications publiques)."]),
 }
 
+DOCL={'en':('Full step-by-step instructions for agents:',''),'zh-Hans':('写给 Agent 的完整步骤：','.zh-CN'),'zh-Hant':('寫給 Agent 的完整步驟：','.zh-TW'),
+      'ru':('Полная пошаговая инструкция для агентов:','.ru'),'de':('Vollständige Schritt-für-Schritt-Anleitung für Agents:','.de'),'fr':('Instructions complètes pour les agents :','.fr')}
 def anchor(h): return re.sub(r'[^\w\- ]','',h.lower()).strip().replace(' ','-')
 cli='''```bash
 mijiabar list                     # list devices (--all, --refresh)
@@ -207,7 +209,7 @@ for lang,fn in files.items():
        f'## {toc[2]}','']+[f'{i+1}. {x}' for i,x in enumerate(t['inst'])]+['',f'> {t["inst_note"]}','',t['req'],'',
        f'## {toc[3]}','']+[f'{i+1}. {x}' for i,x in enumerate(t['login'])]+['',
        f'## {hh}','',hl[0],'']+[f'- {x}' for x in hl[1:3]]+['',hl[3],'',
-       f'## {toc[5]}','',t['agent_intro'],'','```text',prompt,'```','',
+       f'## {toc[5]}','',t['agent_intro'],'','```text',prompt,'```','',f'{DOCL[lang][0]} [docs/AGENT_SETUP{DOCL[lang][1]}.md](docs/AGENT_SETUP{DOCL[lang][1]}.md)','',
        f'### {t["perm_h"]}','','| | |','| --- | --- |']+[f'| {a} | {b} |' for a,b in t['perm']]+['',t['confirm'],'',
        f'### {t["cli_h"]}','',cli,'',t['tools'],'',
        f'## {toc[6]}','',build,'',t['build_note'],'',

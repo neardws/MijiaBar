@@ -11,6 +11,8 @@ enum Entry {
         } else if let i = a.firstIndex(of: "--gif"), i + 1 < a.count {
             let scene = a.firstIndex(of: "--scene").flatMap { $0 + 1 < a.count ? a[$0 + 1] : nil } ?? "ac"
             MainActor.assumeIsolated { Snapshot.gif(to: a[i + 1], scene: scene) }
+        } else if a.contains("--hittest") {
+            MainActor.assumeIsolated { HitTest.run() }
         } else if let i = a.firstIndex(of: "--icon"), i + 1 < a.count {
             MainActor.assumeIsolated { Snapshot.icon(to: a[i + 1]) }
         } else {
