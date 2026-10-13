@@ -79,22 +79,12 @@
 Откройте **Настройки → Интерфейс агента**, нажмите **Копировать инструкцию** и вставьте текст в Claude Code, Codex, Cursor или другой агент. Агент сам найдёт встроенный CLI, зарегистрирует MCP-сервер в своей конфигурации и проверит работу, получив список устройств. Тот же текст (с подставленным путём) выводит `mijiabar setup-prompt`:
 
 ```text
-Пожалуйста, подключи MijiaBar (приложение в строке меню macOS для устройств Xiaomi Mi Home) как свой MCP-инструмент. Сделай это сам, по шагам:
-
-1. Найди CLI. Он находится внутри приложения: /Applications/MijiaBar.app/Contents/Resources/bin/mijiabar. Выполни "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" --help, чтобы проверить его. Для работы из терминала создай ссылку: mkdir -p ~/.local/bin && ln -sf "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" ~/.local/bin/mijiabar
-2. Зарегистрируй в своей конфигурации stdio MCP-сервер с именем mijia, командой "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" и аргументом mcp:
-   - Claude Code: claude mcp add --scope user mijia -- "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" mcp
-   - Codex: codex mcp add mijia -- "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" mcp
-     (~/.codex/config.toml:
-      [mcp_servers.mijia]
-      command = "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar"
-      args = ["mcp"])
-   - Cursor (~/.cursor/mcp.json), Claude Desktop, …:
-     {"mcpServers": {"mijia": {"command": "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar", "args": ["mcp"]}}}
-   При необходимости перезагрузи MCP-серверы.
-3. Инструменты: list_devices, get_device_state, set_property, run_action. Доступом управляю я в MijiaBar → Настройки → Интерфейс агента: по умолчанию «Чтение» (запись запрещена); «Белый список» разрешает только выбранные устройства; «Полный» разрешает все устройства. Если включено «Подтверждать каждую запись», каждая запись показывает на Mac окно, которое я должен одобрить. Никогда не меняй состояние устройства без моей просьбы.
-4. Проверка: выполни "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" list (или вызови list_devices) и покажи мне список устройств. Если я не вошёл в аккаунт, попроси меня сначала войти по QR-коду в MijiaBar.
+Прочитай https://raw.githubusercontent.com/neardws/MijiaBar/main/docs/AGENT_SETUP.ru.md и по этой инструкции подключи MijiaBar как свой MCP-инструмент.
+Путь к CLI: /Applications/MijiaBar.app/Contents/Resources/bin/mijiabar
+Не меняй состояние устройств без моего согласия.
 ```
+
+Полная пошаговая инструкция для агентов: [docs/AGENT_SETUP.ru.md](docs/AGENT_SETUP.ru.md)
 
 ### Права доступа
 
