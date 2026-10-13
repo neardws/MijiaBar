@@ -12,5 +12,6 @@ let package = Package(
         .target(name: "MijiaCore"),
         .executableTarget(name: "MijiaBarApp", dependencies: ["MijiaCore"]),
         .executableTarget(name: "mijiabar", dependencies: ["MijiaCore"]),
+        .testTarget(name: "MijiaCoreTests", dependencies: ["MijiaCore"]),
     ]
 )
