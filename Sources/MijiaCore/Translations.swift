@@ -240,6 +240,9 @@ public let uiTable: [String: [String]] = [
     "Fan only": ["Nur Lüfter", "Ventilation seule", "Solo ventilador", "Solo ventilazione", "Только вентилятор", "送風運転中"],
     "Target temperature": ["Zieltemperatur", "Température cible", "Temperatura objetivo", "Temperatura impostata", "Заданная температура", "設定温度"],
     "Drag, or use the ← → keys": ["Ziehen oder ← → verwenden", "Faites glisser ou utilisez ← →", "Arrastra o usa ← →", "Trascina o usa ← →", "Перетащите или используйте ← →", "ドラッグするか ← → キーで調整"],
+    "Not supported": ["Nicht unterstützt", "Non pris en charge", "No compatible", "Non supportato", "Не поддерживается", "非対応"],
+    "Switch": ["Schalter", "Interrupteur", "Interruptor", "Interruttore", "Выключатель", "スイッチ"],
+    "Power on/off": ["Ein/Aus", "Marche/arrêt", "Encendido/apagado", "Accensione/spegnimento", "Питание", "電源"],
 ]
 
 /// 设备状态取值（键为小写英文）
@@ -694,4 +697,5 @@ public let hantTable: [String: String] = [
     "送风中": "送風中",
     "自动运行": "自動運轉",
     "拖动调节，或用 ← → 键": "拖曳調整，或使用 ← → 鍵",
+    "电源": "電源",
 ]

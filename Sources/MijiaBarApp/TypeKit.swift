@@ -55,7 +55,7 @@ struct TypeShell<Art: View, Content: View>: View {
                         PowerButton(on: powerOn ?? false, tint: tint, action: onPower).help(L("开关（空格）", "Power (Space)"))
                     }
                 }
-                art().frame(height: 136).frame(maxWidth: .infinity)
+                art().frame(height: 136).frame(maxWidth: .infinity).accessibilityHidden(true)
                     .saturation(isOn ? 1 : 0.85).animation(Motion.smooth, value: isOn)
                 content().environment(\.cardAccent, isOn ? tint : nil)
             }
@@ -112,6 +112,7 @@ struct BigValue: View {
             Text(caption).font(.system(size: 11)).foregroundStyle(.secondary)
         }
         .opacity(dim ? 0.45 : 1)
+        .accessibilityElement(children: .combine)   // 读作「目标温度，24°」而不是两段
         .animation(Motion.snappy, value: value)
         .animation(Motion.smooth, value: dim)
         .frame(maxWidth: .infinity)
@@ -162,7 +163,7 @@ struct VolumeControl: View {
             HStack(spacing: 10) {
                 stepButton("speaker.minus.fill", -5)
                 GradientSlider(value: cur, range: range, step: 1, colors: [tint.opacity(0.35), tint], enabled: enabled && value != nil,
-                               minLabel: "", maxLabel: "", onChange: { drag = $0 }, onCommit: { v in drag = nil; onSet(v) })
+                               minLabel: "", maxLabel: "", onChange: { drag = $0 }, onCommit: { v in drag = nil; onSet(v) }, a11yLabel: L("音量", "Volume"))
                     .frame(height: 24).padding(.top, 10)
                 stepButton("speaker.plus.fill", 5)
             }
@@ -185,7 +186,7 @@ struct ActionTile: View {
     var body: some View {
         Button(action: action) {
             TileFace(title: title, value: "", icon: icon, active: active, tint: tint)
-        }.buttonStyle(.pressable)
+        }.buttonStyle(.pressable).accessibilityLabel(title)
     }
 }
 
@@ -206,10 +207,8 @@ struct PropTile: View {
                 }
             } else if let ops = p.options, !ops.isEmpty, p.writable {
                 MenuTile(title: title, value: dc.text(p) ?? "—", icon: icon, active: v != nil, tint: tint) {
-                    ForEach(ops, id: \.value) { o in
-                        Button { m.write(dc.device, p.key, .int(o.value)) } label: {
-                            Text((Int(v?.doubleValue ?? -999) == o.value ? "✓ " : "") + trValue(o.description))
-                        }
+                    OptionPicker(options: ops.map { (trValue($0.description), $0.value) }, selection: v?.doubleValue.map { Int($0) }) {
+                        m.write(dc.device, p.key, .int($0))
                     }
                 }
             } else {
@@ -254,7 +253,8 @@ struct PropSlider: View {
                        onCommit: { v in
                            drag = nil
                            if v != dc.num(prop) { m.write(dc.device, prop.key, PropValue.double(v).coerced(to: prop.format)) }
-                       })
+                       },
+                       a11yLabel: dc.label(prop))
     }
 }
 

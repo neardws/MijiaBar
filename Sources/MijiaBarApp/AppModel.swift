@@ -186,6 +186,7 @@ final class AppModel: ObservableObject {
 
     func showToast(_ s: String) {
         toast = s
+        AccessibilityNotification.Announcement(s).post()
         Task { try? await Task.sleep(nanoseconds: 3_000_000_000); if toast == s { toast = nil } }
     }
     func handleAuth(_ e: Error) {

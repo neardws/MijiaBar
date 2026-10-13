@@ -93,7 +93,9 @@ struct PropRow: View {
             }.labelsHidden().pickerStyle(.menu).fixedSize()
         } else if prop.writable, let r = prop.range, r.count >= 2, prop.isNumber {
             let step = r.count > 2 && r[2] > 0 ? r[2] : 1
-            Slider(value: Binding(get: { local ?? value?.doubleValue ?? r[0] }, set: { local = $0 }), in: r[0]...max(r[1], r[0] + step), step: step,
+            // 不传 step：系统会给每一档画刻度（1…100 就成了一条虚线），在 setter 里自己吸附
+            Slider(value: Binding(get: { local ?? value?.doubleValue ?? r[0] }, set: { local = r[0] + (($0 - r[0]) / step).rounded() * step }),
+                   in: r[0]...max(r[1], r[0] + step),
                    onEditingChanged: { editing in
                        if !editing, let v = local { m.write(device, prop.key, PropValue.double(v).coerced(to: prop.format)); local = nil }
                    }).frame(width: 130).controlSize(.small)
