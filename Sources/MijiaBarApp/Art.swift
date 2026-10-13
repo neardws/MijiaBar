@@ -9,11 +9,12 @@ private let darkBody = LinearGradient(colors: [Color(white: 0.30), Color(white: 
 /// 落地扇：叶片转速跟随风速，摆头时左右摇摆
 struct FanArt: View {
     let on: Bool, level: Double, swing: Bool, tint: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
-        TimelineView(.animation(paused: Motion.reduced || !on)) { tl in
+        TimelineView(.animation(paused: reduceMotion || !on)) { tl in
             let t = tl.date.timeIntervalSinceReferenceDate
             let spin = on ? (t * (200 + 900 * level)).truncatingRemainder(dividingBy: 360) : 20
-            let yaw = on && swing ? sin(t * 0.9) * 28 : 0
+            let yaw = on && swing && !reduceMotion ? sin(t * 0.9) * 28 : 0
             ZStack {
                 VStack(spacing: 0) {
                     Spacer()
@@ -39,6 +40,7 @@ struct FanArt: View {
                 .offset(y: -18)
             }
             .frame(width: 140, height: 136)
+            .scaleEffect(on ? 1 : 0.97)
         }
     }
 }
@@ -65,14 +67,17 @@ struct BulbArt: View {
             .shadow(color: on ? col.opacity(0.7) : .clear, radius: 16)
         }
         .animation(Motion.smooth, value: brightness)
+        .animation(Motion.smooth, value: on)
+        .animation(Motion.smooth, value: kelvin)
     }
 }
 
 /// 插座：通电时电流沿电线流动
 struct PlugArt: View {
     let on: Bool, watts: Double?, tint: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
-        TimelineView(.animation(paused: Motion.reduced || !on)) { tl in
+        TimelineView(.animation(paused: reduceMotion || !on)) { tl in
             let t = tl.date.timeIntervalSinceReferenceDate
             ZStack {
                 RoundedRectangle(cornerRadius: 18).fill(metal).frame(width: 82, height: 82)
@@ -98,8 +103,9 @@ struct PlugArt: View {
 /// 电视：开机时屏幕显示输入源
 struct TVArt: View {
     let on: Bool, input: String?, playing: Bool, tint: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
-        TimelineView(.animation(paused: Motion.reduced || !on)) { tl in
+        TimelineView(.animation(paused: reduceMotion || !on)) { tl in
             let t = tl.date.timeIntervalSinceReferenceDate
             VStack(spacing: 0) {
                 ZStack {
@@ -130,8 +136,9 @@ struct TVArt: View {
 /// 音箱：播放时声波扩散
 struct SpeakerArt: View {
     let playing: Bool, volume: Double, tint: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
-        TimelineView(.animation(paused: Motion.reduced || !playing)) { tl in
+        TimelineView(.animation(paused: reduceMotion || !playing)) { tl in
             let t = tl.date.timeIntervalSinceReferenceDate
             ZStack {
                 if playing {
@@ -158,8 +165,9 @@ struct SpeakerArt: View {
 /// 摄像机：开启时镜头发光、录制灯闪烁；关闭时镜头遮挡
 struct CameraArt: View {
     let on: Bool, tint: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
-        TimelineView(.animation(paused: Motion.reduced || !on)) { tl in
+        TimelineView(.animation(paused: reduceMotion || !on)) { tl in
             let t = tl.date.timeIntervalSinceReferenceDate
             VStack(spacing: 0) {
                 ZStack {
@@ -183,8 +191,9 @@ struct CameraArt: View {
 /// 打印机：打印中纸张缓缓送出
 struct PrinterArt: View {
     let busy: Bool, error: Bool, tint: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
-        TimelineView(.animation(paused: Motion.reduced || !busy)) { tl in
+        TimelineView(.animation(paused: reduceMotion || !busy)) { tl in
             let t = tl.date.timeIntervalSinceReferenceDate
             let feed = busy ? CGFloat((t * 0.4).truncatingRemainder(dividingBy: 1)) * 30 : 6
             ZStack {
@@ -207,8 +216,9 @@ struct PrinterArt: View {
 /// 锅具：烹饪时冒热气
 struct CookerArt: View {
     let cooking: Bool, tint: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
-        TimelineView(.animation(paused: Motion.reduced || !cooking)) { tl in
+        TimelineView(.animation(paused: reduceMotion || !cooking)) { tl in
             let t = tl.date.timeIntervalSinceReferenceDate
             ZStack {
                 if cooking {
@@ -242,8 +252,9 @@ struct CookerArt: View {
 /// 净水器：出水时水滴下落，滤芯寿命条
 struct PurifierArt: View {
     let on: Bool, filter: Double?, tint: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
-        TimelineView(.animation(paused: Motion.reduced || !on)) { tl in
+        TimelineView(.animation(paused: reduceMotion || !on)) { tl in
             let t = tl.date.timeIntervalSinceReferenceDate
             ZStack {
                 RoundedRectangle(cornerRadius: 14).fill(metal).frame(width: 70, height: 110).offset(x: -40)
@@ -260,6 +271,7 @@ struct PurifierArt: View {
                 }
             }
             .frame(width: 200, height: 136)
+            .animation(Motion.smooth, value: filter)
         }
     }
 }
@@ -267,8 +279,9 @@ struct PurifierArt: View {
 /// 取暖器 / 除湿机：机身 + 热浪或水箱水位
 struct ApplianceArt: View {
     let kind: DeviceCategory, on: Bool, level: Double, tint: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
-        TimelineView(.animation(paused: Motion.reduced || !on)) { tl in
+        TimelineView(.animation(paused: reduceMotion || !on)) { tl in
             let t = tl.date.timeIntervalSinceReferenceDate
             ZStack {
                 if kind == .heater {
@@ -299,13 +312,14 @@ struct ApplianceArt: View {
                         .shadow(color: .black.opacity(0.15), radius: 5, y: 3)
                     VStack(spacing: 3) { ForEach(0..<4, id: \.self) { _ in Capsule().fill(Color.black.opacity(0.18)).frame(width: 60, height: 3) } }.offset(y: -40)
                     ZStack(alignment: .bottom) {
-                        RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.7)).frame(width: 64, height: 48)
+                        RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.08)).overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.12))).frame(width: 64, height: 48)
                         RoundedRectangle(cornerRadius: 8).fill(tint.opacity(0.7)).frame(width: 64, height: CGFloat(48 * level))
                     }.offset(y: 26)
                     Circle().fill(on ? tint : Color.gray.opacity(0.5)).frame(width: 6, height: 6).offset(y: -18)
                 }
             }
             .frame(width: 200, height: 136)
+            .animation(Motion.smooth, value: level)
         }
     }
 }
@@ -323,5 +337,6 @@ struct ThermoArt: View {
             Circle().fill(Theme.cool).frame(width: 34, height: 34).offset(y: 12)
         }
         .frame(height: 136)
+        .animation(Motion.smooth, value: temp)
     }
 }

@@ -48,7 +48,7 @@ struct TypeShell<Art: View, Content: View>: View {
                 HStack(alignment: .top, spacing: 8) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(title).font(.system(size: 13, weight: .semibold)).lineLimit(1).contentTransition(.numericText())
-                        Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
+                        Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).contentTransition(.numericText())
                     }
                     Spacer(minLength: 4)
                     if let onPower {
@@ -56,13 +56,23 @@ struct TypeShell<Art: View, Content: View>: View {
                     }
                 }
                 art().frame(height: 136).frame(maxWidth: .infinity)
+                    .saturation(isOn ? 1 : 0.85).animation(Motion.smooth, value: isOn)
                 content()
             }
             .padding(18)
             .frame(width: cardWidth)
-            .background(RoundedRectangle(cornerRadius: 26)
-                .fill(LinearGradient(colors: [tint.opacity(isOn ? 0.22 : 0.06), tint.opacity(0.02)], startPoint: .top, endPoint: .bottom)))
-            .overlay(RoundedRectangle(cornerRadius: 26).stroke(Theme.stroke))
+            .background {
+                // 与空调卡片一致：开启时顶部柔光 + 色调描边
+                let shape = RoundedRectangle(cornerRadius: 26, style: .continuous)
+                shape.fill(LinearGradient(colors: [tint.opacity(isOn ? 0.24 : 0.06), tint.opacity(0.02)], startPoint: .top, endPoint: .bottom))
+                    .overlay(alignment: .top) {
+                        Rectangle().fill(EllipticalGradient(colors: [tint.opacity(0.4), tint.opacity(0)])).frame(width: cardWidth, height: 220).offset(y: -80)
+                            .opacity(isOn ? 1 : 0)
+                    }
+                    .clipShape(shape)
+                    .overlay(shape.stroke(LinearGradient(colors: [isOn ? tint.opacity(0.45) : Theme.stroke, Theme.stroke.opacity(0.4)],
+                                                         startPoint: .top, endPoint: .bottom), lineWidth: 1))
+            }
             .animation(Motion.smooth, value: isOn)
         }
         .scrollIndicators(.never)
@@ -268,5 +278,17 @@ extension View {
                 }
             }
         })
+    }
+}
+
+/// 详情页的主滑条属性（键盘 ←→ 调节用），与各页面上的滑条一一对应
+@MainActor func primarySliderProp(_ dc: DC) -> SpecProperty? {
+    switch dc.device.category {
+    case .fan: return dc.spec?.controlServices.flatMap(\.properties).first { $0.name == "fan-level" && $0.options != nil } ?? dc.p("fan-level") ?? dc.p("speed-level")
+    case .light: return dc.p("brightness")
+    case .heater: return dc.p("target-temperature")
+    case .dehumidifier: return dc.p("target-humidity")
+    case .tv, .speaker: return dc.p("volume", in: "speaker") ?? dc.p("volume")
+    default: return nil
     }
 }

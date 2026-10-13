@@ -9,7 +9,7 @@
 #   NOTARY_PROFILE  notarytool 钥匙串配置名（默认 MijiaBar-notary）；设为空跳过公证
 set -euo pipefail
 cd "$(dirname "$0")/.."
-VERSION="${VERSION:-0.1.4}"
+VERSION="${VERSION:-0.1.5}"
 ARCHS="${ARCHS:---arch arm64 --arch x86_64}"
 NOTARY_PROFILE="${NOTARY_PROFILE-MijiaBar-notary}"
 ENT=Resources/MijiaBar.entitlements

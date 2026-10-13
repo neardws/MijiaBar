@@ -523,7 +523,18 @@ struct DetailView: View {
         }
     }
     func adjustTemp(_ d: Double) -> KeyPress.Result {
-        guard let st = m.states[device.did], let ac = ACState.make(st), let k = ac.tempKey, let t = ac.target else { return .ignored }
+        guard let st = m.states[device.did] else { return .ignored }
+        guard let ac = ACState.make(st) else {
+            // 其他设备：←→ 调节页面主滑条（风速 / 亮度 / 目标温湿度 / 音量），按一档步进
+            let dc = DC(device: device, state: st)
+            guard let p = primarySliderProp(dc), p.writable, let cur = dc.num(p) else { return .ignored }
+            let (r, step) = propRange(p)
+            let big = p.options == nil && (r.upperBound - r.lowerBound) / step > 20 ? 5 * step : step
+            let nv = min(r.upperBound, max(r.lowerBound, cur + d * big))
+            if nv != cur { withoutAnimation { m.write(device, p.key, PropValue.double(nv).coerced(to: p.format)) } }
+            return .handled
+        }
+        guard let k = ac.tempKey, let t = ac.target else { return .ignored }
         withoutAnimation { m.write(device, k, ac.tempValue(min(ac.maxT, max(ac.minT, t + d * ac.step)))) }
         return .handled
     }
