@@ -72,6 +72,7 @@ struct TypeShell<Art: View, Content: View>: View {
                     .clipShape(shape)
                     .overlay(shape.stroke(LinearGradient(colors: [isOn ? tint.opacity(0.45) : Theme.stroke, Theme.stroke.opacity(0.4)],
                                                          startPoint: .top, endPoint: .bottom), lineWidth: 1))
+                    .allowsHitTesting(false)   // 同空调卡片：柔光超出卡片，不能挡住点击
             }
             .animation(Motion.smooth, value: isOn)
         }

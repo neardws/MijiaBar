@@ -10,6 +10,8 @@ enum Entry {
             MainActor.assumeIsolated { Snapshot.run(dir: a[i + 1], liveQR: a.contains("--live-qr")) }
         } else if let i = a.firstIndex(of: "--gif"), i + 1 < a.count {
             MainActor.assumeIsolated { Snapshot.gif(to: a[i + 1]) }
+        } else if a.contains("--hittest") {
+            MainActor.assumeIsolated { HitTest.run() }
         } else if let i = a.firstIndex(of: "--icon"), i + 1 < a.count {
             MainActor.assumeIsolated { Snapshot.icon(to: a[i + 1]) }
         } else {

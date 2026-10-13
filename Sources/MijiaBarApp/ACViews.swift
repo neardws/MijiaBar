@@ -99,6 +99,9 @@ struct ACCardView: View {
                 .clipShape(shape)
                 .overlay(shape.stroke(LinearGradient(colors: [ac.power ? tint.opacity(0.45) : Theme.stroke, Theme.stroke.opacity(0.4)],
                                                      startPoint: .top, endPoint: .bottom), lineWidth: 1))
+                // 顶部柔光向上偏移 80pt 超出卡片；clipShape 只裁剪绘制，不裁剪点击区域，
+                // 不关掉命中测试的话它会盖住详情页顶部的返回 / 收藏 / ••• 按钮
+                .allowsHitTesting(false)
         }
         .animation(Motion.smooth, value: ac.power)
         .animation(Motion.smooth, value: warmth)
