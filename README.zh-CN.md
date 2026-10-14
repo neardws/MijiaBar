@@ -12,7 +12,7 @@
   <a href="https://github.com/neardws/MijiaBar/stargazers"><img src="https://img.shields.io/github/stars/neardws/MijiaBar?style=social" alt="Stars"></a>
 </p>
 
-<p align="center"><a href="README.md">English</a> · <b>简体中文</b> · <a href="README.zh-TW.md">繁體中文</a> · <a href="README.ru.md">Русский</a> · <a href="README.de.md">Deutsch</a> · <a href="README.fr.md">Français</a></p>
+<p align="center"><a href="README.md">English</a> · <b>简体中文</b> · <a href="README.zh-TW.md">繁體中文</a></p>
 
 > 非小米官方项目。使用与米家 App 相同的云端接口和局域网 miIO 协议。
 
@@ -28,7 +28,7 @@
 - **克制的动效**：无回弹的快速弹簧（< 300ms）；风扇按风速转动、电视屏幕发光、取暖器热浪；电源键涟漪；滑条 1:1 跟手、松手吸附、跨档触控板轻触。遵循「减弱动态效果」。
 - **键盘优先**：`↑/↓` 选择、`↩` 打开、`空格` 开关、`←/→` 调节主滑条、`/` 搜索、`Esc` 返回、`⌘Q` 退出。
 - **浅色 / 深色**：使用系统语义色，自动跟随外观。
-- **9 种界面语言**：简体中文、繁體中文、English、Deutsch、Français、Español、Italiano、Русский、日本語，按地区推荐默认语言。
+- **支持三种界面语言**：简体中文、繁體中文（台湾用语）、English，按地区推荐默认语言。
 - **Agent 接口**：`mijiabar` 命令行和 stdio MCP 服务器，默认只读，可选白名单 / 全部权限，写操作可弹窗确认。
 - **双通道控制**：小米云 MIoT RPC，失败时回落局域网 miIO；空调伴侣（`lumi.acpartner.*`）使用旧版局域网命令。
 

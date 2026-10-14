@@ -3,8 +3,7 @@
 import os
 os.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 CLI = '/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar'
-LANGS = [('en', '', 'English'), ('zh-Hans', '.zh-CN', '简体中文'), ('zh-Hant', '.zh-TW', '繁體中文'), ('de', '.de', 'Deutsch'), ('fr', '.fr', 'Français'),
-         ('es', '.es', 'Español'), ('it', '.it', 'Italiano'), ('ru', '.ru', 'Русский'), ('ja', '.ja', '日本語')]
+LANGS = [('en', '', 'English'), ('zh-Hans', '.zh-CN', '简体中文'), ('zh-Hant', '.zh-TW', '繁體中文')]
 CODE = f'''```bash
 # Claude Code
 claude mcp add --scope user mijia -- "{CLI}" mcp

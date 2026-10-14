@@ -139,7 +139,8 @@ struct SettingsView: View {
                         row(L("界面语言", "Language")) {
                             Picker("", selection: Binding(get: { m.lang }, set: { m.setLang($0) })) {
                                 Section(L("当前地区推荐", "Suggested for region")) { ForEach(sug, id: \.self) { Text($0.nativeName).tag($0) } }
-                                Section(L("其他", "Other")) { ForEach(AppLang.allCases.filter { !sug.contains($0) }, id: \.self) { Text($0.nativeName).tag($0) } }
+                                let other = AppLang.allCases.filter { !sug.contains($0) }
+                                if !other.isEmpty { Section(L("其他", "Other")) { ForEach(other, id: \.self) { Text($0.nativeName).tag($0) } } }
                             }.labelsHidden().fixedSize()
                         }
                         if m.langManual {

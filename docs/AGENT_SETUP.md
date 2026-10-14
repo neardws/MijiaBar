@@ -1,6 +1,6 @@
 # MijiaBar · Agent / MCP setup
 
-**English** · [简体中文](AGENT_SETUP.zh-CN.md) · [繁體中文](AGENT_SETUP.zh-TW.md) · [Deutsch](AGENT_SETUP.de.md) · [Français](AGENT_SETUP.fr.md) · [Español](AGENT_SETUP.es.md) · [Italiano](AGENT_SETUP.it.md) · [Русский](AGENT_SETUP.ru.md) · [日本語](AGENT_SETUP.ja.md)
+**English** · [简体中文](AGENT_SETUP.zh-CN.md) · [繁體中文](AGENT_SETUP.zh-TW.md)
 
 Please set up MijiaBar (a macOS menu bar app for Xiaomi Mi Home devices) as an MCP tool for yourself. Do it yourself, step by step:
 

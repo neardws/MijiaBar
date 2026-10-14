@@ -2,14 +2,12 @@ import Foundation
 import CryptoKit
 import os
 
-/// 界面语言。简体为原文，繁体（台湾用语）、其余语言见 Translations.swift。
+/// 界面语言：简体中文（原文）、繁體中文（台湾用语，见 i18n/zh-Hant.tsv）、English（L() 的英文参数）。
 public enum AppLang: String, CaseIterable, Codable, Sendable {
-    case zhHans = "zh-Hans", zhHant = "zh-Hant", en, de, fr, es, it, ru, ja
+    case zhHans = "zh-Hans", zhHant = "zh-Hant", en
     public var nativeName: String {
         switch self {
         case .zhHans: return "简体中文"; case .zhHant: return "繁體中文"; case .en: return "English"
-        case .de: return "Deutsch"; case .fr: return "Français"; case .es: return "Español"
-        case .it: return "Italiano"; case .ru: return "Русский"; case .ja: return "日本語"
         }
     }
     /// 是否有完整翻译（否则回退英文）
@@ -18,16 +16,22 @@ public enum AppLang: String, CaseIterable, Codable, Sendable {
     public static func suggested(forRegion r: String) -> [AppLang] {
         switch r {
         case "cn": return [.zhHans, .zhHant, .en]
-        case "sg": return [.en, .zhHant, .zhHans]
-        case "de": return [.en, .de, .fr, .es, .it]
-        case "ru": return [.ru, .en]
-        default: return [.en, .zhHans, .zhHant]   // us, i2
+        case "tw", "hk": return [.zhHant, .en, .zhHans]
+        default: return [.en, .zhHans, .zhHant]   // de, us, ru, sg, i2
         }
     }
     static func system() -> AppLang {
         let p = Locale.preferredLanguages.first ?? "en"
         if p.hasPrefix("zh") { return (p.contains("Hant") || p.contains("TW") || p.contains("HK") || p.contains("MO")) ? .zhHant : .zhHans }
-        return AppLang(rawValue: String(p.prefix(2))) ?? .en
+        return .en
+    }
+    /// 读取保存的语言。旧版本支持过 de/fr/es/it/ru/ja，保存了这些语言的用户：清掉保存值和「手动选择」标记，
+    /// 回到系统语言（非中文即英文），App 登录后再按地区默认语言设置。
+    static func saved(_ d: UserDefaults = .standard) -> AppLang? {
+        guard let raw = d.string(forKey: "MijiaBarLang") else { return nil }
+        if let l = AppLang(rawValue: raw) { return l }
+        d.removeObject(forKey: "MijiaBarLang"); d.removeObject(forKey: "MijiaBarLangManual")
+        return nil
     }
 }
 
@@ -39,9 +43,9 @@ public var currentLang: AppLang {
 public var isChinese: Bool { currentLang == .zhHans || currentLang == .zhHant }
 /// 语言和繁体转换缓存可能在任意线程读写，用锁保护
 private let langState = OSAllocatedUnfairLock(initialState: (
-    lang: ProcessInfo.processInfo.environment["MIJIABAR_LANG"].flatMap(AppLang.init(rawValue:)) ?? UserDefaults.standard.string(forKey: "MijiaBarLang").flatMap(AppLang.init(rawValue:)) ?? AppLang.system(),
+    lang: ProcessInfo.processInfo.environment["MIJIABAR_LANG"].flatMap(AppLang.init(rawValue:)) ?? AppLang.saved() ?? AppLang.system(),
     hant: [String: String]()))
-/// 简易本地化：中文系统显示中文，其它语言回退英文
+/// 简易本地化：简体返回原文，繁体查台湾用语表，英文返回英文参数
 public func L(_ zh: String, _ en: String) -> String {
     let (lang, cached) = langState.withLock { ($0.lang, $0.hant[zh]) }
     switch lang {
@@ -52,7 +56,7 @@ public func L(_ zh: String, _ en: String) -> String {
         if let cached { return cached }
         let t = zh.applyingTransform(StringTransform("Hans-Hant"), reverse: false) ?? zh
         langState.withLock { $0.hant[zh] = t }; return t
-    default: return tr(en, lang) ?? en
+    case .en: return en
     }
 }
 

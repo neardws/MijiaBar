@@ -14,7 +14,7 @@ MijiaBar is a macOS menu bar app (SwiftUI, macOS 14+) that controls Xiaomi Mi Ho
   - `TypeKit.swift` / `TypeDetails.swift` / `Art.swift` are the per-device-type detail pages and their illustrations; `CardViews.swift` is the generic spec-driven card; `ACViews.swift` is the air conditioner card.
   - `LiveVideo.swift` is the camera/doorbell live view (inline player, pop-out window, go2rtc process).
 - `Sources/mijiabar` — the CLI and MCP server. Writes are gated by `AgentPolicy` (Settings → Agent interface).
-- `site/template.html` + `i18n/site/*.json` — the website (GitHub Pages serves `docs/`). `scripts/gen-site.py` renders `docs/index.html` (English) and `docs/zh-CN.html` (Simplified Chinese). Only these two are published for now; drafts for the other app languages sit in `i18n/site/drafts/` and are not built — don't update them until a language is switched back on in `LANGS`.
+- `site/template.html` + `i18n/site/*.json` — the website (GitHub Pages serves `docs/`). `scripts/gen-site.py` renders `docs/index.html` (English) and `docs/zh-CN.html` (Simplified Chinese). Only these two are published for now; the Traditional Chinese draft sits in `i18n/site/drafts/zh-Hant.json` and is not built — don't update it until it's switched back on in `LANGS`.
 
 ## Sparkle updates
 
@@ -27,10 +27,10 @@ swift build                                    # debug build of all targets
 swift build -c release                         # what CI packages
 scripts/test.sh                                # unit tests (Swift Testing); also works with Command Line Tools only
 scripts/scan-secrets.sh                        # must pass before every commit (CI runs it)
-python3 scripts/gen-i18n.py                    # regenerate Translations.swift; fails if any L() string lacks a translation
+python3 scripts/gen-i18n.py                    # regenerate Translations.swift; fails if any L() string lacks a zh-Hant translation (--check: verify only)
 python3 scripts/gen-agent-docs.py              # regenerate docs/AGENT_SETUP*.md from i18n/agent-setup/*.txt
 python3 scripts/gen-site.py                    # regenerate the website (docs/*.html); fails if a language lacks a string
-python3 -m http.server -d docs 8000            # preview the website at http://localhost:8000 (?lang=ja etc. picks a language)
+python3 -m http.server -d docs 8000            # preview the website at http://localhost:8000 (zh-CN.html is Simplified Chinese)
 scripts/site-shots.sh                          # re-render the website's screenshots, illustrations and share image (needs swift build + cwebp)
 .build/debug/MijiaBarApp --snapshot /tmp/shots -AppleLanguages "(zh-Hans)"   # every screen, light and dark (*-light.png / *-dark.png)
 .build/debug/MijiaBarApp --gif /tmp/demo.gif -AppleLanguages "(zh-Hans)"     # record the AC card animation
@@ -63,7 +63,7 @@ Regenerate `docs/screenshots/` (Simplified Chinese, `-AppleLanguages "(zh-Hans)"
 
 - **Read [`docs/DESIGN.md`](docs/DESIGN.md) before touching UI.** In short: animate only for feedback or state; use `Motion.*` tokens (no bounce, ≤ 300 ms, exits faster than entrances); keyboard actions never animate (`withoutAnimation { }`, `animated: false`); respect Reduce Motion; use `Theme` semantic colors; give icon-only and stateful controls accessibility labels and values.
 - **Device models:** when a model falls back to another type's illustration or the generic card, design it to the same standard (illustration, title, list icon; see "同类不同形" in `docs/DESIGN.md`) instead of borrowing art that looks like a different product.
-- **Strings:** every user-facing string goes through `L("简体中文", "English")` (or `LF` with `%@` arguments). The English text is the key for the other languages: add a row to `i18n/ui.tsv` (English, de, fr, es, it, ru, ja) and the Taiwan-style Traditional Chinese to `i18n/zh-Hant.tsv`, then run `python3 scripts/gen-i18n.py`. Never edit `Translations.swift` by hand. Reusing an existing English key reuses its translations, so pick a distinct key when the meaning differs (e.g. "Power" is wattage; the power button uses "Power on/off").
+- **Strings:** every user-facing string goes through `L("简体中文", "English")` (or `LF` with `%@` arguments). The app has exactly three languages: Simplified Chinese (the first argument), English (the second) and Traditional Chinese with Taiwan wording — add the Simplified → Traditional row to `i18n/zh-Hant.tsv` (use Taiwan terms: 裝置, 設定, 網路, 預設…), then run `python3 scripts/gen-i18n.py`. Never edit `Translations.swift` by hand. Do not add other languages back without a decision from the maintainer; anything user-facing (README, agent guide, website) is likewise English / 简体中文 / 繁體中文 only.
 - **Style:** match the surrounding code — compact one-line bodies are normal here. Code comments are in Chinese; keep new ones short and in Chinese.
 - **Privacy:** never commit tokens, `ssecurity`, device IPs, or real device names. Demo data lives in `Snapshot.swift`. Credentials belong in the Keychain; caches in `~/Library/Application Support/MijiaBar/` with mode 0600.
 - **Agent safety:** don't widen what the CLI/MCP can do without going through `AgentPolicy.canWrite` and the confirmation prompt.
@@ -71,7 +71,7 @@ Regenerate `docs/screenshots/` (Simplified Chinese, `-AppleLanguages "(zh-Hans)"
 ## Pull requests
 
 - One topic per PR. Describe user-visible changes first, then implementation notes and a test plan.
-- The READMEs (`README.md`, `README.zh-CN.md`, `README.zh-TW.md`, `README.ru.md`, `README.de.md`, `README.fr.md`) are generated by `scripts/gen-readme.py`. Change the text there and regenerate; don't edit the README files directly.
+- The READMEs (`README.md`, `README.zh-CN.md`, `README.zh-TW.md`) are generated by `scripts/gen-readme.py`. Change the text there and regenerate; don't edit the README files directly.
 - The website is generated too: edit `site/template.html` and `i18n/site/*.json`, then run `python3 scripts/gen-site.py`; never edit `docs/*.html` directly. `en.json` is the reference — every published language needs the same keys, the same `|` separators and `{v}` placeholder. The agent prompt on the page is read from `AgentPrompt.swift` and the version from `docs/appcast.xml`, so don't copy them into the strings. Re-run `scripts/site-shots.sh` only when the app's look or demo data changes (it uses demo data, never `--real`); animated illustrations come out at a different frame on every run, so commit only the images whose design actually changed and `git checkout` the rest. The page follows `docs/DESIGN.md` as well: motion only for feedback or state, Reduce Motion respected, semantic colors for light and dark.
 - The agent setup guide (`docs/AGENT_SETUP*.md`) is generated from `i18n/agent-setup/*.txt` by `scripts/gen-agent-docs.py`. The prompt users copy in Settings (`AgentPrompt.swift`) stays short and links to that guide; put details in the guide, not the prompt.
 - Things you can't verify without real devices (LAN control, sign-in) must be listed as unchecked items in the test plan.

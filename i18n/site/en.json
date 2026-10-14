@@ -76,7 +76,7 @@
   "chip_lan": "LAN",
   "t_path_t": "Cloud or local network — whichever gets through.",
   "t_path_d": "MijiaBar reaches devices through the Xiaomi cloud and falls back to your local network when it has to. Away from home it skips the wait, and every device shows which path it took.",
-  "t_lang_t": "Speaks nine languages.",
+  "t_lang_t": "Speaks three languages.",
   "t_qr_t": "Sign in with a scan.",
   "t_qr_d": "Scan the code with the Mi Home app — no password to type. Your session stays in the macOS Keychain.",
   "t_qr_r": "Servers in Mainland China, Europe, the United States, Russia, Singapore and India.",

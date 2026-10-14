@@ -111,14 +111,12 @@ func acSpec() throws -> DeviceSpec {
             #expect(L("温度单元测试", "x") == "溫度單元測試")              // 第二次走缓存
         }
         with(.en) { #expect(L("设备", "Device") == "Device") }
-        with(.ja) { #expect(L("关", "Off") == "オフ"); #expect(L("测试", "Not in the table") == "Not in the table") }   // 缺翻译回退英文
     }
 
     @Test func translatesCommonValues() {
         with(.zhHans) { #expect(trValue("Cool") == "制冷"); #expect(trValue("unknown-thing") == "unknown-thing") }
         with(.zhHant) { #expect(trValue("Dry") == "除濕"); #expect(trValue("Heat") == "暖氣") }
         with(.en) { #expect(trValue("Cool") == "Cool") }
-        with(.ja) { #expect(trValue("cool") == "冷房") }
     }
 
     @Test func readsMIoTAirConditioner() throws {
@@ -196,7 +194,19 @@ func acSpec() throws -> DeviceSpec {
     @Test func suggestsLanguagesForEachRegion() {
         #expect(AppLang.suggested(forRegion: "cn").first == .zhHans)
         #expect(AppLang.suggested(forRegion: "us").first == .en)
-        #expect(AppLang.suggested(forRegion: "ru").first == .ru)
+        #expect(AppLang.suggested(forRegion: "tw") == [.zhHant, .en, .zhHans])
+        #expect(AppLang.suggested(forRegion: "hk").first == .zhHant)
+        #expect(AppLang.suggested(forRegion: "ru") == [.en, .zhHans, .zhHant])
+        #expect(AppLang.allCases == [.zhHans, .zhHant, .en])
+    }
+
+    @Test func migratesRemovedLanguages() {
+        let d = UserDefaults(suiteName: "MijiaBarLangTest-\(UUID().uuidString)")!
+        d.set("ja", forKey: "MijiaBarLang"); d.set(true, forKey: "MijiaBarLangManual")
+        #expect(AppLang.saved(d) == nil)                       // 已移除的语言：回到系统 / 地区默认
+        #expect(d.string(forKey: "MijiaBarLang") == nil && !d.bool(forKey: "MijiaBarLangManual"))
+        d.set("zh-Hant", forKey: "MijiaBarLang")
+        #expect(AppLang.saved(d) == .zhHant)
     }
 }
 
