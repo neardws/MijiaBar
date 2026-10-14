@@ -741,3 +741,24 @@ struct MotionSensorArt: View {
         }
     }
 }
+
+/// 通用智能设备（没有专门插画的类型）：白色亮面方形主机，正面一个磨砂圆形按键，下方一条指示灯带。
+/// 开机时灯带亮起设备色、身后带环境光；不画镜头之类会被误认成具体设备的部件，静止画面不加动画。
+struct GenericArt: View {
+    let on: Bool, tint: Color
+    var body: some View {
+        PowerTimeline(on: on) { _, k in
+            ZStack {
+                Ambient(tint, k * 0.6, width: 200, height: 120).position(x: 80, y: 68)
+                RoundedRectangle(cornerRadius: 30, style: .continuous).appliance(tint, k).frame(width: 104, height: 104).position(x: 80, y: 68)
+                Circle().fill(RadialGradient(colors: [Color(white: 0.99), Color(white: 0.85)], center: UnitPoint(x: 0.4, y: 0.3), startRadius: 0, endRadius: 26))
+                    .overlay(Circle().stroke(Color.black.opacity(0.08), lineWidth: 0.5))
+                    .shadow(color: .black.opacity(0.10), radius: 2, y: 1)
+                    .frame(width: 44, height: 44).position(x: 80, y: 58)
+                Capsule().fill(Color.black.opacity(0.08)).frame(width: 52, height: 5).position(x: 80, y: 98)
+                Capsule().fill(tint).frame(width: 52, height: 5).opacity(k).shadow(color: tint, radius: 5 * k).position(x: 80, y: 98)
+            }
+            .frame(width: 160, height: 136)
+        }
+    }
+}

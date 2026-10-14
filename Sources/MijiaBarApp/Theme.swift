@@ -56,9 +56,9 @@ extension DeviceCategory {
         case .camera: return .purple
         case .speaker: return .pink
         case .kitchen: return .orange
-        case .printer: return .gray
+        case .printer: return .blue
         case .purifier: return .blue
-        case .other: return .gray
+        case .other: return .indigo
         }
     }
 }

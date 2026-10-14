@@ -61,7 +61,7 @@ extension AppModel {
 
 /// 所有插画的开/关对照（自检用，不进 README）：没有演示设备的类型也能检查画风是否统一
 struct ArtGallery: View {
-    static let size = CGSize(width: 480, height: 1794)
+    static let size = CGSize(width: 480, height: 1932)
     var body: some View {
         let rows: [(String, AnyView, AnyView)] = [
             ("fan", AnyView(FanArt(on: true, level: 0.5, swing: false, tint: .teal)), AnyView(FanArt(on: false, level: 0.5, swing: false, tint: .teal))),
@@ -77,6 +77,7 @@ struct ArtGallery: View {
             ("dehumidifier", AnyView(ApplianceArt(kind: .dehumidifier, on: true, level: 0.4, tint: .cyan)), AnyView(ApplianceArt(kind: .dehumidifier, on: false, level: 0.4, tint: .cyan))),
             ("thermo", AnyView(ThermoArt(temp: 25.6, tint: .mint)), AnyView(ThermoArt(temp: nil, tint: .mint))),
             ("motion", AnyView(MotionSensorArt(on: true, tint: .mint)), AnyView(MotionSensorArt(on: false, tint: .mint))),
+            ("generic", AnyView(GenericArt(on: true, tint: .indigo)), AnyView(GenericArt(on: false, tint: .indigo))),
         ]
         VStack(spacing: 0) {
             ForEach(rows, id: \.0) { r in
@@ -94,7 +95,7 @@ struct ArtGallery: View {
     }
 }
 
-/// 应用图标的图形（`--icon` 生成 AppIcon，登录页也用它），按 size 等比缩放
+/// 应用图标的图形（`--icon` 生成 Resources/AppIcon.icns），按 size 等比缩放
 struct AppMark: View {
     let size: CGFloat
     var body: some View {

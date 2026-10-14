@@ -25,6 +25,61 @@ struct TypeDetailView: View {
     }
 }
 
+/// 还没有状态时（读取中、离线、读取失败）的详情卡片：和正常详情页同一个 TypeShell，插画是该设备关着的样子，
+/// 读到状态后原地换成真正的卡片，不会从页面中央的转圈跳到一张卡片
+struct DeviceStatusCard: View {
+    @EnvironmentObject var m: AppModel
+    enum Kind: Equatable { case loading, offline, failed(String) }
+    let device: Device
+    let kind: Kind
+    var body: some View {
+        let tint = device.category.color
+        let title: String = {
+            switch kind {
+            case .loading: return L("正在读取状态…", "Reading state…")
+            case .offline: return L("设备离线", "Device offline")
+            case .failed: return L("读取失败", "Couldn't read state")
+            }
+        }()
+        TypeShell(device: device, tint: tint, isOn: false, title: title, subtitle: zhCategory(device.category)) {
+            offArt(device, tint: tint)
+        } content: {
+            switch kind {
+            case .loading:
+                ProgressView().controlSize(.small).frame(height: 40)
+            case .offline:
+                Text(L("请检查设备的电源和网络连接", "Check the device's power and network connection"))
+                    .font(.system(size: 11)).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            case .failed(let e):
+                Text(e).font(.system(size: 11)).foregroundStyle(.secondary).multilineTextAlignment(.center).lineLimit(4).textSelection(.enabled)
+                Button { m.stateErrors[device.did] = nil; Task { await m.loadState(device) } } label: {
+                    WideButtonFace(title: L("重试", "Retry"), icon: "arrow.clockwise", tint: tint)
+                }
+                .buttonStyle(.pressable).hoverHighlight()
+            }
+        }
+    }
+}
+
+/// 设备关着时的插画（没有读数时用）
+@MainActor @ViewBuilder func offArt(_ d: Device, tint: Color) -> some View {
+    switch d.category {
+    case .ac: ACIllustration(on: false, tint: tint)
+    case .fan: FanArt(on: false, level: 0.5, swing: false, tint: tint)
+    case .light: BulbArt(on: false, brightness: 0.7, kelvin: nil)
+    case .plug: PlugArt(on: false, watts: nil, tint: tint)
+    case .tv: TVArt(on: false, playing: false, tint: tint)
+    case .speaker: SpeakerArt(playing: false, volume: 0.5, tint: tint)
+    case .camera: CameraArt(on: false, tint: tint)
+    case .printer: PrinterArt(busy: false, error: false, tint: tint)
+    case .kitchen: CookerArt(cooking: false, tint: tint)
+    case .purifier: PurifierArt(on: false, filter: nil, tint: tint)
+    case .heater, .dehumidifier: ApplianceArt(kind: d.category, on: false, level: 0.3, tint: tint)
+    case .sensor: if d.model.contains("motion") { MotionSensorArt(on: false, tint: tint) } else { ThermoArt(temp: nil, tint: tint) }
+    case .other: GenericArt(on: false, tint: tint)
+    }
+}
+
 extension View {
     /// 底部按钮行：等宽排列
     func tileRow() -> some View { self.frame(maxWidth: .infinity) }

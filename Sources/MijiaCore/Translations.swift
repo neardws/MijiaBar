@@ -285,6 +285,8 @@ public let uiTable: [String: [String]] = [
     "Power on/off": ["Ein/Aus", "Marche/arrêt", "Encendido/apagado", "Accensione/spegnimento", "Питание", "電源"],
     "Live view: home network only": ["Livebild nur im Heimnetz", "Direct uniquement sur le réseau domestique", "Directo solo en la red de casa", "Live solo sulla rete di casa", "Трансляция только в домашней сети", "ライブ映像は自宅のネットワークのみ"],
     "Sign-in QR code": ["Anmelde-QR-Code", "QR code de connexion", "Código QR de inicio de sesión", "Codice QR di accesso", "QR-код для входа", "サインイン用 QR コード"],
+    "Couldn't read state": ["Status konnte nicht gelesen werden", "Impossible de lire l'état", "No se pudo leer el estado", "Impossibile leggere lo stato", "Не удалось получить состояние", "状態を読み取れませんでした"],
+    "Check the device's power and network connection": ["Prüfe Stromversorgung und Netzwerkverbindung des Geräts", "Vérifiez l'alimentation et la connexion réseau de l'appareil", "Comprueba la alimentación y la conexión de red del dispositivo", "Controlla l'alimentazione e la connessione di rete del dispositivo", "Проверьте питание и подключение устройства к сети", "デバイスの電源とネットワーク接続を確認してください"],
 ]
 
 /// 设备状态取值（键为小写英文）
@@ -782,4 +784,6 @@ public let hantTable: [String: String] = [
     "电源": "電源",
     "直播仅限家庭网络": "直播僅限家庭網路",
     "登录二维码": "登入 QR 碼",
+    "读取失败": "讀取失敗",
+    "请检查设备的电源和网络连接": "請檢查裝置的電源和網路連線",
 ]

@@ -61,7 +61,7 @@ struct LoginView: View {
     var body: some View {
         VStack(spacing: 0) {
             Spacer(minLength: 8)
-            AppMark(size: 56).shadow(color: .black.opacity(0.15), radius: 6, y: 3).accessibilityHidden(true).staggerIn(0)
+            BrandMark(size: 56).accessibilityHidden(true).staggerIn(0)
             Text(L("登录小米账号", "Sign in to Xiaomi")).font(.system(size: 20, weight: .semibold)).padding(.top, 14).staggerIn(1)
             Text(L("用米家 App 扫码，无需输入密码", "Scan with the Mi Home app — no password needed")).font(.system(size: 12)).foregroundStyle(.secondary)
                 .padding(.top, 4).staggerIn(2)
@@ -526,28 +526,17 @@ struct DetailView: View {
                     .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().hoverHighlight()
             }
             .animation(Motion.snappy, value: m.busy.contains(device.did))
-            if let st = m.states[device.did] {
-                if let ac = ACState.make(st) { ACCardView(device: device, ac: ac).transition(.opacity.combined(with: .scale(scale: 0.97))) }
-                else { TypeDetailView(device: device, state: st).transition(.opacity.combined(with: .scale(scale: 0.97))) }
-            } else if let e = m.stateErrors[device.did] {
-                Spacer()
-                VStack(spacing: 10) {
-                    Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(.orange)
-                    Text(e).font(.system(size: 12)).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                    Button(L("重试", "Retry")) { m.stateErrors[device.did] = nil; Task { await m.loadState(device) } }
+            Group {
+                if let st = m.states[device.did] {
+                    if let ac = ACState.make(st) { ACCardView(device: device, ac: ac) } else { TypeDetailView(device: device, state: st) }
+                } else if let e = m.stateErrors[device.did] {
+                    DeviceStatusCard(device: device, kind: .failed(e))
+                } else {
+                    DeviceStatusCard(device: device, kind: device.isOnline ? .loading : .offline)
                 }
-                .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                Spacer()
-            } else if !device.isOnline {
-                Spacer()
-                VStack(spacing: 8) {
-                    Image(systemName: "wifi.slash").font(.system(size: 28)).foregroundStyle(.secondary)
-                    Text(L("设备离线", "Device offline")).foregroundStyle(.secondary)
-                }.transition(.opacity)
-                Spacer()
-            } else {
-                Spacer(); ProgressView(L("正在读取状态…", "Reading state…")).transition(.opacity); Spacer()
             }
+            .transition(.opacity)
+            .frame(maxHeight: .infinity, alignment: .top)
         }
         .animation(Motion.smooth, value: m.states[device.did] != nil)
         .animation(Motion.smooth, value: m.stateErrors[device.did])
