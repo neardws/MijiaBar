@@ -307,9 +307,12 @@ struct LivePlayerView: View {
                     phase = p
                 }.id(attempt)
             }
-            overlay
+            overlay.transition(.opacity)
         }
+        .animation(Motion.snappy, value: phase)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(L("摄像头直播", "Camera live view"))
         .background(WindowVisibility { v in
             guard v != visible else { return }
             if Self.realInMock { print("visible \(v)") }
@@ -326,13 +329,14 @@ struct LivePlayerView: View {
     @ViewBuilder var overlay: some View {
         switch phase {
         case .live:
-            VStack { HStack { LiveBadge(); Spacer() }; Spacer() }.padding(8)
+            VStack { HStack { LiveBadge(); Spacer() }; Spacer() }.padding(LiveChrome.inset)
         case .starting, .loading:
             VStack(spacing: 6) {
                 ProgressView().controlSize(.small).tint(.white)
                 Text(phase == .starting ? L("正在启动直播…", "Starting live view…") : L("正在连接摄像头…", "Connecting to camera…"))
                     .font(.system(size: 11)).foregroundStyle(.white.opacity(0.8))
             }
+            .accessibilityElement(children: .combine)
         case .paused:
             retry(L("直播已自动暂停", "Live view paused"), icon: "pause.circle")
         case .error(let e):
@@ -400,16 +404,28 @@ enum LiveErrorText {
     }
 }
 
+/// 直播画面上的浮层底色：画面本身是黑底视频，不随浅色/深色变化
+enum LiveChrome {
+    static let scrim = Color.black.opacity(0.5)
+    /// 角标和按钮同高，左右两端对齐在同一条线上
+    static let size: CGFloat = 22
+    static let inset: CGFloat = 8
+}
+
+/// 「直播」角标：红点常亮表示正在直播，只有身后的光圈呼吸（持续动画表达状态）；减弱动态效果时完全静止
 struct LiveBadge: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pulse = false
     var body: some View {
         HStack(spacing: 4) {
-            Circle().fill(.red).frame(width: 6, height: 6).opacity(pulse ? 0.35 : 1)
+            Circle().fill(.red).frame(width: 6, height: 6)
+                .background(Circle().fill(.red).scaleEffect(pulse ? 2.2 : 1).opacity(pulse ? 0 : 0.6))
             Text(L("直播", "LIVE")).font(.system(size: 9, weight: .bold)).foregroundStyle(.white)
         }
-        .padding(.horizontal, 6).padding(.vertical, 3)
-        .background(Capsule().fill(.black.opacity(0.55)))
-        .onAppear { withAnimation(.easeInOut(duration: 0.9).repeatForever()) { pulse = true } }
+        .padding(.horizontal, 8).frame(height: LiveChrome.size)
+        .background(Capsule().fill(LiveChrome.scrim))
+        .accessibilityElement(children: .ignore).accessibilityLabel(L("直播", "LIVE"))
+        .onAppear { if !reduceMotion { withAnimation(Motion.breathe) { pulse = true } } }
     }
 }
 
@@ -424,16 +440,14 @@ struct CameraLiveArt<Art: View>: View {
             if watching {
                 LivePlayerView(device: device)
                     .overlay(alignment: .topTrailing) {
-                        HStack(spacing: 4) {
-                            chip("arrow.up.left.and.arrow.down.right", L("放大", "Enlarge")) {
-                                watching = false; LiveWindow.open(device, model: m)
-                            }
-                            chip("xmark", L("停止直播", "Stop live view")) { withAnimation(Motion.smooth) { watching = false } }
-                        }.padding(6)
+                        // 停止直播用下方的主按钮，这里只放「弹出窗口」，不重复
+                        chip("arrow.up.left.and.arrow.down.right", L("放大", "Enlarge")) {
+                            watching = false; LiveWindow.open(device, model: m)
+                        }.padding(LiveChrome.inset)
                     }
                     .transition(.opacity)
             } else {
-                art().transition(.opacity)
+                art().accessibilityHidden(true).transition(.opacity)
             }
         }
         .animation(Motion.smooth, value: watching)
@@ -441,8 +455,11 @@ struct CameraLiveArt<Art: View>: View {
     func chip(_ icon: String, _ help: String, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon).font(.system(size: 10, weight: .semibold)).foregroundStyle(.white)
-                .frame(width: 22, height: 22).background(Circle().fill(.black.opacity(0.55)))
-        }.buttonStyle(.plain).help(help)
+                .frame(width: LiveChrome.size, height: LiveChrome.size).background(Circle().fill(LiveChrome.scrim))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.pressable(0.92)).hoverHighlight()
+        .help(help).accessibilityLabel(help)
     }
 }
 
@@ -455,31 +472,42 @@ struct LiveControls: View {
     static var snapshotWatching = false
     var isDoorbell: Bool { device.model.contains(".cateye.") }
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 8) {
             if m.atHome == false && !watching {
-                Label(L("不在家庭网络，无法看直播（直播只能在同一局域网内连接摄像头）", "Not on your home network, live view isn't available (it only works on the same local network as the camera)"),
-                      systemImage: "house.slash")
-                    .font(.system(size: 11)).foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.vertical, 9)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.secondary.opacity(0.1)))
-                    .fixedSize(horizontal: false, vertical: true)
+                face(L("直播仅限家庭网络", "Live view: home network only"), icon: "house.slash", enabled: false)
+                    .help(L("不在家庭网络，无法看直播（直播只能在同一局域网内连接摄像头）", "Not on your home network, live view isn't available (it only works on the same local network as the camera)"))
+                    .accessibilityElement(children: .combine)
             } else {
-            Button {
-                if watching { withAnimation(Motion.smooth) { watching = false }; return }
-                if !m.mock, m.session?.canLiveStream != true { m.showToast(LiveError.noAuth.localizedDescription, error: true); m.openSettings(); return }
-                withAnimation(Motion.smooth) { watching = true }
-            } label: {
-                Label(watching ? L("停止直播", "Stop live view") : L("看直播", "Watch live"), systemImage: watching ? "stop.fill" : "play.rectangle.fill")
-                    .font(.system(size: 13, weight: .semibold)).frame(maxWidth: .infinity).padding(.vertical, 9)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(tint.opacity(0.16)))
-                    .foregroundStyle(tint)
-            }.buttonStyle(.plain).disabled(!device.isOnline)
+                Button {
+                    if watching { withAnimation(Motion.smooth) { watching = false }; return }
+                    if !m.mock, m.session?.canLiveStream != true { m.showToast(LiveError.noAuth.localizedDescription, error: true); m.openSettings(); return }
+                    withAnimation(Motion.smooth) { watching = true }
+                } label: {
+                    face(watching ? L("停止直播", "Stop live view") : L("看直播", "Watch live"), icon: watching ? "stop.fill" : "play.fill", enabled: device.isOnline)
+                }
+                .buttonStyle(.pressable).hoverHighlight().disabled(!device.isOnline)
             }
             if isDoorbell {
-                Label(L("门铃靠电池供电，看直播会唤醒设备并明显耗电，请尽量短时间观看", "The doorbell runs on battery. Live view wakes it up and drains the battery, keep it short"),
-                      systemImage: "battery.25percent")
-                    .font(.system(size: 10)).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+                // 提醒而非警告：正文用次要色，只有图标带橙色
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
+                    Image(systemName: "battery.25percent").foregroundStyle(.orange).accessibilityHidden(true)
+                    Text(L("门铃靠电池供电，看直播会唤醒设备并明显耗电，请尽量短时间观看", "The doorbell runs on battery. Live view wakes it up and drains the battery, keep it short"))
+                        .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+                .font(.system(size: 10)).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4)
             }
         }
+    }
+    func face(_ title: String, icon: String, enabled: Bool) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
+        return Label(title, systemImage: icon)
+            .font(.system(size: 13, weight: enabled ? .semibold : .medium))
+            .contentTransition(.symbolEffect(.replace))
+            .foregroundStyle(enabled ? AnyShapeStyle(tint) : AnyShapeStyle(.secondary))
+            .frame(maxWidth: .infinity).padding(.vertical, 10)
+            .background(shape.fill(enabled ? tint.opacity(0.16) : Theme.tile))
+            .overlay(shape.stroke(enabled ? tint.opacity(0.3) : Theme.stroke))
+            .contentShape(shape)
     }
 }
 

@@ -372,28 +372,63 @@ struct SpeakerArt: View {
     }
 }
 
-/// 摄像机：开启时镜头发光、录制灯闪烁；关闭时镜头遮挡
+/// 家用摄像机：白色亮面机头 + 黑色玻璃前脸 + 镜头，立在短底座上。
+/// 开机时镜头里亮起设备色光圈、状态灯常亮；隐私模式时镜头向下转出玻璃视野（和真机一样），不用图标表达。静止画面不加动画。
 struct CameraArt: View {
     let on: Bool, tint: Color
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    static let head = CGPoint(x: 100, y: 58)
     var body: some View {
-        TimelineView(.animation(paused: reduceMotion || !on)) { tl in
-            let t = tl.date.timeIntervalSinceReferenceDate
-            VStack(spacing: 0) {
-                ZStack {
-                    Circle().fill(metal).frame(width: 100, height: 100).shadow(color: .black.opacity(0.18), radius: 5, y: 3)
-                    Circle().fill(Color(white: 0.12)).frame(width: 62, height: 62)
-                    if on {
-                        Circle().fill(RadialGradient(colors: [tint.opacity(0.9), Color(white: 0.05)], center: .center, startRadius: 2, endRadius: 22)).frame(width: 40, height: 40)
-                        Circle().fill(Color.white.opacity(0.6)).frame(width: 8, height: 8).offset(x: -8, y: -8)
-                        Circle().fill(Color.red.opacity(sin(t * 3) > 0 ? 0.95 : 0.25)).frame(width: 6, height: 6).offset(y: -40)
-                    } else {
-                        Capsule().fill(Color(white: 0.45)).frame(width: 62, height: 22)
-                        Image(systemName: "eye.slash.fill").font(.system(size: 12)).foregroundStyle(.white.opacity(0.8))
-                    }
-                }
-                Capsule().fill(metal).frame(width: 60, height: 10).padding(.top, 4)
+        PowerTimeline(on: on) { _, k in
+            ZStack {
+                Ambient(tint, k * 0.7, width: 200, height: 120).position(x: 100, y: 62)
+                // 接触阴影 + 底座：短立柱 + 圆角托盘，和机头同一种亮面外壳
+                Ellipse().fill(RadialGradient(colors: [.black.opacity(0.22), .black.opacity(0)], center: .center, startRadius: 0, endRadius: 50))
+                    .frame(width: 110, height: 14).position(x: 100, y: 131)
+                RoundedRectangle(cornerRadius: 6, style: .continuous).appliance(tint, 0).frame(width: 24, height: 22).position(x: 100, y: 108)
+                Capsule().appliance(tint, 0).frame(width: 80, height: 14).position(x: 100, y: 123)
+                // 机头：一条连续的圆角轮廓
+                RoundedRectangle(cornerRadius: 34, style: .continuous).appliance(tint, k).frame(width: 108, height: 88).position(Self.head)
+                visor(k).position(Self.head)
             }
+            .frame(width: 200, height: 136)
+        }
+    }
+
+    /// 前脸黑色玻璃：镜头和状态灯都在玻璃后面。隐私模式时镜头向下转出视野，只剩一块干净的玻璃
+    func visor(_ k: Double) -> some View {
+        let glass = RoundedRectangle(cornerRadius: 22, style: .continuous)
+        return ZStack {
+            glass.fill(LinearGradient(colors: [Color(white: 0.20), Color(white: 0.05)], startPoint: .top, endPoint: .bottom))
+            ZStack {
+                lens(k)
+                // 状态灯：常亮，不闪烁
+                Circle().fill(Color.white.opacity(0.12)).frame(width: 4, height: 4).offset(x: 27, y: -1)
+                Glow(tint, 0.9 * k, diameter: 4, softness: 3).offset(x: 27, y: -1)
+            }
+            .offset(y: CGFloat(1 - k) * 46)
+            // 玻璃上半部的斜向反光 + 顶缘细高光
+            glass.fill(LinearGradient(colors: [.white.opacity(0.10), .white.opacity(0)], startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.5)))
+            glass.stroke(LinearGradient(colors: [.white.opacity(0.28), .white.opacity(0.04)], startPoint: .top, endPoint: .bottom), lineWidth: 0.75)
+        }
+        .frame(width: 82, height: 54)
+        .clipShape(glass)
+    }
+
+    /// 镜头：铝圈 → 深色镜片 → 开机时带设备色的光圈，左上缘一道弧形高光
+    func lens(_ k: Double) -> some View {
+        ZStack {
+            Circle().fill(LinearGradient(colors: [Color(white: 0.42), Color(white: 0.14)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: 38, height: 38)
+            Circle().stroke(Color.white.opacity(0.22), lineWidth: 0.75).frame(width: 37, height: 37)
+            Circle().fill(RadialGradient(colors: [Color(white: 0.10), Color(white: 0.01)], center: .center, startRadius: 1, endRadius: 14))
+                .frame(width: 27, height: 27)
+            // 镀膜：开机时镜片里透出设备色，中心更深，像真实镜头的多层镜片
+            Circle().fill(RadialGradient(colors: [Color(white: 0.02), tint.opacity(0.85), tint.opacity(0.15)], center: .center, startRadius: 2, endRadius: 12))
+                .frame(width: 23, height: 23).opacity(k)
+            Circle().stroke(Color.white.opacity(0.10), lineWidth: 0.5).frame(width: 15, height: 15)
+            Circle().trim(from: 0.56, to: 0.71).stroke(Color.white.opacity(0.75), style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
+                .frame(width: 19, height: 19)
+            Circle().fill(Color.white.opacity(0.35)).frame(width: 2.5, height: 2.5).offset(x: 5, y: 5)
         }
     }
 }

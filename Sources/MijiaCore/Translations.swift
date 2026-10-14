@@ -283,6 +283,7 @@ public let uiTable: [String: [String]] = [
     "Not supported": ["Nicht unterstützt", "Non pris en charge", "No compatible", "Non supportato", "Не поддерживается", "非対応"],
     "Switch": ["Schalter", "Interrupteur", "Interruptor", "Interruttore", "Выключатель", "スイッチ"],
     "Power on/off": ["Ein/Aus", "Marche/arrêt", "Encendido/apagado", "Accensione/spegnimento", "Питание", "電源"],
+    "Live view: home network only": ["Livebild nur im Heimnetz", "Direct uniquement sur le réseau domestique", "Directo solo en la red de casa", "Live solo sulla rete di casa", "Трансляция только в домашней сети", "ライブ映像は自宅のネットワークのみ"],
 ]
 
 /// 设备状态取值（键为小写英文）
@@ -778,4 +779,5 @@ public let hantTable: [String: String] = [
     "蓝牙设备：经小米云由蓝牙网关转发": "藍牙裝置：經小米雲端由藍牙閘道轉發",
     "不在家庭网络，无法看直播（直播只能在同一局域网内连接摄像头）": "不在家庭網路，無法看直播（直播只能在同一個區域網路內連線攝影機）",
     "电源": "電源",
+    "直播仅限家庭网络": "直播僅限家庭網路",
 ]

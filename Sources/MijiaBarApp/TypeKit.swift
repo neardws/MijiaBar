@@ -39,6 +39,8 @@ struct TypeShell<Art: View, Content: View>: View {
     let subtitle: String
     var powerOn: Bool? = nil
     var onPower: (() -> Void)? = nil
+    /// 插画区有可操作内容（如直播画面）时为 true，由插画自己隐藏装饰部分
+    var artInteractive = false
     @ViewBuilder let art: () -> Art
     @ViewBuilder let content: () -> Content
 
@@ -55,7 +57,7 @@ struct TypeShell<Art: View, Content: View>: View {
                         PowerButton(on: powerOn ?? false, tint: tint, action: onPower).help(L("开关（空格）", "Power (Space)"))
                     }
                 }
-                art().frame(height: 136).frame(maxWidth: .infinity).accessibilityHidden(true)
+                art().frame(height: 136).frame(maxWidth: .infinity).accessibilityHidden(!artInteractive)
                     .saturation(isOn ? 1 : 0.85).animation(Motion.smooth, value: isOn)
                 content().environment(\.cardAccent, isOn ? tint : nil)
             }

@@ -192,7 +192,7 @@ struct CameraDetail: View {
         let on = pw?.isOn ?? d.isOnline
         TypeShell(device: d, tint: tint, isOn: on, title: on ? L("监控中", "Watching") : L("隐私模式", "Privacy mode"),
                   subtitle: joined([d.model.contains("cateye") ? L("智能门铃", "Doorbell") : L("摄像机", "Camera"), dc.text(dc.p("status", in: "video-doorbell"))]),
-                  powerOn: on, onPower: powerHandler(m, d)) {
+                  powerOn: on, onPower: powerHandler(m, d), artInteractive: true) {
             CameraLiveArt(device: d, watching: $watching) { CameraArt(on: on, tint: tint) }
         } content: {
             LiveControls(device: d, watching: $watching, tint: tint)

@@ -18,6 +18,8 @@ enum Motion {
     static let enter = Animation.spring(duration: 0.28, bounce: 0)
     /// 退出：比进入更快
     static let exit = Animation.spring(duration: 0.2, bounce: 0)
+    /// 持续的状态指示（如直播角标的光圈）；只在表达「正在进行」时用，减弱动态效果时不播放
+    static let breathe = Animation.easeOut(duration: 1.4).repeatForever(autoreverses: false)
     static func stagger(_ i: Int) -> Animation { enter.delay(Double(min(i, 8)) * 0.05) }
 }
 
