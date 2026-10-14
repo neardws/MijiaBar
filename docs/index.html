@@ -195,14 +195,14 @@ section{padding:120px 0}
 html:not(.js) .paddles{display:none}
 
 /* —— 设备阵列 —— */
-.lineup{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:44px 12px;margin-top:64px}
+.lineup{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:44px 12px;margin-top:64px}
+@media (max-width:1023px){.lineup{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .lineup li{display:flex;flex-direction:column;align-items:center;text-align:center}
-.lineup .art{display:flex;align-items:center;justify-content:center;width:100%;height:112px}
-.lineup img{height:112px;width:auto;max-width:100%;object-fit:contain}
+.lineup .art{display:flex;align-items:center;justify-content:center;width:100%;height:104px}
+.lineup img{height:104px;width:auto;max-width:100%;object-fit:contain}
 .lineup img,.duo img{-webkit-mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent),linear-gradient(transparent,#000 10%,#000 90%,transparent);-webkit-mask-composite:source-in;
   mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent),linear-gradient(transparent,#000 10%,#000 90%,transparent);mask-composite:intersect}
 .lineup span{margin-top:14px;font-size:14px;line-height:1.3;font-weight:600;letter-spacing:var(--ls-small)}
-.lineup .more-li span{color:var(--fg2)}
 @media (max-width:560px){.lineup{grid-template-columns:repeat(2,minmax(0,1fr));gap:32px 8px}.lineup .art,.lineup img{height:88px}}
 
 /* —— 两栏 —— */
@@ -439,6 +439,7 @@ footer a{color:var(--fg)}
         <li><span class="art"><picture><source srcset="https://files.neardws.com/mijiabar/site/art/bulb-dark.webp" media="(prefers-color-scheme: dark)"><img src="https://files.neardws.com/mijiabar/site/art/bulb-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>Light</span></li>
         <li><span class="art"><picture><source srcset="https://files.neardws.com/mijiabar/site/art/plug-dark.webp" media="(prefers-color-scheme: dark)"><img src="https://files.neardws.com/mijiabar/site/art/plug-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>Smart plug</span></li>
         <li><span class="art"><picture><source srcset="https://files.neardws.com/mijiabar/site/art/camera-dark.webp" media="(prefers-color-scheme: dark)"><img src="https://files.neardws.com/mijiabar/site/art/camera-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>Camera</span></li>
+        <li><span class="art"><picture><source srcset="https://files.neardws.com/mijiabar/site/art/doorbell-dark.webp" media="(prefers-color-scheme: dark)"><img src="https://files.neardws.com/mijiabar/site/art/doorbell-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>Doorbell</span></li>
         <li><span class="art"><picture><source srcset="https://files.neardws.com/mijiabar/site/art/tv-dark.webp" media="(prefers-color-scheme: dark)"><img src="https://files.neardws.com/mijiabar/site/art/tv-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>TV</span></li>
         <li><span class="art"><picture><source srcset="https://files.neardws.com/mijiabar/site/art/speaker-dark.webp" media="(prefers-color-scheme: dark)"><img src="https://files.neardws.com/mijiabar/site/art/speaker-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>Speaker</span></li>
         <li><span class="art"><picture><source srcset="https://files.neardws.com/mijiabar/site/art/air-purifier-dark.webp" media="(prefers-color-scheme: dark)"><img src="https://files.neardws.com/mijiabar/site/art/air-purifier-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>Air purifier</span></li>
@@ -449,7 +450,8 @@ footer a{color:var(--fg)}
         <li><span class="art"><picture><source srcset="https://files.neardws.com/mijiabar/site/art/printer-dark.webp" media="(prefers-color-scheme: dark)"><img src="https://files.neardws.com/mijiabar/site/art/printer-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>Printer</span></li>
         <li><span class="art"><picture><source srcset="https://files.neardws.com/mijiabar/site/art/thermo-dark.webp" media="(prefers-color-scheme: dark)"><img src="https://files.neardws.com/mijiabar/site/art/thermo-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>Thermometer</span></li>
         <li><span class="art"><picture><source srcset="https://files.neardws.com/mijiabar/site/art/motion-dark.webp" media="(prefers-color-scheme: dark)"><img src="https://files.neardws.com/mijiabar/site/art/motion-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>Motion sensor</span></li>
-        <li class="more-li"><span class="art"><picture><source srcset="https://files.neardws.com/mijiabar/site/art/generic-dark.webp" media="(prefers-color-scheme: dark)"><img src="https://files.neardws.com/mijiabar/site/art/generic-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>And more</span></li>
+        <li><span class="art"><picture><source srcset="https://files.neardws.com/mijiabar/site/art/contact-dark.webp" media="(prefers-color-scheme: dark)"><img src="https://files.neardws.com/mijiabar/site/art/contact-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>Door & window sensor</span></li>
+        <li><span class="art"><picture><source srcset="https://files.neardws.com/mijiabar/site/art/leak-dark.webp" media="(prefers-color-scheme: dark)"><img src="https://files.neardws.com/mijiabar/site/art/leak-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>Water leak sensor</span></li>
       </ul>
     </div>
   </section>
