@@ -16,7 +16,7 @@
 
 > 非小米官方專案。使用與米家 App 相同的雲端介面和區域網路 miIO 協定。
 
-<p align="center"><img src="docs/screenshots/demo.gif" width="300" alt="demo"></p>
+<p align="center"><img src="https://files.neardws.com/mijiabar/readme/demo.gif" width="300" alt="demo"></p>
 
 [功能](#功能) · [截圖](#截圖) · [安裝](#安裝) · [登入](#登入) · [預設隱藏規則](#預設隱藏規則) · [攝影機直播](#攝影機直播) · [Agent / MCP](#agent--mcp) · [從原始碼建置](#從原始碼建置) · [資料存放位置](#資料存放位置) · [致謝](#致謝)
 
@@ -35,19 +35,19 @@
 ## 截圖
 
 <p align="center">
-  <img src="docs/screenshots/list-light.png" width="260" alt="">
-  <img src="docs/screenshots/ac-cool-light.png" width="260" alt="">
-  <img src="docs/screenshots/fan-light.png" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/list-light.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/ac-cool-light.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/fan-light.webp" width="260" alt="">
 </p>
 <p align="center"><b>深色模式</b><br>
-  <img src="docs/screenshots/list-dark.png" width="260" alt="">
-  <img src="docs/screenshots/ac-heat-dark.png" width="260" alt="">
-  <img src="docs/screenshots/light-dark.png" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/list-dark.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/ac-heat-dark.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/light-dark.webp" width="260" alt="">
 </p>
 <p align="center">
-  <img src="docs/screenshots/plug-light.png" width="260" alt="">
-  <img src="docs/screenshots/agent-light.png" width="260" alt="">
-  <img src="docs/screenshots/login-light.png" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/plug-light.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/agent-light.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/login-light.webp" width="260" alt="">
 </p>
 
 ## 安裝
@@ -84,8 +84,8 @@
 - 離家偵測：比較 Mac 目前網卡子網路和裝置的區域網路 IP（網路變化時重新判斷，不保存任何網路資訊）。不在家時略過區域網路直接走雲端，攝影機卡片提示只能在家裡看直播。
 
 <p align="center">
-  <img src="docs/screenshots/camera-live-light.png" width="260" alt="">
-  <img src="docs/screenshots/doorbell-live-dark.png" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/camera-live-light.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/doorbell-live-dark.webp" width="260" alt="">
 </p>
 
 ## Agent / MCP

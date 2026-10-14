@@ -16,7 +16,7 @@
 
 > 非小米官方项目。使用与米家 App 相同的云端接口和局域网 miIO 协议。
 
-<p align="center"><img src="docs/screenshots/demo.gif" width="300" alt="demo"></p>
+<p align="center"><img src="https://files.neardws.com/mijiabar/readme/demo.gif" width="300" alt="demo"></p>
 
 [功能](#功能) · [截图](#截图) · [安装](#安装) · [登录](#登录) · [默认隐藏规则](#默认隐藏规则) · [摄像头直播](#摄像头直播) · [Agent / MCP](#agent--mcp) · [从源码构建](#从源码构建) · [数据存放](#数据存放) · [致谢](#致谢)
 
@@ -35,19 +35,19 @@
 ## 截图
 
 <p align="center">
-  <img src="docs/screenshots/list-light.png" width="260" alt="">
-  <img src="docs/screenshots/ac-cool-light.png" width="260" alt="">
-  <img src="docs/screenshots/fan-light.png" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/list-light.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/ac-cool-light.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/fan-light.webp" width="260" alt="">
 </p>
 <p align="center"><b>深色模式</b><br>
-  <img src="docs/screenshots/list-dark.png" width="260" alt="">
-  <img src="docs/screenshots/ac-heat-dark.png" width="260" alt="">
-  <img src="docs/screenshots/light-dark.png" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/list-dark.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/ac-heat-dark.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/light-dark.webp" width="260" alt="">
 </p>
 <p align="center">
-  <img src="docs/screenshots/plug-light.png" width="260" alt="">
-  <img src="docs/screenshots/agent-light.png" width="260" alt="">
-  <img src="docs/screenshots/login-light.png" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/plug-light.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/agent-light.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/login-light.webp" width="260" alt="">
 </p>
 
 ## 安装
@@ -84,8 +84,8 @@
 - 离家检测：比较 Mac 当前网卡子网和设备的局域网 IP（网络变化时重新判断，不保存任何网络信息）。不在家时跳过局域网直接走云端，摄像头卡片提示只能在家里看直播。
 
 <p align="center">
-  <img src="docs/screenshots/camera-live-light.png" width="260" alt="">
-  <img src="docs/screenshots/doorbell-live-dark.png" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/camera-live-light.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/doorbell-live-dark.webp" width="260" alt="">
 </p>
 
 ## Agent / MCP
