@@ -4,7 +4,7 @@
         <title>MijiaBar</title>
         <item>
             <title>0.1.9-rc1</title>
-            <pubDate>Wed, 14 Oct 2026 16:07:02 +0800</pubDate>
+            <pubDate>Wed, 14 Oct 2026 16:23:50 +0800</pubDate>
             <link>https://www.neardws.com/MijiaBar/</link>
             <sparkle:version>0.1.9-rc1</sparkle:version>
             <sparkle:shortVersionString>0.1.9-rc1</sparkle:shortVersionString>
@@ -15,7 +15,7 @@
 - GitHub Pages 下载页与 appcast
 - 合并此前未发版的 UI / 无障碍 / 图标更新
 ]]></description>
-            <enclosure url="https://github.com/neardws/MijiaBar/releases/download/v0.1.9-rc1/MijiaBar-0.1.9-rc1.dmg" length="23349777" type="application/octet-stream" sparkle:edSignature="IUVB0CQpvGj0BBB8d+UkKECVDTfRhurXTEZhsJ4OY/bh7QqK+m5oMm4/pqwMlCNO3pGh7yaHZEs+F9OtLG6kCw=="/>
+            <enclosure url="https://github.com/neardws/MijiaBar/releases/download/v0.1.9-rc1/MijiaBar-0.1.9-rc1.dmg" length="23351822" type="application/octet-stream" sparkle:edSignature="CUbqTv9AotgWVBTkkFyuihEjW5HEr+h7snOd2b3rpHX6wokl+cjStWWAGNlGCTDk2QWWQr1ejtHDWb1ZYX7nAw=="/>
         </item>
     </channel>
 </rss>
