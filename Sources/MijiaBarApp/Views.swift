@@ -377,7 +377,7 @@ struct DeviceRow: View {
         let on = power?.isOn ?? false
         let c = device.category.color
         HStack(spacing: 10) {
-            Image(systemName: device.category.icon).font(.system(size: 13, weight: .medium)).accessibilityHidden(true)
+            Image(systemName: device.icon).font(.system(size: 13, weight: .medium)).accessibilityHidden(true)
                 .foregroundStyle(on ? c : Color.secondary)
                 .frame(width: 26, height: 26)
                 .background(RoundedRectangle(cornerRadius: 7).fill(on ? c.opacity(0.16) : Theme.card))
