@@ -77,6 +77,7 @@ struct DeviceStatusCard: View {
     case .heater, .dehumidifier: ApplianceArt(kind: d.category, on: false, level: 0.3, tint: tint)
     case .sensor: if d.model.contains("motion") { MotionSensorArt(on: false, tint: tint) } else { ThermoArt(temp: nil, tint: tint) }
     case .other: GenericArt(on: false, tint: tint)
+    case .airPurifier: AirPurifierArt(on: false, level: 0.5, tint: tint)
     }
 }
 

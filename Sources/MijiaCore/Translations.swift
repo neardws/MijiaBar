@@ -287,6 +287,7 @@ public let uiTable: [String: [String]] = [
     "Sign-in QR code": ["Anmelde-QR-Code", "QR code de connexion", "Código QR de inicio de sesión", "Codice QR di accesso", "QR-код для входа", "サインイン用 QR コード"],
     "Couldn't read state": ["Status konnte nicht gelesen werden", "Impossible de lire l'état", "No se pudo leer el estado", "Impossibile leggere lo stato", "Не удалось получить состояние", "状態を読み取れませんでした"],
     "Check the device's power and network connection": ["Prüfe Stromversorgung und Netzwerkverbindung des Geräts", "Vérifiez l'alimentation et la connexion réseau de l'appareil", "Comprueba la alimentación y la conexión de red del dispositivo", "Controlla l'alimentazione e la connessione di rete del dispositivo", "Проверьте питание и подключение устройства к сети", "デバイスの電源とネットワーク接続を確認してください"],
+    "Air purifier": ["Luftreiniger", "Purificateur d'air", "Purificador de aire", "Purificatore d'aria", "Очиститель воздуха", "空気清浄機"],
 ]
 
 /// 设备状态取值（键为小写英文）
@@ -419,6 +420,12 @@ public let trNameTable: [String: [String]] = [
     "temperature-humidity-sensor": ["Temperatur-/Feuchtesensor", "Capteur temp./humidité", "Sensor de temperatura y humedad", "Sensore temperatura/umidità", "Датчик температуры и влажности", "温湿度センサー"],
     "screen": ["Bildschirm", "Écran", "Pantalla", "Schermo", "Экран", "画面"],
     "flow-rate": ["Durchfluss", "Débit", "Caudal", "Portata", "Расход", "流量"],
+    "pm2.5-density": ["PM2.5", "PM2,5", "PM2.5", "PM2.5", "PM2.5", "PM2.5"],
+    "pm10-density": ["PM10", "PM10", "PM10", "PM10", "PM10", "PM10"],
+    "air-quality-index": ["Luftqualitätsindex", "Indice de qualité de l'air", "Índice de calidad del aire", "Indice di qualità dell'aria", "Индекс качества воздуха", "空気質指数"],
+    "air-quality": ["Luftqualität", "Qualité de l'air", "Calidad del aire", "Qualità dell'aria", "Качество воздуха", "空気質"],
+    "air-purifier": ["Luftreiniger", "Purificateur d'air", "Purificador de aire", "Purificatore d'aria", "Очиститель воздуха", "空気清浄機"],
+    "filter": ["Filter", "Filtre", "Filtro", "Filtro", "Фильтр", "フィルター"],
 ]
 
 /// 繁体中文（台湾用语），键为简体原文
@@ -786,4 +793,8 @@ public let hantTable: [String: String] = [
     "登录二维码": "登入 QR 碼",
     "读取失败": "讀取失敗",
     "请检查设备的电源和网络连接": "請檢查裝置的電源和網路連線",
+    "空气净化器": "空氣清淨機",
+    "空气质量指数": "空氣品質指數",
+    "空气质量": "空氣品質",
+    "滤芯": "濾心",
 ]

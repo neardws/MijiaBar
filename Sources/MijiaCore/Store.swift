@@ -76,10 +76,13 @@ public struct Home: Codable, Hashable, Identifiable, Sendable {
 
 public enum DeviceCategory: String, Codable, CaseIterable, Sendable {
     case ac, plug, light, fan, heater, dehumidifier, sensor, tv, camera, speaker, kitchen, printer, purifier, other
+    /// 空气净化器 / 新风机（purifier 是净水器）
+    case airPurifier = "air-purifier"
     public static func guess(_ model: String) -> DeviceCategory {
         let m = model.lowercased()
         func has(_ s: String...) -> Bool { s.contains { m.contains($0) } }
         if has("printer") { return .printer }
+        if has("airpurifier", ".airp.", "air_purifier", "airfresh") { return .airPurifier }
         if has(".ysj.", "waterpuri", "water_purifier", ".wp.") { return .purifier }
         if has("acpartner", "aircondition", ".ac.", "airc") { return .ac }
         if has("heater") { return .heater }

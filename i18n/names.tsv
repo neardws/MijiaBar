@@ -58,3 +58,9 @@ voltage	Spannung	Tension	Voltaje	Tensione	Напряжение	電圧
 temperature-humidity-sensor	Temperatur-/Feuchtesensor	Capteur temp./humidité	Sensor de temperatura y humedad	Sensore temperatura/umidità	Датчик температуры и влажности	温湿度センサー
 screen	Bildschirm	Écran	Pantalla	Schermo	Экран	画面
 flow-rate	Durchfluss	Débit	Caudal	Portata	Расход	流量
+pm2.5-density	PM2.5	PM2,5	PM2.5	PM2.5	PM2.5	PM2.5
+pm10-density	PM10	PM10	PM10	PM10	PM10	PM10
+air-quality-index	Luftqualitätsindex	Indice de qualité de l'air	Índice de calidad del aire	Indice di qualità dell'aria	Индекс качества воздуха	空気質指数
+air-quality	Luftqualität	Qualité de l'air	Calidad del aire	Qualità dell'aria	Качество воздуха	空気質
+air-purifier	Luftreiniger	Purificateur d'air	Purificador de aire	Purificatore d'aria	Очиститель воздуха	空気清浄機
+filter	Filter	Filtre	Filtro	Filtro	Фильтр	フィルター

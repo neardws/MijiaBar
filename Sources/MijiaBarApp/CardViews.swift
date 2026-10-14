@@ -73,6 +73,7 @@ struct CardModel {
         .plug: ["electric-power", "power-consumption", "temperature"],
         .sensor: ["temperature", "relative-humidity", "illumination", "battery-level"],
         .speaker: ["volume"], .tv: ["volume"],
+        .airPurifier: ["pm2.5-density", "air-quality-index", "fan-level"],
     ]
     static let readoutNames = ["temperature", "relative-humidity", "electric-power", "power-consumption", "battery-level",
                                "illumination", "pm2.5-density", "filter-life-level", "voltage", "electric-current"]
@@ -148,7 +149,12 @@ struct DeviceCardView: View {
         let primaryValue: Double? = c.primary.flatMap { state.values[$0.key]?.doubleValue }
         TypeShell(device: device, tint: tint, isOn: isOn, title: statusTitle(c, isOn), subtitle: statusLine(c),
                   powerOn: c.power?.isOn, onPower: c.power.map { p in { m.write(device, p.key, p.isOn ? p.off : p.on) } }) {
-            GenericArt(on: isOn, tint: tint)
+            if device.category == .airPurifier {
+                let fan = state.spec?.controlServices.flatMap(\.properties).first { $0.name == "fan-level" }
+                AirPurifierArt(on: isOn, level: fan.map { propFraction($0, state.values[$0.key]?.doubleValue) } ?? 0.5, tint: tint)
+            } else {
+                GenericArt(on: isOn, tint: tint)
+            }
         } content: {
             if let p = c.primary {
                 BigValue(value: drag.map { displayValue(p, .double($0)) } ?? displayValue(p, state.values[p.key]),
@@ -256,6 +262,7 @@ func zhCategory(_ c: DeviceCategory) -> String {
     case .printer: return L("打印机", "Printer")
     case .purifier: return L("净水器", "Water purifier")
     case .other: return L("设备", "Device")
+    case .airPurifier: return L("空气净化器", "Air purifier")
     }
 }
 

@@ -762,3 +762,64 @@ struct GenericArt: View {
         }
     }
 }
+
+/// 空气净化器：白色圆柱机身（左右明暗表现圆柱体）、一圈细密的进风孔，顶部是圆形出风格栅和一圈指示灯环。
+/// 开机时灯环亮起设备色、净化后的空气以设备色柔光粒子从顶部升起，速度和亮度跟随风速。正面不画圆形深色部件，避免像摄像头。
+struct AirPurifierArt: View {
+    let on: Bool, level: Double, tint: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    static let box = CGRect(x: 44, y: 22, width: 72, height: 108)
+    /// 圆柱的左右明暗
+    static let cylinder = LinearGradient(stops: [.init(color: Color(white: 0.80), location: 0), .init(color: Color(white: 0.98), location: 0.38),
+                                                 .init(color: Color(white: 0.93), location: 0.7), .init(color: Color(white: 0.76), location: 1)],
+                                         startPoint: .leading, endPoint: .trailing)
+    var body: some View {
+        PowerTimeline(on: on, running: true) { t, k in
+            let b = Self.box
+            let body = UnevenRoundedRectangle(topLeadingRadius: 8, bottomLeadingRadius: 16, bottomTrailingRadius: 16, topTrailingRadius: 8, style: .continuous)
+            ZStack {
+                Ambient(tint, k * (0.45 + 0.35 * level), width: 190, height: 120).position(x: 80, y: 70)
+                Canvas { ctx, _ in rise(&ctx, t: t, k: k) }
+                body.fill(Self.cylinder)
+                    .shadow(color: k > 0.01 ? tint.opacity(0.45 * k) : .black.opacity(0.22), radius: 5 + 9 * k, y: 4)
+                    .frame(width: b.width, height: b.height).position(x: b.midX, y: b.midY)
+                // 进风孔：越靠两侧越淡，像绕着圆柱一圈
+                Canvas { ctx, size in
+                    var row = 0
+                    for y in stride(from: 3.0, to: size.height - 2, by: 4.4) {
+                        let dx = row % 2 == 0 ? 0 : 2.2
+                        for x in stride(from: 2.0 + dx, to: size.width - 1, by: 4.4) {
+                            let edge = abs(x / size.width - 0.5) * 2
+                            ctx.fill(Path(ellipseIn: CGRect(x: x - 0.8, y: y - 0.8, width: 1.6, height: 1.6)), with: .color(.black.opacity(0.13 * (1 - edge * edge))))
+                        }
+                        row += 1
+                    }
+                }
+                .frame(width: b.width - 6, height: b.height - 34).position(x: b.midX, y: b.minY + 22 + (b.height - 34) / 2)
+                // 顶部：机身顶面（椭圆）、出风格栅、指示灯环
+                Ellipse().fill(LinearGradient(colors: [Color(white: 0.99), Color(white: 0.88)], startPoint: .top, endPoint: .bottom))
+                    .overlay(Ellipse().stroke(Color.black.opacity(0.06), lineWidth: 0.5))
+                    .frame(width: b.width, height: 18).position(x: b.midX, y: b.minY)
+                Ellipse().stroke(tint, lineWidth: 2).frame(width: 56, height: 12).opacity(k).shadow(color: tint, radius: 3 * k).position(x: b.midX, y: b.minY)
+                Ellipse().fill(LinearGradient(colors: [Color(white: 0.55), Color(white: 0.72)], startPoint: .top, endPoint: .bottom))
+                    .overlay(grille).frame(width: 50, height: 10).clipShape(Ellipse()).position(x: b.midX, y: b.minY)
+            }
+            .frame(width: 160, height: 136)
+        }
+        .animation(Motion.smooth, value: level)
+    }
+    /// 出风格栅：几道横向细缝
+    var grille: some View {
+        VStack(spacing: 1.6) { ForEach(0..<4, id: \.self) { _ in Rectangle().fill(Color.black.opacity(0.18)).frame(height: 0.8) } }
+    }
+    func rise(_ ctx: inout GraphicsContext, t: Double, k: Double) {
+        guard k > 0.01 else { return }
+        let rate = reduceMotion ? 0 : 0.3 + 0.5 * level
+        var dots: [(CGPoint, Double)] = []
+        for i in 0..<5 {
+            let u = (t * rate + Double(i) * 0.37).truncatingRemainder(dividingBy: 1)
+            dots.append((CGPoint(x: 60 + CGFloat(i) * 10 + CGFloat(sin(u * 5 + Double(i))) * 2, y: Self.box.minY - 2 - CGFloat(u) * 20), k * (0.5 + 0.5 * level) * sin(u * .pi)))
+        }
+        particles(&ctx, dots, tint: tint)
+    }
+}

@@ -61,7 +61,7 @@ extension AppModel {
 
 /// 所有插画的开/关对照（自检用，不进 README）：没有演示设备的类型也能检查画风是否统一
 struct ArtGallery: View {
-    static let size = CGSize(width: 480, height: 1932)
+    static let size = CGSize(width: 480, height: 2070)
     var body: some View {
         let rows: [(String, AnyView, AnyView)] = [
             ("fan", AnyView(FanArt(on: true, level: 0.5, swing: false, tint: .teal)), AnyView(FanArt(on: false, level: 0.5, swing: false, tint: .teal))),
@@ -77,6 +77,7 @@ struct ArtGallery: View {
             ("dehumidifier", AnyView(ApplianceArt(kind: .dehumidifier, on: true, level: 0.4, tint: .cyan)), AnyView(ApplianceArt(kind: .dehumidifier, on: false, level: 0.4, tint: .cyan))),
             ("thermo", AnyView(ThermoArt(temp: 25.6, tint: .mint)), AnyView(ThermoArt(temp: nil, tint: .mint))),
             ("motion", AnyView(MotionSensorArt(on: true, tint: .mint)), AnyView(MotionSensorArt(on: false, tint: .mint))),
+            ("air purifier", AnyView(AirPurifierArt(on: true, level: 0.6, tint: .cyan)), AnyView(AirPurifierArt(on: false, level: 0.6, tint: .cyan))),
             ("generic", AnyView(GenericArt(on: true, tint: .indigo)), AnyView(GenericArt(on: false, tint: .indigo))),
         ]
         VStack(spacing: 0) {
@@ -154,7 +155,7 @@ enum Snapshot {
             m.page = .list
             render(root, out.appendingPathComponent("warmup.png")); wait(10)
             var picks: [Device] = []
-            for c in [DeviceCategory.ac, .light, .plug, .fan, .sensor, .heater, .dehumidifier, .speaker, .camera, .tv, .printer, .purifier, .other, .kitchen] {
+            for c in [DeviceCategory.ac, .light, .plug, .fan, .sensor, .heater, .dehumidifier, .speaker, .camera, .tv, .printer, .purifier, .airPurifier, .other, .kitchen] {
                 if let d = m.devices.first(where: { $0.category == c && $0.isOnline && $0.homeId == m.currentHomeId }) ?? m.devices.first(where: { $0.category == c && $0.isOnline }) ?? m.devices.first(where: { $0.category == c }) { picks.append(d) }
             }
             for d in picks where m.states[d.did] == nil {
