@@ -284,6 +284,7 @@ public let uiTable: [String: [String]] = [
     "Switch": ["Schalter", "Interrupteur", "Interruptor", "Interruttore", "Выключатель", "スイッチ"],
     "Power on/off": ["Ein/Aus", "Marche/arrêt", "Encendido/apagado", "Accensione/spegnimento", "Питание", "電源"],
     "Live view: home network only": ["Livebild nur im Heimnetz", "Direct uniquement sur le réseau domestique", "Directo solo en la red de casa", "Live solo sulla rete di casa", "Трансляция только в домашней сети", "ライブ映像は自宅のネットワークのみ"],
+    "Sign-in QR code": ["Anmelde-QR-Code", "QR code de connexion", "Código QR de inicio de sesión", "Codice QR di accesso", "QR-код для входа", "サインイン用 QR コード"],
 ]
 
 /// 设备状态取值（键为小写英文）
@@ -780,4 +781,5 @@ public let hantTable: [String: String] = [
     "不在家庭网络，无法看直播（直播只能在同一局域网内连接摄像头）": "不在家庭網路，無法看直播（直播只能在同一個區域網路內連線攝影機）",
     "电源": "電源",
     "直播仅限家庭网络": "直播僅限家庭網路",
+    "登录二维码": "登入 QR 碼",
 ]

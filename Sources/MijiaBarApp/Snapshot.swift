@@ -94,6 +94,22 @@ struct ArtGallery: View {
     }
 }
 
+/// 应用图标的图形（`--icon` 生成 AppIcon，登录页也用它），按 size 等比缩放
+struct AppMark: View {
+    let size: CGFloat
+    var body: some View {
+        let u = size / 1024
+        let shape = RoundedRectangle(cornerRadius: 230 * u, style: .continuous)
+        ZStack {
+            shape.fill(LinearGradient(colors: [Color(red: 0.16, green: 0.42, blue: 1), Color(red: 1, green: 0.52, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing))
+            shape.fill(Color.black.opacity(0.12))
+            Image(systemName: "house.fill").font(.system(size: 520 * u, weight: .semibold)).foregroundStyle(.white)
+            Image(systemName: "snowflake").font(.system(size: 210 * u, weight: .bold)).foregroundStyle(Color(red: 0.2, green: 0.45, blue: 1)).offset(y: 70 * u)
+        }
+        .frame(width: size, height: size)
+    }
+}
+
 @MainActor
 enum Snapshot {
     static var appearance = NSAppearance(named: .darkAqua)
@@ -166,6 +182,7 @@ enum Snapshot {
             m.page = .detail("d3"); render(root, f("light"))
             m.page = .detail("d5"); render(root, f("plug"))
             m.page = .detail("d4"); m.states["d4"]?.values["2.1"] = .bool(true); render(root, f("fan"))
+            m.states["d4"]?.values["2.1"] = .bool(false)   // 还原，否则深色那一轮的列表会多算一台开启
             m.page = .detail("d10"); render(root, f("camera"))
             m.atHome = false; render(root, f("camera-away")); m.atHome = nil
             LiveControls.snapshotWatching = true
@@ -260,13 +277,7 @@ enum Snapshot {
     }
 
     static func icon(to path: String) {
-        let v = ZStack {
-            RoundedRectangle(cornerRadius: 230, style: .continuous)
-                .fill(LinearGradient(colors: [Color(red: 0.16, green: 0.42, blue: 1), Color(red: 1, green: 0.52, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing))
-            RoundedRectangle(cornerRadius: 230, style: .continuous).fill(Color.black.opacity(0.12)).padding(0)
-            Image(systemName: "house.fill").font(.system(size: 520, weight: .semibold)).foregroundStyle(.white)
-            Image(systemName: "snowflake").font(.system(size: 210, weight: .bold)).foregroundStyle(Color(red: 0.2, green: 0.45, blue: 1)).offset(y: 70)
-        }.frame(width: 1024, height: 1024).padding(0)
+        let v = AppMark(size: 1024)
         let r = ImageRenderer(content: v.frame(width: 1024, height: 1024)); r.scale = 1
         if let img = r.nsImage, let tiff = img.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff) {
             try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: path))

@@ -58,55 +58,69 @@ struct RootView: View {
 
 struct LoginView: View {
     @EnvironmentObject var m: AppModel
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
-        VStack(spacing: 14) {
-            Spacer()
-            Image(systemName: "house.circle.fill").font(.system(size: 44)).foregroundStyle(Theme.sliderGradient)
-                .shadow(color: Theme.cool.opacity(0.5), radius: 14)
-                .phaseAnimator([false, true]) { v, up in v.offset(y: up && !reduceMotion ? -3 : 0) } animation: { _ in .easeInOut(duration: 1.6) }
-                .staggerIn(0)
-            Text(L("登录小米账号", "Sign in to Xiaomi")).font(.system(size: 20, weight: .semibold)).staggerIn(1)
-            Text(L("用米家 App 扫码，无需输入密码", "Scan with the Mi Home app — no password needed")).font(.system(size: 12)).foregroundStyle(.secondary).staggerIn(2)
-            ZStack {
-                RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white).frame(width: 224, height: 224)
-                if let img = m.qrImage {
-                    Image(nsImage: img).resizable().interpolation(.none).frame(width: 200, height: 200)
-                        .overlay(ScanLine())
-                        .transition(.pop())
-                } else if m.loggingIn {
-                    ProgressView().controlSize(.large).colorScheme(.light).transition(.opacity)
-                } else {
-                    Button(L("获取二维码", "Get QR code")) { m.startLogin() }.colorScheme(.light).transition(.opacity)
-                }
-            }
-            .overlay {
-                if m.qrImage != nil {
-                    ViewfinderCorners(length: 16).stroke(Theme.sliderGradient, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
-                        .frame(width: 208, height: 208)
-                        .transition(.pop(1.05))
-                }
-            }
-            .shadow(color: .black.opacity(0.2), radius: 16, y: 6)
-            .animation(Motion.enter, value: m.qrImage)
-            .animation(Motion.enter, value: m.loggingIn)
-            .staggerIn(3)
-            Text(m.loginStatus).font(.system(size: 12)).foregroundStyle(.secondary).multilineTextAlignment(.center).frame(height: 32)
+        VStack(spacing: 0) {
+            Spacer(minLength: 8)
+            AppMark(size: 56).shadow(color: .black.opacity(0.15), radius: 6, y: 3).accessibilityHidden(true).staggerIn(0)
+            Text(L("登录小米账号", "Sign in to Xiaomi")).font(.system(size: 20, weight: .semibold)).padding(.top, 14).staggerIn(1)
+            Text(L("用米家 App 扫码，无需输入密码", "Scan with the Mi Home app — no password needed")).font(.system(size: 12)).foregroundStyle(.secondary)
+                .padding(.top, 4).staggerIn(2)
+            qrCard.padding(.top, 18).staggerIn(3)
+            Text(m.loginStatus).font(.system(size: 12)).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                .frame(height: 32).padding(.top, 10)
                 .contentTransition(.opacity).animation(Motion.snappy, value: m.loginStatus)
+            Spacer(minLength: 8)
+            // 与设置页同样的分组卡片
             HStack {
-                Text(L("地区", "Region")).font(.system(size: 12)).foregroundStyle(.secondary)
+                Text(L("服务器地区", "Region"))
+                Spacer()
                 Picker("", selection: Binding(get: { m.prefs.region }, set: { m.setRegion($0) })) {
                     ForEach(xiaomiRegions, id: \.id) { Text($0.name).tag($0.id) }
-                }.labelsHidden().frame(width: 140)
+                }.labelsHidden().fixedSize()
             }
-            HStack(spacing: 12) {
-                Button { m.startLogin() } label: { Label(L("刷新二维码", "Refresh"), systemImage: "arrow.clockwise") }
-                Button { NSApp.terminate(nil) } label: { Label(L("退出", "Quit"), systemImage: "xmark.circle") }
-            }.buttonStyle(.borderless).font(.system(size: 12))
-            Spacer()
+            .font(.system(size: 12))
+            .padding(.horizontal, 12).padding(.vertical, 8)
+            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.card))
+            HStack {
+                footerButton(L("刷新二维码", "Refresh"), icon: "arrow.clockwise") { m.startLogin() }
+                Spacer()
+                footerButton(L("退出", "Quit"), icon: "power") { m.quitApp() }.help("⌘Q")
+            }
+            .padding(.top, 10).padding(.horizontal, 4)
         }
-        .padding(20)
+        .padding(.horizontal, 20).padding(.vertical, 16)
         .onAppear { if !m.mock, m.qrImage == nil, !m.loggingIn { m.startLogin() } }
+    }
+
+    /// 二维码必须白底黑码；卡片描边和投影与磁贴一致
+    var qrCard: some View {
+        let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
+        return ZStack {
+            shape.fill(Color.white)
+            if let img = m.qrImage {
+                Image(nsImage: img).resizable().interpolation(.none).frame(width: 196, height: 196)
+                    .overlay(ScanLine())
+                    .accessibilityLabel(L("登录二维码", "Sign-in QR code"))
+                    .transition(.pop())
+            } else if m.loggingIn {
+                ProgressView().controlSize(.large).colorScheme(.light).transition(.opacity)
+            } else {
+                Button(L("获取二维码", "Get QR code")) { m.startLogin() }.colorScheme(.light).transition(.opacity)
+            }
+        }
+        .frame(width: 220, height: 220)
+        .overlay(shape.stroke(Theme.stroke))
+        .shadow(color: .black.opacity(0.12), radius: 12, y: 4)
+        .animation(Motion.enter, value: m.qrImage)
+        .animation(Motion.enter, value: m.loggingIn)
+    }
+
+    func footerButton(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: icon).font(.system(size: 12)).foregroundStyle(.secondary)
+                .padding(.horizontal, 8).padding(.vertical, 5).contentShape(Rectangle())
+        }
+        .buttonStyle(.pressable).hoverHighlight()
     }
 }
 
@@ -127,21 +141,6 @@ struct ScanLine: View {
             }
         }
         .clipped().allowsHitTesting(false)
-    }
-}
-
-/// 取景框四角
-struct ViewfinderCorners: Shape {
-    var length: CGFloat = 24
-    func path(in r: CGRect) -> Path {
-        var p = Path()
-        for (c, dx, dy) in [(CGPoint(x: r.minX, y: r.minY), 1.0, 1.0), (CGPoint(x: r.maxX, y: r.minY), -1.0, 1.0),
-                            (CGPoint(x: r.minX, y: r.maxY), 1.0, -1.0), (CGPoint(x: r.maxX, y: r.maxY), -1.0, -1.0)] {
-            p.move(to: CGPoint(x: c.x, y: c.y + dy * length))
-            p.addLine(to: c)
-            p.addLine(to: CGPoint(x: c.x + dx * length, y: c.y))
-        }
-        return p
     }
 }
 
