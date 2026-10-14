@@ -1,8 +1,9 @@
 import Foundation
 import CryptoKit
+import os
 
 /// 界面语言。简体为原文，繁体（台湾用语）、其余语言见 Translations.swift。
-public enum AppLang: String, CaseIterable, Codable {
+public enum AppLang: String, CaseIterable, Codable, Sendable {
     case zhHans = "zh-Hans", zhHant = "zh-Hant", en, de, fr, es, it, ru, ja
     public var nativeName: String {
         switch self {
@@ -31,20 +32,27 @@ public enum AppLang: String, CaseIterable, Codable {
 }
 
 /// 当前语言：用户在设置中选择的 > 系统语言（CLI 与 App 共用 UserDefaults 键 MijiaBarLang）
-public var currentLang: AppLang = ProcessInfo.processInfo.environment["MIJIABAR_LANG"].flatMap(AppLang.init(rawValue:)) ?? UserDefaults.standard.string(forKey: "MijiaBarLang").flatMap(AppLang.init(rawValue:)) ?? AppLang.system()
+public var currentLang: AppLang {
+    get { langState.withLock { $0.lang } }
+    set { langState.withLock { $0.lang = newValue } }
+}
 public var isChinese: Bool { currentLang == .zhHans || currentLang == .zhHant }
-private var hantCache: [String: String] = [:]
+/// 语言和繁体转换缓存可能在任意线程读写，用锁保护
+private let langState = OSAllocatedUnfairLock(initialState: (
+    lang: ProcessInfo.processInfo.environment["MIJIABAR_LANG"].flatMap(AppLang.init(rawValue:)) ?? UserDefaults.standard.string(forKey: "MijiaBarLang").flatMap(AppLang.init(rawValue:)) ?? AppLang.system(),
+    hant: [String: String]()))
 /// 简易本地化：中文系统显示中文，其它语言回退英文
 public func L(_ zh: String, _ en: String) -> String {
-    switch currentLang {
+    let (lang, cached) = langState.withLock { ($0.lang, $0.hant[zh]) }
+    switch lang {
     case .zhHans: return zh
     case .zhHant:
         // 台湾用语：优先人工校对过的 i18n/zh-Hant.tsv，缺失时才自动转换
         if let t = hantTable[zh] { return t }
-        if let c = hantCache[zh] { return c }
+        if let cached { return cached }
         let t = zh.applyingTransform(StringTransform("Hans-Hant"), reverse: false) ?? zh
-        hantCache[zh] = t; return t
-    default: return tr(en, currentLang) ?? en
+        langState.withLock { $0.hant[zh] = t }; return t
+    default: return tr(en, lang) ?? en
     }
 }
 

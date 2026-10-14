@@ -47,15 +47,19 @@ public enum Keychain {
     public static func delete(account: String) { SecItemDelete(base(account) as CFDictionary) }
 }
 
-public struct Session: Codable, Equatable {
+public struct Session: Codable, Equatable, Sendable {
     public var userId: String
     public var ssecurity: String
     public var serviceToken: String
     public var region: String
     public var cUserId: String?
-    public init(userId: String, ssecurity: String, serviceToken: String, region: String, cUserId: String? = nil) {
+    /// 扫码登录返回的长期凭据，只用于给本机 go2rtc 直播助手换取摄像头 P2P 密钥（v0.1.8 起保存）
+    public var passToken: String?
+    public init(userId: String, ssecurity: String, serviceToken: String, region: String, cUserId: String? = nil, passToken: String? = nil) {
         self.userId = userId; self.ssecurity = ssecurity; self.serviceToken = serviceToken; self.region = region; self.cUserId = cUserId
+        self.passToken = passToken
     }
+    public var canLiveStream: Bool { !(passToken ?? "").isEmpty }
     public static func load() -> Session? {
         guard let d = Keychain.get(account: "session") else { return nil }
         return try? JSONDecoder().decode(Session.self, from: d)
@@ -64,13 +68,13 @@ public struct Session: Codable, Equatable {
     public static func clear() { Keychain.delete(account: "session") }
 }
 
-public struct Room: Codable, Hashable { public var id: String; public var name: String; public var dids: [String] }
-public struct Home: Codable, Hashable, Identifiable {
+public struct Room: Codable, Hashable, Sendable { public var id: String; public var name: String; public var dids: [String] }
+public struct Home: Codable, Hashable, Identifiable, Sendable {
     public var id: String; public var name: String; public var ownerId: String; public var rooms: [Room]
     public init(id: String, name: String, ownerId: String, rooms: [Room]) { self.id = id; self.name = name; self.ownerId = ownerId; self.rooms = rooms }
 }
 
-public enum DeviceCategory: String, Codable, CaseIterable {
+public enum DeviceCategory: String, Codable, CaseIterable, Sendable {
     case ac, plug, light, fan, heater, dehumidifier, sensor, tv, camera, speaker, kitchen, printer, purifier, other
     public static func guess(_ model: String) -> DeviceCategory {
         let m = model.lowercased()
@@ -92,7 +96,7 @@ public enum DeviceCategory: String, Codable, CaseIterable {
     }
 }
 
-public struct Device: Codable, Hashable, Identifiable {
+public struct Device: Codable, Hashable, Identifiable, Sendable {
     public var did: String
     public var name: String
     public var model: String
@@ -114,7 +118,7 @@ public struct Device: Codable, Hashable, Identifiable {
 }
 
 /// 设备列表缓存（含局域网 token，文件权限 0600，只在本机）
-public struct DeviceCache: Codable {
+public struct DeviceCache: Codable, Sendable {
     public var homes: [Home]; public var devices: [Device]; public var updated: Date
     public init(homes: [Home], devices: [Device], updated: Date) { self.homes = homes; self.devices = devices; self.updated = updated }
     public static func load() -> DeviceCache? { loadJSON(DeviceCache.self, "devices.json") }
@@ -122,7 +126,7 @@ public struct DeviceCache: Codable {
     public static func clear() { try? FileManager.default.removeItem(at: Paths.support.appendingPathComponent("devices.json")) }
 }
 
-public struct DevicePrefs: Codable, Hashable {
+public struct DevicePrefs: Codable, Hashable, Sendable {
     public var alias: String?
     public var hidden: Bool?
     public var favorite: Bool?
@@ -130,7 +134,7 @@ public struct DevicePrefs: Codable, Hashable {
     public init() {}
 }
 
-public struct Prefs: Codable, Equatable {
+public struct Prefs: Codable, Equatable, Sendable {
     public var devices: [String: DevicePrefs] = [:]
     public var region: String = "cn"
     public var selectedHome: String?
@@ -150,8 +154,8 @@ public struct Prefs: Codable, Equatable {
     public func name(_ d: Device) -> String { devices[d.did]?.alias ?? d.name }
 }
 
-public struct AgentPolicy: Codable, Equatable {
-    public enum Mode: String, Codable, CaseIterable { case disabled, readOnly, allowlist, full }
+public struct AgentPolicy: Codable, Equatable, Sendable {
+    public enum Mode: String, Codable, CaseIterable, Sendable { case disabled, readOnly, allowlist, full }
     public var mode: Mode = .readOnly
     public var allowlist: [String] = []
     public var confirmWrites: Bool = true

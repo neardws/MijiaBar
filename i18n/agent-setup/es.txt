@@ -1,0 +1,15 @@
+Configura MijiaBar (una app de barra de menús de macOS para dispositivos Xiaomi Mi Home) como herramienta MCP para ti. Hazlo tú mismo, paso a paso:
+
+1. Localiza la CLI. Viene dentro de la app: {CLI}. Ejecuta "{CLI}" --help para comprobar que funciona. Para usarla en el terminal, crea un enlace: mkdir -p ~/.local/bin && ln -sf "{CLI}" ~/.local/bin/mijiabar
+2. Registra en tu propia configuración un servidor MCP stdio llamado mijia, comando "{CLI}", argumento mcp:
+   - Claude Code: claude mcp add --scope user mijia -- "{CLI}" mcp
+   - Codex: codex mcp add mijia -- "{CLI}" mcp
+     (~/.codex/config.toml:
+      [mcp_servers.mijia]
+      command = "{CLI}"
+      args = ["mcp"])
+   - Cursor (~/.cursor/mcp.json), Claude Desktop, …:
+     {"mcpServers": {"mijia": {"command": "{CLI}", "args": ["mcp"]}}}
+   Después recarga los servidores MCP si hace falta.
+3. Herramientas: list_devices, get_device_state, set_property, run_action. Yo controlo el acceso en MijiaBar → Ajustes → Interfaz de agente: «Lectura» por defecto (se rechazan las escrituras); «Lista permitida» solo permite los dispositivos que elija; «Completo» permite todos. Con «Confirmar cada escritura» activado, cada escritura muestra un diálogo en el Mac que debo aprobar. Nunca cambies el estado de un dispositivo sin que te lo pida.
+4. Verifica: ejecuta "{CLI}" list (o llama a list_devices) y muéstrame la lista de dispositivos. Si indica que no he iniciado sesión, pídeme que primero inicie sesión con el código QR en MijiaBar.

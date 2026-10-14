@@ -23,6 +23,8 @@ extension AppModel {
             dev("d7", L("除湿机", "Dehumidifier"), "dmaker.derh.22l", L("书房", "Study")),
             dev("d8", L("旧摄像头", "Old camera"), "chuangmi.camera.v2", L("阳台", "Balcony"), online: false),
             dev("d9", L("旧打印机", "Old printer"), "hannto.printer.honey", L("书房", "Study"), online: false),
+            dev("d10", L("客厅摄像机", "Living room camera"), "chuangmi.camera.demo", L("客厅", "Living room")),
+            dev("d11", L("智能门铃", "Doorbell"), "madv.cateye.demo", L("门口", "Entrance")),
         ]
         prefs.devices["d1"] = { var p = DevicePrefs(); p.favorite = true; return p }()
         prefs.devices["d2"] = { var p = DevicePrefs(); p.favorite = true; return p }()
@@ -49,6 +51,11 @@ extension AppModel {
         states["d6"] = DeviceState(values: ["2.1": .double(25.6), "2.2": .int(58)], spec: ht, legacy: false, source: "cloud")
         let derh = DeviceSpec(type: "", description: "", services: [S(2, "dehumidifier", [P(2, 1, "on", "bool"), P(2, 5, "target-humidity", "uint8", range: [40, 70, 5], unit: "percentage")])])
         states["d7"] = DeviceState(values: ["2.1": .bool(false), "2.5": .int(50)], spec: derh, legacy: false, source: "cloud")
+        let cam = DeviceSpec(type: "", description: "", services: [S(2, "camera-control", [P(2, 1, "on", "bool"), P(2, 3, "night-shot", "uint8", opts: [ValueOption(value: 0, description: "Auto"), ValueOption(value: 1, description: "Off"), ValueOption(value: 2, description: "On")])])])
+        states["d10"] = DeviceState(values: ["2.1": .bool(true), "2.3": .int(0)], spec: cam, legacy: false, source: "cloud")
+        let bell = DeviceSpec(type: "", description: "", services: [S(2, "battery", [P(2, 1, "battery-level", "uint8", ["read"], range: [0, 100, 1], unit: "percentage")])])
+        states["d11"] = DeviceState(values: ["2.1": .int(64)], spec: bell, legacy: false, source: "cloud")
+        for d in devices { if let st = states[d.did], let t = Transport.from(st.source, device: d) { transports[d.did] = t } }
     }
 }
 
@@ -124,6 +131,11 @@ enum Snapshot {
             m.page = .detail("d3"); render(root, f("light"))
             m.page = .detail("d5"); render(root, f("plug"))
             m.page = .detail("d4"); m.states["d4"]?.values["2.1"] = .bool(true); render(root, f("fan"))
+            m.page = .detail("d10"); render(root, f("camera"))
+            m.atHome = false; render(root, f("camera-away")); m.atHome = nil
+            LiveControls.snapshotWatching = true
+            render(root, f("camera-live")); m.page = .detail("d11"); render(root, f("doorbell-live"))
+            LiveControls.snapshotWatching = false
             m.page = .settings; render(root, f("settings")); render(AgentSettingsSection().padding(12).frame(maxHeight: .infinity, alignment: .top).background(Theme.bg).environmentObject(m), f("agent"), size: CGSize(width: 360, height: 420))
             m.page = .list; m.showHidden = true; render(root, f("list-hidden")); m.showHidden = false
             m.session = nil; m.qrImage = qr("https://github.com/neardws/MijiaBar"); m.loginStatus = L("打开米家 App 扫一扫，并在手机上确认登录", "Scan with the Mi Home app")

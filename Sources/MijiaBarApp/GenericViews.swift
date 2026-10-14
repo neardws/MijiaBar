@@ -99,7 +99,7 @@ struct PropRow: View {
                    onEditingChanged: { editing in
                        if !editing, let v = local { m.write(device, prop.key, PropValue.double(v).coerced(to: prop.format)); local = nil }
                    }).frame(width: 130).controlSize(.small)
-            Text("\(PropValue.double(local ?? value?.doubleValue ?? r[0]))\(unit)").font(.system(size: 11)).monospacedDigit().frame(width: 52, alignment: .trailing)
+            Text(PropValue.double(local ?? value?.doubleValue ?? r[0]).description + unit).font(.system(size: 11)).monospacedDigit().frame(width: 52, alignment: .trailing)
                 .contentTransition(.numericText(value: local ?? value?.doubleValue ?? r[0]))
         } else {
             Text(display).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary).lineLimit(1).contentTransition(.numericText())
@@ -155,6 +155,24 @@ struct SettingsView: View {
                                "Hidden by default: offline devices and devices not seen online for 30+ days. Right-click a device to hide, favorite or rename."))
                             .font(.system(size: 11)).foregroundStyle(.secondary)
                     }
+                    group(L("摄像头直播", "Camera live view")) {
+                        let ok = m.mock || m.session?.canLiveStream == true
+                        row(L("摄像头登录", "Camera sign-in")) {
+                            Label(ok ? L("已授权", "Authorized") : L("未授权", "Not authorized"), systemImage: ok ? "checkmark.seal.fill" : "exclamationmark.circle")
+                                .foregroundStyle(ok ? .green : .orange)
+                        }
+                        if m.loggingIn {
+                            if let img = m.qrImage {
+                                Image(nsImage: img).resizable().interpolation(.none).frame(width: 140, height: 140).frame(maxWidth: .infinity)
+                            }
+                            Text(m.loginStatus).font(.system(size: 11)).foregroundStyle(.secondary)
+                        } else if !ok {
+                            Button(L("重新扫码授权直播", "Scan QR to enable live view")) { m.startLogin() }
+                        }
+                        Text(L("直播由内置的 go2rtc 在本机播放：只监听 127.0.0.1，按需启动，关闭画面后自动停止。密钥向小米云获取，视频经小米 P2P 从摄像头传来；凭据只保存在钥匙串。Agent / MCP 无法访问摄像头画面。",
+                               "Live video is played locally by the built-in go2rtc: it listens on 127.0.0.1 only, starts on demand and stops when you close the player. Keys come from the Xiaomi cloud and video from the camera over Xiaomi P2P; credentials stay in the Keychain. Agents / MCP can't access camera video."))
+                            .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
                     AgentSettingsSection()
                     Button { m.quitApp() } label: {
                         Label(L("完全退出 MijiaBar", "Quit MijiaBar"), systemImage: "power")
@@ -163,7 +181,7 @@ struct SettingsView: View {
                             .foregroundStyle(.red)
                     }.buttonStyle(.plain).help("⌘Q")
                     group(L("关于", "About")) {
-                        row("MijiaBar") { Text("v0.1.6").foregroundStyle(.secondary) }
+                        row("MijiaBar") { Text("v0.1.8").foregroundStyle(.secondary) }
                         Link("github.com/neardws/MijiaBar", destination: URL(string: "https://github.com/neardws/MijiaBar")!)
 
                     }
@@ -202,13 +220,11 @@ struct AgentPromptBox: View {
                        "Paste this into Claude Code, Codex, Cursor or any other agent — it will install and configure itself."))
                     .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
-            ScrollView {
-                Text(text).font(.system(size: 10, design: .monospaced)).textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading).padding(10)
-            }
-            .frame(height: 150)
-            .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.tile))
-            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.stroke))
+            Text(text).font(.system(size: 10, design: .monospaced)).textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading).padding(10)
+                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.tile))
+                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.stroke))
             Button {
                 onCopy(text)
                 withAnimation(Motion.snappy) { copied = true }

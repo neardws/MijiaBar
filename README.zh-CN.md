@@ -18,7 +18,7 @@
 
 <p align="center"><img src="docs/screenshots/demo.gif" width="300" alt="demo"></p>
 
-[功能](#功能) · [截图](#截图) · [安装](#安装) · [登录](#登录) · [默认隐藏规则](#默认隐藏规则) · [Agent / MCP](#agent--mcp) · [从源码构建](#从源码构建) · [数据存放](#数据存放) · [致谢](#致谢)
+[功能](#功能) · [截图](#截图) · [安装](#安装) · [登录](#登录) · [默认隐藏规则](#默认隐藏规则) · [摄像头直播](#摄像头直播) · [Agent / MCP](#agent--mcp) · [从源码构建](#从源码构建) · [数据存放](#数据存放) · [致谢](#致谢)
 
 ## 功能
 
@@ -74,27 +74,31 @@
 
 点眼睛按钮或「显示」可以展开，也可以在 **设置 → 设备管理 → 显示已隐藏的设备** 中打开。右键设备可以手动「隐藏 / 取消隐藏」，手动设置始终优先于自动规则。
 
+## 摄像头直播
+
+- 摄像机和门铃的详情卡片里有 **看直播** 按钮：画面直接在卡片里播放，点放大按钮可以弹出可调整大小的独立窗口。
+- 播放由内置的 [go2rtc](https://github.com/AlexxIT/go2rtc)（MIT，官方发布包，构建时校验 SHA-256）完成，只在观看时运行：只监听 `127.0.0.1` 的随机端口，关闭 RTSP / WebRTC / HomeKit（mDNS），只开放播放器和 `/api/ws`；关闭画面 20 秒后停止，完全退出 MijiaBar 时结束。
+- 登录复用扫码会话：MijiaBar 把扫码登录返回的 `passToken` 存在钥匙串，通过临时的 `go2rtc.yaml`（权限 600，go2rtc 读入后立即删除）交给 go2rtc。v0.1.8 之前的登录需要再扫一次码（**设置 → 摄像头直播**）。
+- 每次连接都会向小米云获取密钥，视频经小米 P2P 从摄像头传来，不做任何录制。电池门铃会被唤醒、耗电更快，请尽量短时间观看。Agent / MCP 无法访问摄像头。
+- 设备详情页标题（以及列表行上的小图标）显示最近一次读取/控制走的通道：**局域网**（miIO 直连）、**云端**（回退）或 **蓝牙网关**。
+- 离家检测：比较 Mac 当前网卡子网和设备的局域网 IP（网络变化时重新判断，不保存任何网络信息）。不在家时跳过局域网直接走云端，摄像头卡片提示只能在家里看直播。
+
+<p align="center">
+  <img src="docs/screenshots/camera-live-light.png" width="260" alt="">
+  <img src="docs/screenshots/doorbell-live-dark.png" width="260" alt="">
+</p>
+
 ## Agent / MCP
 
 打开 **设置 → Agent 接口**，点 **复制安装说明**，粘贴给 Claude Code、Codex、Cursor 等 Agent。Agent 会自己找到内置 CLI、在自己的配置里注册 MCP 服务器，并列出设备完成验证。`mijiabar setup-prompt` 会输出同样的内容（路径已填好）：
 
 ```text
-请帮我把 MijiaBar（macOS 菜单栏米家控制应用）接入为你的 MCP 工具，按以下步骤自己完成：
-
-1. 找到命令行工具：它在应用包内 /Applications/MijiaBar.app/Contents/Resources/bin/mijiabar。运行 "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" --help 确认可用。如需在终端直接使用，可建立链接：mkdir -p ~/.local/bin && ln -sf "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" ~/.local/bin/mijiabar
-2. 用你自己的配置注册一个名为 mijia 的 stdio MCP 服务器，命令为 "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar"，参数为 mcp：
-   - Claude Code: claude mcp add --scope user mijia -- "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" mcp
-   - Codex: codex mcp add mijia -- "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" mcp
-     (~/.codex/config.toml:
-      [mcp_servers.mijia]
-      command = "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar"
-      args = ["mcp"])
-   - Cursor (~/.cursor/mcp.json), Claude Desktop, …:
-     {"mcpServers": {"mijia": {"command": "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar", "args": ["mcp"]}}}
-   注册后按需重新加载 MCP。
-3. 可用工具：list_devices、get_device_state、set_property、run_action。权限由我在 MijiaBar → 设置 → Agent 接口 中控制：默认「只读」（写操作会被拒绝）；「白名单」只允许控制选中的设备；「全部」允许控制所有设备。开启「每次写操作弹窗确认」时，每次写操作都会在 Mac 上弹窗，需要我点允许。没有我的明确要求，不要改变任何设备的状态。
-4. 验证：运行 "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" list（或调用 list_devices），把设备列表给我看。如果提示未登录，请让我先在 MijiaBar 里扫码登录。
+请阅读 https://raw.githubusercontent.com/neardws/MijiaBar/main/docs/AGENT_SETUP.zh-CN.md ，按其中的步骤把 MijiaBar 接入为你的 MCP 工具。
+CLI 路径：/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar
+未经我同意，不要改变任何设备的状态。
 ```
+
+写给 Agent 的完整步骤： [docs/AGENT_SETUP.zh-CN.md](docs/AGENT_SETUP.zh-CN.md)
 
 ### 权限
 

@@ -1,6 +1,7 @@
 import Foundation
+import Network
 
-public enum PropValue: Codable, Hashable, CustomStringConvertible {
+public enum PropValue: Codable, Hashable, Sendable, CustomStringConvertible {
     case bool(Bool), int(Int), double(Double), string(String), null
 
     public init(_ a: Any?) {
@@ -62,7 +63,7 @@ public enum PropValue: Codable, Hashable, CustomStringConvertible {
     }
 }
 
-public struct DeviceState {
+public struct DeviceState: Sendable {
     public var values: [String: PropValue]
     public var spec: DeviceSpec?
     public var legacy: Bool
@@ -73,76 +74,202 @@ public struct DeviceState {
     }
 }
 
+/// 记录每台设备的局域网是否可达。不在家时局域网请求只会超时，
+/// 失败一次后在 backoff 时间内直接走云端，不再每次先等一个超时。
+struct LANHealth {
+    var backoff: TimeInterval
+    private var downUntil: [String: Date] = [:]
+    // 显式写出：有 private 属性时，Swift 6.0 不会生成可用的逐成员初始化方法
+    init(backoff: TimeInterval = 300) { self.backoff = backoff }
+    func shouldTry(_ did: String, now: Date = Date()) -> Bool { downUntil[did].map { now >= $0 } ?? true }
+    mutating func recordFailure(_ did: String, now: Date = Date()) { downUntil[did] = now.addingTimeInterval(backoff) }
+    mutating func recordSuccess(_ did: String) { downUntil[did] = nil }
+    mutating func reset() { downUntil = [:] }
+}
+
 /// 统一的设备读写：MIoT 走云端 miotspec，局域网 miIO 兜底；空调伴侣走旧版命令（局域网优先）
-public final class Controller {
-    public var cloud: XiaomiCloud?
+/// 可以在任意线程使用：可变状态都由 lock 保护。
+public final class Controller: @unchecked Sendable {
     public let specs = SpecStore.shared
-    public init(cloud: XiaomiCloud?) { self.cloud = cloud }
+    private let lock = NSLock()
+    private var _cloud: XiaomiCloud?
+    private var lanDevices: [String: MiIODevice] = [:]
+    private var health = LANHealth()
+    private let pathMonitor = NWPathMonitor()
+    private var lastPath: String?
+    private var deviceIPs: [String] = []
+    private var _atHome: Bool?
+    /// 网络变化回调（App 用来刷新「在家 / 不在家」状态）
+    public var onNetworkChange: (@Sendable () -> Void)?
+
+    /// 这台 Mac 是否在家庭局域网：任一网卡的子网包含设备列表里的某个局域网 IP。
+    /// 不探测设备、不保存任何网络标识；nil 表示还不知道（没有设备 IP），此时照常尝试局域网。
+    public var atHome: Bool? { lock.withLock { _atHome } }
+    public func setDeviceIPs(_ ips: [String]) {
+        lock.withLock { deviceIPs = ips; _atHome = HomeNetwork.evaluate(deviceIPs: ips) }
+    }
+    private var _makeLAN: @Sendable (String, String) throws -> MiIODevice = { ip, token in try MiIODevice(ip: ip, tokenHex: token, timeout: 2.5) }
+
+    public var cloud: XiaomiCloud? {
+        get { lock.withLock { _cloud } }
+        set { lock.withLock { _cloud = newValue } }
+    }
+    /// 测试时替换局域网设备的创建方式
+    var makeLAN: @Sendable (String, String) throws -> MiIODevice {
+        get { lock.withLock { _makeLAN } }
+        set { lock.withLock { _makeLAN = newValue } }
+    }
+
+    public init(cloud: XiaomiCloud?) {
+        _cloud = cloud
+        // 换了网络（比如回到家）就重新尝试局域网；启动时的第一次回调不算
+        pathMonitor.pathUpdateHandler = { [weak self] path in
+            guard let self else { return }
+            let sig = "\(path.status)|" + path.availableInterfaces.map(\.name).joined(separator: ",")
+            lock.withLock {
+                if let last = self.lastPath, last != sig { self.health.reset() }
+                self.lastPath = sig
+                self._atHome = HomeNetwork.evaluate(deviceIPs: self.deviceIPs)
+            }
+            self.onNetworkChange?()
+        }
+        pathMonitor.start(queue: .global(qos: .utility))
+    }
+    deinit { pathMonitor.cancel() }
 
     public static func isLegacyAC(_ model: String) -> Bool { model.hasPrefix("lumi.acpartner.") }
     public static let legacyProps = ["power", "mode", "tar_temp", "fan_level", "ver_swing", "load_power"]
     static let legacySetters = ["power": "set_power", "mode": "set_mode", "tar_temp": "set_tar_temp", "fan_level": "set_fan_level", "ver_swing": "set_ver_swing"]
 
+    /// 设备的局域网连接（同一设备复用，保留握手结果）。最近不可达且有云端可用时返回 nil，直接走云端。
     func lan(_ d: Device) -> MiIODevice? {
         guard let ip = d.ip, let t = d.token, !ip.isEmpty, t.count == 32 else { return nil }
-        return try? MiIODevice(ip: ip, tokenHex: t, timeout: 2.5)
+        return lock.withLock {
+            guard _cloud == nil || health.shouldTry(d.did) else { return nil }
+            // 不在家时直接走云端，不等局域网超时
+            if _cloud != nil, _atHome == false { return nil }
+            let k = "\(d.did)|\(ip)|\(t)"
+            if let m = lanDevices[k] { return m }
+            guard let m = try? _makeLAN(ip, t) else { return nil }
+            lanDevices[k] = m
+            return m
+        }
+    }
+
+    /// 执行一次局域网请求，并记录这台设备的局域网是否可达
+    func viaLAN<T: Sendable>(_ d: Device, _ m: MiIODevice, _ op: (MiIODevice) async throws -> T) async throws -> T {
+        do {
+            let r = try await op(m)
+            lock.withLock { health.recordSuccess(d.did) }
+            return r
+        } catch {
+            if MiIODevice.isUnreachable(error) { lock.withLock { health.recordFailure(d.did) } }
+            throw error
+        }
     }
 
     public func readState(_ d: Device) async throws -> DeviceState {
         if Self.isLegacyAC(d.model) {
-            var raw: [Any]?; var src = "lan"; var lastErr: Error = MiIOError.noLAN
-            if let m = lan(d) { do { raw = try await m.send(method: "get_prop", params: Self.legacyProps) as? [Any] } catch { lastErr = error } }
-            if raw == nil, let c = cloud { raw = try await c.rpc(did: d.did, method: "get_prop", params: Self.legacyProps) as? [Any]; src = "cloud" }
+            var raw: [PropValue]?; var src = "lan"; var lastErr: Error = MiIOError.noLAN
+            if let m = lan(d) { do { raw = try await viaLAN(d, m) { try await $0.send(method: "get_prop", params: Self.legacyProps.map { .string($0) }) } } catch { lastErr = error } }
+            if raw == nil, let c = cloud { raw = (try await c.rpc(did: d.did, method: "get_prop", params: Self.legacyProps) as? [Any])?.map { PropValue($0) }; src = "cloud" }
             guard let raw else { throw lastErr }
             var v: [String: PropValue] = [:]
-            for (k, x) in zip(Self.legacyProps, raw) { v[k] = PropValue(x) }
+            for (k, x) in zip(Self.legacyProps, raw) { v[k] = x }
             return DeviceState(values: v, spec: nil, legacy: true, source: src)
         }
         guard let spec = try await specs.spec(for: d.model) else { return DeviceState(values: [:], spec: nil, legacy: false, source: "none") }
         let props = spec.controlServices.flatMap(\.properties).filter(\.readable).prefix(48).map { ($0.siid, $0.iid) }
-        var vals: [String: Any] = [:]; var src = "cloud"; var lastErr: Error?
+        var vals: [String: PropValue] = [:]; var src = "cloud"; var lastErr: Error?
         if let c = cloud {
             do { for chunk in stride(from: 0, to: props.count, by: 16).map({ Array(props[$0..<min($0 + 16, props.count)]) }) {
-                vals.merge(try await c.getProps(did: d.did, chunk)) { $1 } } }
+                vals.merge(try await c.getProps(did: d.did, chunk).mapValues { PropValue($0) }) { $1 } } }
             catch { lastErr = error }
         }
         if vals.isEmpty, let m = lan(d) {
             src = "lan"
             do { for chunk in stride(from: 0, to: props.count, by: 8).map({ Array(props[$0..<min($0 + 8, props.count)]) }) {
-                vals.merge(try await m.getProperties(chunk)) { $1 } } }
+                vals.merge(try await viaLAN(d, m) { try await $0.getProperties(chunk) }) { $1 } } }
             catch { lastErr = lastErr ?? error }
         }
         if vals.isEmpty, !props.isEmpty, let e = lastErr ?? (cloud == nil ? MiIOError.noLAN : nil) { throw e }
-        return DeviceState(values: vals.mapValues { PropValue($0) }, spec: spec, legacy: false, source: src)
+        return DeviceState(values: vals, spec: spec, legacy: false, source: src)
     }
 
-    public func set(_ d: Device, key: String, value: PropValue) async throws {
+    /// 返回实际使用的通道："lan" 或 "cloud"
+    @discardableResult
+    public func set(_ d: Device, key: String, value: PropValue) async throws -> String {
         if Self.isLegacyAC(d.model) {
             guard let method = Self.legacySetters[key] else { throw MijiaError.unknownProperty(key) }
             var v = value
             if key == "power" || key == "ver_swing", case .bool(let b) = value { v = .string(b ? "on" : "off") }
             if key == "tar_temp" { v = value.coerced(to: "int") }
             if let m = lan(d) {
-                do { _ = try await m.send(method: method, params: [v.any]); return } catch { if cloud == nil { throw error } }
+                do { _ = try await viaLAN(d, m) { try await $0.send(method: method, params: [v]) }; return "lan" } catch { if cloud == nil { throw error } }
             }
             guard let c = cloud else { throw MiIOError.noLAN }
-            _ = try await c.rpc(did: d.did, method: method, params: [v.any]); return
+            _ = try await c.rpc(did: d.did, method: method, params: [v.any]); return "cloud"
         }
         let p = key.split(separator: ".").compactMap { Int($0) }
         guard p.count == 2 else { throw MijiaError.unknownProperty(key) }
         if let c = cloud {
-            do { try await c.setProp(did: d.did, siid: p[0], piid: p[1], value: value.any); return }
+            do { try await c.setProp(did: d.did, siid: p[0], piid: p[1], value: value.any); return "cloud" }
             catch { if lan(d) == nil { throw error } }
         }
         guard let m = lan(d) else { throw MiIOError.noLAN }
-        try await m.setProperty(siid: p[0], piid: p[1], value: value.any)
+        try await viaLAN(d, m) { try await $0.setProperty(siid: p[0], piid: p[1], value: value) }
+        return "lan"
     }
 
-    public func action(_ d: Device, key: String, inputs: [Any]) async throws -> Any {
+    public func action(_ d: Device, key: String, inputs: [PropValue]) async throws -> PropValue {
         let p = key.split(separator: ".").compactMap { Int($0) }
         guard p.count == 2 else { throw MijiaError.unknownProperty(key) }
-        if let c = cloud { return try await c.action(did: d.did, siid: p[0], aiid: p[1], inputs: inputs) }
+        if let c = cloud { return PropValue(try await c.action(did: d.did, siid: p[0], aiid: p[1], inputs: inputs.map(\.any))) }
         guard let m = lan(d) else { throw MiIOError.noLAN }
-        return try await m.action(siid: p[0], aiid: p[1], inputs: inputs)
+        return try await viaLAN(d, m) { try await $0.action(siid: p[0], aiid: p[1], inputs: inputs) }
+    }
+}
+
+/// 最近一次读写走的通道（界面上的小标记）
+public enum Transport: String, Sendable {
+    case lan, cloud, ble
+    /// 蓝牙子设备没有局域网通道，云端请求由网关转发
+    public static func from(_ source: String, device: Device) -> Transport? {
+        switch source {
+        case "lan": return .lan
+        case "cloud": return device.isBLE ? .ble : .cloud
+        default: return nil
+        }
+    }
+}
+
+public enum HomeNetwork {
+    static func v4(_ s: String) -> UInt32? {
+        var a = in_addr(); guard inet_pton(AF_INET, s, &a) == 1 else { return nil }
+        return UInt32(bigEndian: a.s_addr)
+    }
+    /// 本机 IPv4 网卡（地址, 掩码）
+    static func interfaces() -> [(UInt32, UInt32)] {
+        var out: [(UInt32, UInt32)] = []
+        var ptr: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&ptr) == 0, let first = ptr else { return [] }
+        defer { freeifaddrs(ptr) }
+        for p in sequence(first: first, next: { $0.pointee.ifa_next }) {
+            let i = p.pointee
+            guard let a = i.ifa_addr, a.pointee.sa_family == sa_family_t(AF_INET), let m = i.ifa_netmask,
+                  (i.ifa_flags & UInt32(IFF_UP)) != 0, (i.ifa_flags & UInt32(IFF_LOOPBACK)) == 0 else { continue }
+            let ip = a.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { UInt32(bigEndian: $0.pointee.sin_addr.s_addr) }
+            let mask = m.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { UInt32(bigEndian: $0.pointee.sin_addr.s_addr) }
+            // 忽略点对点 / VPN 的 /32 和过大的网段
+            guard mask != 0xFFFF_FFFF, mask >= 0xFFFF_0000 else { continue }
+            out.append((ip, mask))
+        }
+        return out
+    }
+    public static func evaluate(deviceIPs: [String], interfaces ifs: [(UInt32, UInt32)]? = nil) -> Bool? {
+        let devs = deviceIPs.compactMap(v4)
+        guard !devs.isEmpty else { return nil }
+        let ifs = ifs ?? interfaces()
+        return devs.contains { d in ifs.contains { (d & $0.1) == ($0.0 & $0.1) } }
     }
 }

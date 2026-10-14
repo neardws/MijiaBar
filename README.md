@@ -18,7 +18,7 @@
 
 <p align="center"><img src="docs/screenshots/demo.gif" width="300" alt="demo"></p>
 
-[Features](#features) · [Screenshots](#screenshots) · [Install](#install) · [Sign in](#sign-in) · [Auto-hidden devices](#auto-hidden-devices) · [Agent / MCP](#agent--mcp) · [Build from source](#build-from-source) · [Where data is stored](#where-data-is-stored) · [Credits](#credits)
+[Features](#features) · [Screenshots](#screenshots) · [Install](#install) · [Sign in](#sign-in) · [Auto-hidden devices](#auto-hidden-devices) · [Live video (cameras)](#live-video-cameras) · [Agent / MCP](#agent--mcp) · [Build from source](#build-from-source) · [Where data is stored](#where-data-is-stored) · [Credits](#credits)
 
 ## Features
 
@@ -74,27 +74,31 @@ A device is collapsed to the bottom of the list by default when either is true:
 
 Click the eye button or **Show** to reveal them, or turn on **Settings → Devices → Show hidden devices**. Right-click a device to hide / unhide it manually — a manual choice always overrides the automatic rule.
 
+## Live video (cameras)
+
+- Camera and doorbell detail cards have a **Watch live** button: the video plays inline in the card, and the enlarge button pops it out into a resizable window.
+- It uses the bundled [go2rtc](https://github.com/AlexxIT/go2rtc) (MIT, official release, SHA-256 verified at build time) as a helper that only runs while you watch: it listens on `127.0.0.1` on a random port, has RTSP / WebRTC / HomeKit (mDNS) disabled, exposes only the player and `/api/ws`, stops 20 s after the player closes and is killed when MijiaBar quits.
+- Sign-in reuses the QR session: MijiaBar keeps the `passToken` returned by the QR login in the Keychain and hands it to go2rtc via a temporary `go2rtc.yaml` (mode 600, deleted as soon as go2rtc has read it). Sessions from before v0.1.8 need one more QR scan (**Settings → Camera live view**).
+- Stream keys come from the Xiaomi cloud on every connect; video comes from the camera over Xiaomi's P2P. Nothing is recorded. Battery doorbells are woken up and drain faster, so keep it short. Agents / MCP have no camera access.
+- Each device's detail header (and, subtly, its list row) shows which path the last read/control used: **LAN** (direct miIO), **Cloud** (fallback) or **BLE gateway**.
+- Away-from-home detection: MijiaBar compares the Mac's network subnets with the devices' local IPs (re-checked on every network change, nothing stored). When you're away it skips LAN attempts and goes straight to the cloud, and camera cards say live view is only available at home.
+
+<p align="center">
+  <img src="docs/screenshots/camera-live-light.png" width="260" alt="">
+  <img src="docs/screenshots/doorbell-live-dark.png" width="260" alt="">
+</p>
+
 ## Agent / MCP
 
 Open **Settings → Agent interface**, click **Copy setup instructions** and paste the text into Claude Code, Codex, Cursor or any other agent. The agent finds the bundled CLI, registers the MCP server in its own config and verifies by listing your devices. The same text (with the path filled in) is printed by `mijiabar setup-prompt`:
 
 ```text
-Please set up MijiaBar (a macOS menu bar app for Xiaomi Mi Home devices) as an MCP tool for yourself. Do it yourself, step by step:
-
-1. Find the CLI. It ships inside the app bundle at /Applications/MijiaBar.app/Contents/Resources/bin/mijiabar. Run "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" --help to check it works. To use it from a terminal, link it: mkdir -p ~/.local/bin && ln -sf "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" ~/.local/bin/mijiabar
-2. Register a stdio MCP server named mijia, command "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar", argument mcp, in your own config:
-   - Claude Code: claude mcp add --scope user mijia -- "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" mcp
-   - Codex: codex mcp add mijia -- "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" mcp
-     (~/.codex/config.toml:
-      [mcp_servers.mijia]
-      command = "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar"
-      args = ["mcp"])
-   - Cursor (~/.cursor/mcp.json), Claude Desktop, …:
-     {"mcpServers": {"mijia": {"command": "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar", "args": ["mcp"]}}}
-   Reload MCP servers afterwards if needed.
-3. Tools: list_devices, get_device_state, set_property, run_action. I control access in MijiaBar → Settings → Agent interface: "Read" is the default (writes are refused); "Allowlist" allows only the devices I pick; "Full" allows every device. When "Confirm every write" is on, each write shows a dialog on the Mac that I have to approve. Never change a device's state unless I ask you to.
-4. Verify: run "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" list (or call list_devices) and show me the device list. If it says I'm not signed in, ask me to sign in with the QR code in MijiaBar first.
+Read https://raw.githubusercontent.com/neardws/MijiaBar/main/docs/AGENT_SETUP.md and follow it to set up MijiaBar as your MCP tool.
+CLI path: /Applications/MijiaBar.app/Contents/Resources/bin/mijiabar
+Don't change any device's state without my consent.
 ```
+
+Full step-by-step instructions for agents: [docs/AGENT_SETUP.md](docs/AGENT_SETUP.md)
 
 ### Permissions
 
