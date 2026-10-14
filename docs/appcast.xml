@@ -3,19 +3,20 @@
     <channel>
         <title>MijiaBar</title>
         <item>
-            <title>0.1.9</title>
-            <pubDate>Wed, 14 Oct 2026 16:27:48 +0800</pubDate>
+            <title>0.1.10</title>
+            <pubDate>Wed, 14 Oct 2026 21:41:06 +0800</pubDate>
             <link>https://www.neardws.com/MijiaBar/</link>
-            <sparkle:version>0.1.9</sparkle:version>
-            <sparkle:shortVersionString>0.1.9</sparkle:shortVersionString>
+            <sparkle:version>0.1.10</sparkle:version>
+            <sparkle:shortVersionString>0.1.10</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description sparkle:format="markdown"><![CDATA[## 0.1.9
+            <description sparkle:format="markdown"><![CDATA[## 0.1.10
 
-- Sparkle 应用内自动更新 / In-app updates via Sparkle
-- 下载页 / Download site: https://www.neardws.com/MijiaBar/
-- UI、无障碍、新图标（感谢 @skyswordw）/ UI, accessibility and new icon (thanks @skyswordw)
+- 全新官网设计（感谢 @skyswordw）/ Redesigned website (thanks @skyswordw)
+- 新增门铃、门窗传感器、水浸传感器设备页（感谢 @skyswordw）/ New doorbell, door/window sensor and water-leak sensor device pages (thanks @skyswordw)
+- 界面语言精简为简体中文、繁體中文（台湾用语）和 English；之前选了其他语言的用户会回到英文或地区默认语言 / UI languages simplified to Simplified Chinese, Traditional Chinese (Taiwan) and English; if you picked another language you'll get English or your region's default
+- 修复 CI 构建（测试前先获取 Sparkle）/ CI fix: fetch Sparkle before running tests
 ]]></description>
-            <enclosure url="https://github.com/neardws/MijiaBar/releases/download/v0.1.9/MijiaBar-0.1.9.dmg" length="23351794" type="application/octet-stream" sparkle:edSignature="Y3eg8SJftpIV7ewpnBVM1u6ROYtmO3kwxqkhQ5LDccuVhDD0W8zSgKjxyiWsj98a02oacd+W657r8qfPTsOfAw=="/>
+            <enclosure url="https://github.com/neardws/MijiaBar/releases/download/v0.1.10/MijiaBar-0.1.10.dmg" length="23217186" type="application/octet-stream" sparkle:edSignature="7Xj1yDr2bv1fux1kSoW6XJXknGz/tmvmCtIrjAbL/PEkb3VvECHbOWWu+c13YL10MXSenQFRP97Au284/eaLAg=="/>
         </item>
     </channel>
 </rss>
