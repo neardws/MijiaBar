@@ -51,10 +51,11 @@ struct MijiaBarApp: App {
 
 struct MenuLabel: View {
     @ObservedObject var model: AppModel
+    @ObservedObject var glance = GlanceStore.shared
     var body: some View {
         HStack(spacing: 3) {
             Image(systemName: model.menuIcon)
-            if let t = model.menuTemp { Text(t) }
+            if let g = model.glanceText { Text(g).monospacedDigit() } else if let t = model.menuTemp { Text(t) }
         }
     }
 }

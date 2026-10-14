@@ -38,6 +38,7 @@ final class AppModel: ObservableObject {
         self.mock = mock
         prefs = mock ? Prefs() : Prefs.load()
         agent = mock ? AgentPolicy() : AgentPolicy.load()
+        GlanceStore.shared.mock = mock
         if mock { loadMock(); return }
         session = Session.load()
         if let s = session { controller.cloud = XiaomiCloud(session: s) }
@@ -46,6 +47,7 @@ final class AppModel: ObservableObject {
         updateHome()
         if session != nil { Task { await refresh() } }
         Task { await menuLoop() }
+        GlanceStore.shared.start(self)
     }
 
     // MARK: 查询

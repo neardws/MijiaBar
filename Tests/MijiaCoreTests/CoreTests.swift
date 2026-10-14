@@ -286,3 +286,21 @@ func acSpec() throws -> DeviceSpec {
         #expect(p.sortedForList(ds) { $0.isEmpty ? "~" : $0 }.map(\.did) == ["b1", "o2", "o1", "x", "z"])
     }
 }
+
+@Suite struct GlanceTests {
+    @Test func formatsCompactly() {
+        #expect(Glance.text(.temperature, 25.64) == "25.6°")
+        #expect(Glance.text(.acTarget, 26) == "26°")
+        #expect(Glance.text(.humidity, 57.6) == "58%")
+        #expect(Glance.text(.pm25, 35.2) == "PM35")
+        #expect(Glance.text(.power, 36.5) == "37W")
+        #expect(Glance.text(.power, 1260) == "1.3kW")
+    }
+    @Test func persistsDedupedAndCapped() {
+        let d = UserDefaults(suiteName: "GlanceTest-\(UUID().uuidString)")!
+        let a = GlanceItem(did: "1", kind: .temperature)
+        Glance.save([a, a, .init(did: "1", kind: .humidity), .init(did: "2", kind: .power), .init(did: "3", kind: .pm25)], d)
+        #expect(Glance.load(d) == [a, .init(did: "1", kind: .humidity), .init(did: "2", kind: .power)])
+        #expect(Glance.load(UserDefaults(suiteName: "GlanceEmpty-\(UUID().uuidString)")!).isEmpty)
+    }
+}
