@@ -44,6 +44,7 @@
   "d_light": "灯",
   "d_plug": "智能插座",
   "d_camera": "摄像机",
+  "d_doorbell": "智能门铃",
   "d_tv": "电视",
   "d_speaker": "音箱",
   "d_air": "空气净化器",
@@ -54,7 +55,8 @@
   "d_printer": "打印机",
   "d_thermo": "温湿度计",
   "d_motion": "人体传感器",
-  "d_more": "以及更多",
+  "d_contact": "门窗传感器",
+  "d_leak": "水浸传感器",
 
   "cam_eyebrow": "实时画面",
   "cam_title": "不离开菜单栏，就能看看摄像头。",

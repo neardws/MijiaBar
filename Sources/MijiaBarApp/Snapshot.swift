@@ -10,8 +10,8 @@ extension AppModel {
     func loadMock() {
         session = Session(userId: "demo", ssecurity: "", serviceToken: "", region: "cn")
         homes = [Home(id: "h1", name: L("我的家", "My Home"), ownerId: "0", rooms: []), Home(id: "h2", name: L("父母家", "Parents"), ownerId: "0", rooms: [])]
-        func dev(_ id: String, _ n: String, _ model: String, _ room: String, online: Bool = true) -> Device {
-            Device(did: id, name: n, model: model, isOnline: online, homeId: "h1", homeName: "", roomName: room)
+        func dev(_ id: String, _ n: String, _ model: String, _ room: String, online: Bool = true, home: String = "h1") -> Device {
+            Device(did: id, name: n, model: model, isOnline: online, homeId: home, homeName: "", roomName: room)
         }
         devices = [
             dev("d1", L("客厅空调", "Living room AC"), "lumi.acpartner.mcn02", L("客厅", "Living room")),
@@ -25,6 +25,9 @@ extension AppModel {
             dev("d9", L("旧打印机", "Old printer"), "hannto.printer.honey", L("书房", "Study"), online: false),
             dev("d10", L("客厅摄像机", "Living room camera"), "chuangmi.camera.demo", L("客厅", "Living room")),
             dev("d11", L("智能门铃", "Doorbell"), "madv.cateye.demo", L("门口", "Entrance")),
+            // 放在第二个家里：只用来截详情页，不改变「我的家」列表截图
+            dev("d12", L("阳台门", "Balcony door"), "lumi.sensor_magnet.aq2", L("阳台", "Balcony"), home: "h2"),
+            dev("d13", L("厨房水浸", "Kitchen leak sensor"), "lumi.flood.agl02", L("厨房", "Kitchen"), home: "h2"),
         ]
         prefs.devices["d1"] = { var p = DevicePrefs(); p.favorite = true; return p }()
         prefs.devices["d2"] = { var p = DevicePrefs(); p.favorite = true; return p }()
@@ -55,13 +58,18 @@ extension AppModel {
         states["d10"] = DeviceState(values: ["2.1": .bool(true), "2.3": .int(0)], spec: cam, legacy: false, source: "cloud")
         let bell = DeviceSpec(type: "", description: "", services: [S(2, "battery", [P(2, 1, "battery-level", "uint8", ["read"], range: [0, 100, 1], unit: "percentage")])])
         states["d11"] = DeviceState(values: ["2.1": .int(64)], spec: bell, legacy: false, source: "cloud")
+        let battery = S(3, "battery", [P(3, 1, "battery-level", "uint8", ["read"], range: [0, 100, 1], unit: "percentage")])
+        let magnet = DeviceSpec(type: "", description: "", services: [S(2, "magnet-sensor", [P(2, 1, "contact-state", "bool", ["read", "notify"])]), battery])
+        states["d12"] = DeviceState(values: ["2.1": .bool(false), "3.1": .int(82)], spec: magnet, legacy: false, source: "cloud")
+        let flood = DeviceSpec(type: "", description: "", services: [S(2, "submersion-sensor", [P(2, 1, "submersion-state", "bool", ["read", "notify"])]), battery])
+        states["d13"] = DeviceState(values: ["2.1": .bool(true), "3.1": .int(91)], spec: flood, legacy: false, source: "cloud")
         for d in devices { if let st = states[d.did], let t = Transport.from(st.source, device: d) { transports[d.did] = t } }
     }
 }
 
 /// 所有插画的开/关对照（自检用，不进 README）：没有演示设备的类型也能检查画风是否统一
 struct ArtGallery: View {
-    static let size = CGSize(width: 480, height: 2070)
+    static let size = CGSize(width: 480, height: 2484)
     /// (名字, 开, 关)；网站的设备阵列（--art）也用这份清单
     static var rows: [(String, AnyView, AnyView)] { [
             ("fan", AnyView(FanArt(on: true, level: 0.5, swing: false, tint: .teal)), AnyView(FanArt(on: false, level: 0.5, swing: false, tint: .teal))),
@@ -77,6 +85,9 @@ struct ArtGallery: View {
             ("dehumidifier", AnyView(ApplianceArt(kind: .dehumidifier, on: true, level: 0.4, tint: .cyan)), AnyView(ApplianceArt(kind: .dehumidifier, on: false, level: 0.4, tint: .cyan))),
             ("thermo", AnyView(ThermoArt(temp: 25.6, tint: .mint)), AnyView(ThermoArt(temp: nil, tint: .mint))),
             ("motion", AnyView(MotionSensorArt(on: true, tint: .mint)), AnyView(MotionSensorArt(on: false, tint: .mint))),
+            ("contact", AnyView(ContactSensorArt(on: true, open: true, tint: .mint)), AnyView(ContactSensorArt(on: false, open: nil, tint: .mint))),
+            ("leak", AnyView(LeakSensorArt(on: true, wet: true, tint: .mint)), AnyView(LeakSensorArt(on: false, wet: nil, tint: .mint))),
+            ("doorbell", AnyView(DoorbellArt(on: true, tint: .purple)), AnyView(DoorbellArt(on: false, tint: .purple))),
             ("air purifier", AnyView(AirPurifierArt(on: true, level: 0.6, tint: .cyan)), AnyView(AirPurifierArt(on: false, level: 0.6, tint: .cyan))),
             ("generic", AnyView(GenericArt(on: true, tint: .indigo)), AnyView(GenericArt(on: false, tint: .indigo))),
     ] }
@@ -185,8 +196,10 @@ enum Snapshot {
             m.states["d4"]?.values["2.1"] = .bool(false)   // 还原，否则深色那一轮的列表会多算一台开启
             m.page = .detail("d10"); render(root, f("camera"))
             m.atHome = false; render(root, f("camera-away")); m.atHome = nil
+            m.page = .detail("d11"); render(root, f("doorbell")); m.page = .detail("d12"); render(root, f("contact"))
+            m.page = .detail("d13"); render(root, f("leak"))
             LiveControls.snapshotWatching = true
-            render(root, f("camera-live")); m.page = .detail("d11"); render(root, f("doorbell-live"))
+            m.page = .detail("d10"); render(root, f("camera-live")); m.page = .detail("d11"); render(root, f("doorbell-live"))
             LiveControls.snapshotWatching = false
             render(ArtGallery(), f("art-gallery"), size: ArtGallery.size)
             m.page = .settings; render(root, f("settings")); render(AgentSettingsSection().padding(12).frame(maxHeight: .infinity, alignment: .top).background(Theme.bg).environmentObject(m), f("agent"), size: CGSize(width: 360, height: 420))

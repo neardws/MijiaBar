@@ -70,12 +70,18 @@ struct DeviceStatusCard: View {
     case .plug: PlugArt(on: false, watts: nil, tint: tint)
     case .tv: TVArt(on: false, playing: false, tint: tint)
     case .speaker: SpeakerArt(playing: false, volume: 0.5, tint: tint)
-    case .camera: CameraArt(on: false, tint: tint)
+    case .camera: if d.form == .doorbell { DoorbellArt(on: false, tint: tint) } else { CameraArt(on: false, tint: tint) }
     case .printer: PrinterArt(busy: false, error: false, tint: tint)
     case .kitchen: CookerArt(cooking: false, tint: tint)
     case .purifier: PurifierArt(on: false, filter: nil, tint: tint)
     case .heater, .dehumidifier: ApplianceArt(kind: d.category, on: false, level: 0.3, tint: tint)
-    case .sensor: if d.model.contains("motion") { MotionSensorArt(on: false, tint: tint) } else { ThermoArt(temp: nil, tint: tint) }
+    case .sensor:
+        switch d.form {
+        case .motion: MotionSensorArt(on: false, tint: tint)
+        case .contact: ContactSensorArt(on: false, open: nil, tint: tint)
+        case .leak: LeakSensorArt(on: false, wet: nil, tint: tint)
+        default: ThermoArt(temp: nil, tint: tint)
+        }
     case .other: GenericArt(on: false, tint: tint)
     case .airPurifier: AirPurifierArt(on: false, level: 0.5, tint: tint)
     }
@@ -247,9 +253,11 @@ struct CameraDetail: View {
         let pw = m.powerInfo(d)
         let on = pw?.isOn ?? d.isOnline
         TypeShell(device: d, tint: tint, isOn: on, title: on ? L("监控中", "Watching") : L("隐私模式", "Privacy mode"),
-                  subtitle: joined([d.model.contains("cateye") ? L("智能门铃", "Doorbell") : L("摄像机", "Camera"), dc.text(dc.p("status", in: "video-doorbell"))]),
+                  subtitle: joined([d.form == .doorbell ? L("智能门铃", "Doorbell") : L("摄像机", "Camera"), dc.text(dc.p("status", in: "video-doorbell"))]),
                   powerOn: on, onPower: powerHandler(m, d), artInteractive: true) {
-            CameraLiveArt(device: d, watching: $watching) { CameraArt(on: on, tint: tint) }
+            CameraLiveArt(device: d, watching: $watching) {
+                if d.form == .doorbell { DoorbellArt(on: on, tint: tint) } else { CameraArt(on: on, tint: tint) }
+            }
         } content: {
             LiveControls(device: d, watching: $watching, tint: tint)
             ReadoutRow(items: [("sdcard.fill", dc.text(dc.p("status", in: "memory-card-management")).map { L("存储卡 ", "SD ") + $0 }),
@@ -373,7 +381,9 @@ struct SensorDetail: View {
     var body: some View {
         let d = dc.device, tint = Color.mint
         let t = dc.num(dc.p("temperature")), h = dc.num(dc.p("relative-humidity"))
-        if dc.p("temperature") == nil { MotionSensorDetail(dc: dc) } else {
+        if dc.p("contact-state") != nil || d.form == .contact { ContactSensorDetail(dc: dc) }
+        else if dc.p("submersion-state") != nil || d.form == .leak { LeakSensorDetail(dc: dc) }
+        else if dc.p("temperature") == nil { MotionSensorDetail(dc: dc) } else {
         TypeShell(device: d, tint: tint, isOn: d.isOnline, title: d.isOnline ? L("在线", "Online") : L("离线", "Offline"), subtitle: L("传感器", "Sensor")) {
             ThermoArt(temp: t, tint: tint)
         } content: {
@@ -402,6 +412,39 @@ struct MotionSensorDetail: View {
             BigValue(value: lux.map { "\(Int($0))" }, unit: "lux", caption: L("光照", "Illuminance"))
             ReadoutRow(items: [("battery.75percent", dc.num(dc.p("battery-level")).map { L("电量 ", "Battery ") + "\(Int($0))%" })], tint: tint)
             Text(L("人体移动事件请在米家 App 中查看", "Motion events are shown in the Mi Home app")).font(.system(size: 10)).foregroundStyle(.tertiary)
+        }
+    }
+}
+
+/// 门窗传感器：标题说门窗开着还是关着（contact-state 为 true 表示两块贴合，即关着）
+struct ContactSensorDetail: View {
+    let dc: DC
+    var body: some View {
+        let d = dc.device, tint = Color.mint
+        let open = dc.bool(dc.p("contact-state")).map { !$0 }
+        let title = !d.isOnline ? L("离线", "Offline") : open.map { $0 ? L("已打开", "Open") : L("已关闭", "Closed") } ?? L("在线", "Online")
+        TypeShell(device: d, tint: tint, isOn: d.isOnline, title: title, subtitle: L("门窗传感器", "Door & window sensor")) {
+            ContactSensorArt(on: d.isOnline, open: open, tint: tint)
+        } content: {
+            ReadoutRow(items: [("battery.75percent", dc.num(dc.p("battery-level")).map { L("电量 ", "Battery ") + "\(Int($0))%" })], tint: tint)
+            Text(L("开合记录请在米家 App 中查看", "Open and close history is shown in the Mi Home app")).font(.system(size: 10)).foregroundStyle(.tertiary)
+        }
+    }
+}
+
+/// 水浸传感器：检测到浸水时整张卡片换成橙色警示
+struct LeakSensorDetail: View {
+    let dc: DC
+    var body: some View {
+        let d = dc.device
+        let wet = dc.bool(dc.p("submersion-state"))
+        let tint = wet == true ? Color.orange : Color.mint
+        let title = !d.isOnline ? L("离线", "Offline") : wet.map { $0 ? L("检测到浸水", "Water detected") : L("无浸水", "No water") } ?? L("在线", "Online")
+        TypeShell(device: d, tint: tint, isOn: d.isOnline, title: title, subtitle: L("水浸传感器", "Water leak sensor")) {
+            LeakSensorArt(on: d.isOnline, wet: wet, tint: tint)
+        } content: {
+            ReadoutRow(items: [("battery.75percent", dc.num(dc.p("battery-level")).map { L("电量 ", "Battery ") + "\(Int($0))%" })], tint: tint)
+            Text(L("浸水报警请在米家 App 中查看", "Leak alerts are shown in the Mi Home app")).font(.system(size: 10)).foregroundStyle(.tertiary)
         }
     }
 }
