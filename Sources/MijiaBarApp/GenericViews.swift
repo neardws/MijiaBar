@@ -174,6 +174,7 @@ struct SettingsView: View {
                                "Live video is played locally by the built-in go2rtc: it listens on 127.0.0.1 only, starts on demand and stops when you close the player. Keys come from the Xiaomi cloud and video from the camera over Xiaomi P2P; credentials stay in the Keychain. Agents / MCP can't access camera video."))
                             .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     }
+                    HistorySettingsSection()
                     AgentSettingsSection()
                     group(L("软件更新", "Updates")) {
                         SwitchRow(title: L("自动检查更新", "Check for updates automatically"),

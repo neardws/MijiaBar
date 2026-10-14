@@ -93,6 +93,7 @@ struct ACCardView: View {
             }
             .animation(Motion.snappy, value: ac.mode)
             .animation(Motion.snappy, value: ac.fan)
+            if ac.loadPower != nil { PowerHistoryCard(device: device, tint: tint) }
         }
         .animation(Motion.smooth, value: warmth)
     }
