@@ -3,130 +3,252 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MijiaBar — Mi Home in your Mac menu bar</title>
-<meta name="description" content="Control Xiaomi Mi Home devices from the macOS menu bar. Notarized, open source, with an Agent/MCP interface.">
-<link rel="icon" href="screenshots/app-icon-proposal.png">
+<title>MijiaBar — Your Mi Home, one click away</title>
+<meta name="description" content="A native macOS menu bar app for Xiaomi Mi Home. Notarized, open source, LAN-first, Agent-ready.">
+<meta property="og:image" content="https://www.neardws.com/MijiaBar/screenshots/list-dark.png">
+<link rel="icon" href="assets/icon.png">
 <style>
-  :root { color-scheme: dark; --bg:#0b0d10; --card:#14181f; --text:#e8eaed; --muted:#9aa0a6; --accent:#4da3ff; --line:#222831; }
-  * { box-sizing: border-box; }
-  body { margin:0; font:16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); }
-  a { color:var(--accent); text-decoration:none; } a:hover { text-decoration:underline; }
-  .wrap { max-width:880px; margin:0 auto; padding:48px 20px 80px; }
-  header { display:flex; gap:16px; align-items:center; margin-bottom:28px; }
-  header img.icon { width:72px; height:72px; border-radius:16px; }
-  h1 { font-size:1.85rem; margin:0 0 4px; letter-spacing:-0.02em; }
-  .tag { color:var(--muted); margin:0; }
-  .langs { margin-left:auto; font-size:0.9rem; color:var(--muted); }
-  .badges { display:flex; flex-wrap:wrap; gap:8px; margin:20px 0 28px; }
-  .badges img { height:20px; }
-  .hero { display:grid; gap:16px; grid-template-columns:1fr; }
-  @media (min-width:720px){ .hero { grid-template-columns:1.1fr 0.9fr; align-items:center; } }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px; }
-  .btn { display:inline-block; background:var(--accent); color:#041018; font-weight:600; padding:12px 18px; border-radius:10px; }
-  .btn:hover { filter:brightness(1.08); text-decoration:none; }
-  .btn.secondary { background:transparent; color:var(--text); border:1px solid var(--line); }
-  .shot { width:100%; border-radius:12px; border:1px solid var(--line); background:#000; }
-  ul.feats { margin:12px 0 0; padding-left:1.1em; color:var(--muted); }
-  ul.feats li { margin:6px 0; }
-  h2 { font-size:1.15rem; margin:36px 0 12px; }
-  footer { margin-top:48px; color:var(--muted); font-size:0.85rem; border-top:1px solid var(--line); padding-top:16px; }
-  code { font-size:0.9em; background:#0f1318; padding:1px 6px; border-radius:4px; }
+:root{--bg:#f6f7fb;--bg2:#fff;--fg:#0b0d12;--mut:#5b6170;--line:rgba(10,14,25,.08);--glass:rgba(255,255,255,.62);--acc:#2f7bff;--acc2:#8b5cf6;--warm:#ff8a3d;--shadow:0 30px 80px -20px rgba(30,50,120,.25)}
+@media (prefers-color-scheme:dark){:root{--bg:#07080c;--bg2:#0e1016;--fg:#f2f4f8;--mut:#9097a6;--line:rgba(255,255,255,.08);--glass:rgba(22,25,34,.55);--shadow:0 40px 100px -20px rgba(0,0,0,.7)}}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth}
+body{font:16px/1.6 -apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Segoe UI",sans-serif;background:var(--bg);color:var(--fg);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+img{display:block;max-width:100%}
+.w{max-width:1120px;margin:0 auto;padding:0 24px}
+/* nav */
+nav{position:sticky;top:0;z-index:50;backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px);background:color-mix(in srgb,var(--bg) 70%,transparent);border-bottom:1px solid var(--line)}
+nav .w{display:flex;align-items:center;gap:20px;height:60px}
+.brand{display:flex;gap:10px;align-items:center;font-weight:650;letter-spacing:-.01em}
+.brand img{width:28px;height:28px}
+nav .links{margin-left:auto;display:flex;gap:22px;align-items:center;font-size:14px;color:var(--mut)}
+nav .links a:hover{color:var(--fg)}
+.lang{border:1px solid var(--line);border-radius:999px;padding:4px 4px;display:flex;gap:2px;font-size:12px}
+.lang button{border:0;background:none;color:var(--mut);padding:3px 10px;border-radius:999px;cursor:pointer;font:inherit}
+.lang button.on{background:var(--fg);color:var(--bg)}
+@media(max-width:720px){nav .links a.hide-m{display:none}}
+/* bg glow */
+.aurora{position:absolute;inset:-20% -10% auto;height:900px;z-index:-1;pointer-events:none;filter:blur(60px);opacity:.75}
+.aurora i{position:absolute;border-radius:50%}
+.aurora i:nth-child(1){width:520px;height:520px;left:8%;top:10%;background:radial-gradient(circle,#4f8cff 0,transparent 65%);animation:float 18s ease-in-out infinite}
+.aurora i:nth-child(2){width:460px;height:460px;right:6%;top:0;background:radial-gradient(circle,#a855f7 0,transparent 65%);animation:float 22s ease-in-out infinite reverse}
+.aurora i:nth-child(3){width:420px;height:420px;left:40%;top:35%;background:radial-gradient(circle,#ff8a3d 0,transparent 65%);opacity:.6;animation:float 26s ease-in-out infinite}
+@keyframes float{50%{transform:translate(40px,-30px) scale(1.08)}}
+/* hero */
+header.hero{position:relative;padding:96px 0 40px;text-align:center}
+.pill{display:inline-flex;gap:8px;align-items:center;padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:var(--glass);backdrop-filter:blur(12px);font-size:13px;color:var(--mut)}
+.pill b{color:var(--fg);font-weight:600}
+.dot{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.18)}
+.hero .icon{width:112px;height:112px;margin:28px auto 22px;filter:drop-shadow(0 20px 40px rgba(47,123,255,.35))}
+h1{font-size:clamp(40px,7vw,76px);line-height:1.02;letter-spacing:-.045em;font-weight:750}
+h1 .g{background:linear-gradient(100deg,var(--acc) 0%,var(--acc2) 50%,var(--warm) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{max-width:620px;margin:22px auto 0;font-size:clamp(17px,2vw,20px);color:var(--mut)}
+.cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:34px}
+.btn{display:inline-flex;align-items:center;gap:10px;padding:14px 22px;border-radius:14px;font-weight:600;font-size:15px;transition:transform .2s,box-shadow .2s}
+.btn.p{background:var(--fg);color:var(--bg);box-shadow:0 10px 30px -10px rgba(0,0,0,.4)}
+.btn.p:hover{transform:translateY(-2px)}
+.btn.s{border:1px solid var(--line);background:var(--glass);backdrop-filter:blur(12px)}
+.btn svg{width:18px;height:18px}
+.trust{margin-top:18px;font-size:13px;color:var(--mut);display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.trust span{display:inline-flex;gap:6px;align-items:center}
+/* mockup */
+.stage{position:relative;margin:64px auto 0;max-width:980px;height:640px;border-radius:28px;overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow);background:linear-gradient(160deg,#5b7cfa,#9f6bff 45%,#ff9d5c)}
+@media (prefers-color-scheme:dark){.stage{background:linear-gradient(160deg,#141a3a,#2a1846 50%,#3a1d10)}}
+.menubar{height:30px;display:flex;align-items:center;gap:18px;padding:0 16px;font-size:13px;color:#fff;background:rgba(0,0,0,.22);backdrop-filter:blur(20px)}
+.menubar .r{margin-left:auto;display:flex;gap:16px;align-items:center}
+.menubar .mb{display:flex;gap:6px;align-items:center;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.22)}
+.pop{position:absolute;right:120px;top:40px;width:360px;border-radius:18px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.18);animation:pop 1s cubic-bezier(.2,.8,.2,1) both .3s}
+.pop img{width:100%;transition:opacity .8s}
+.pop .layer{position:absolute;inset:0;opacity:0}
+.pop .layer.on{opacity:1}
+@keyframes pop{from{opacity:0;transform:translateY(-14px) scale(.96)}}
+.float-card{position:absolute;border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.18);width:250px}
+.fc1{left:60px;top:120px;animation:bob 7s ease-in-out infinite}
+.fc2{left:180px;top:360px;width:220px;animation:bob 9s ease-in-out infinite reverse}
+@keyframes bob{50%{transform:translateY(-14px)}}
+@media(max-width:860px){.stage{height:560px}.pop{right:50%;transform:translateX(50%);width:300px;animation:none}.float-card{display:none}}
+/* sections */
+section{padding:120px 0 0}
+.eyebrow{font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--acc)}
+h2{font-size:clamp(30px,4.4vw,48px);line-height:1.08;letter-spacing:-.035em;margin-top:10px;font-weight:720}
+.lead{color:var(--mut);font-size:18px;max-width:560px;margin-top:14px}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+.split.rev>:first-child{order:2}
+@media(max-width:860px){.split{grid-template-columns:1fr;gap:32px}.split.rev>:first-child{order:0}}
+.shot{border-radius:22px;overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow);background:var(--bg2)}
+.gallery{display:flex;gap:18px;margin-top:44px;overflow-x:auto;scroll-snap-type:x mandatory;padding:10px 24px 30px;margin-left:-24px;margin-right:-24px;scrollbar-width:none}
+.gallery figure{flex:0 0 240px;scroll-snap-align:center;text-align:center}
+.gallery figure img{border-radius:18px;border:1px solid var(--line);box-shadow:0 20px 50px -20px rgba(0,0,0,.35);transition:transform .35s}
+.gallery figure:hover img{transform:translateY(-6px)}
+.gallery figcaption{margin-top:12px;font-size:14px;color:var(--mut)}
+ul.ticks{list-style:none;padding:0;margin-top:24px;display:grid;gap:12px}
+ul.ticks li{display:flex;gap:12px;align-items:flex-start;color:var(--mut)}
+ul.ticks li:before{content:"";flex:0 0 20px;height:20px;margin-top:3px;border-radius:6px;background:linear-gradient(135deg,var(--acc),var(--acc2));-webkit-mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M5 10.5l3 3 7-7" stroke="black" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>') center/16px no-repeat,linear-gradient(#000,#000);-webkit-mask-composite:xor;mask-composite:exclude}
+/* bento */
+.bento{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;margin-top:44px}
+.card{position:relative;border:1px solid var(--line);border-radius:22px;padding:26px;background:var(--glass);backdrop-filter:blur(14px);overflow:hidden}
+.card h3{font-size:19px;letter-spacing:-.02em}
+.card p{color:var(--mut);margin-top:8px;font-size:15px}
+.c3{grid-column:span 3}.c2{grid-column:span 2}.c4{grid-column:span 4}
+@media(max-width:860px){.c3,.c2,.c4{grid-column:span 6}}
+.big{font-size:46px;font-weight:750;letter-spacing:-.04em;background:linear-gradient(100deg,var(--acc),var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.flow{display:flex;align-items:center;gap:10px;margin-top:18px;font-size:13px;flex-wrap:wrap}
+.flow span{padding:6px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg2)}
+.flow em{font-style:normal;color:var(--mut)}
+.langs-cloud{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.langs-cloud span{padding:5px 11px;border-radius:999px;border:1px solid var(--line);font-size:13px;background:var(--bg2)}
+/* agent prompt */
+.prompt{margin-top:28px;border-radius:18px;border:1px solid var(--line);background:#0b0d12;color:#d7dce5;font:13px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace;overflow:hidden;box-shadow:var(--shadow)}
+.prompt .bar{display:flex;align-items:center;gap:7px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.07)}
+.prompt .bar i{width:11px;height:11px;border-radius:50%;background:#ff5f57}.prompt .bar i+i{background:#febc2e}.prompt .bar i+i+i{background:#28c840}
+.prompt .bar button{margin-left:auto;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;border-radius:8px;padding:4px 10px;font:12px -apple-system,sans-serif;cursor:pointer}
+.prompt pre{padding:18px 20px;white-space:pre-wrap;margin:0}
+.prompt .k{color:#7aa2ff}
+/* faq */
+.faq{margin-top:36px;display:grid;gap:12px}
+details{border:1px solid var(--line);border-radius:16px;padding:18px 22px;background:var(--glass)}
+summary{cursor:pointer;font-weight:600;list-style:none;display:flex;justify-content:space-between}
+summary:after{content:"+";color:var(--mut);transition:transform .2s}
+details[open] summary:after{transform:rotate(45deg)}
+details p{color:var(--mut);margin-top:10px}
+/* final cta */
+.final{margin:120px 0 0;padding:72px 32px;text-align:center;border-radius:32px;border:1px solid var(--line);background:radial-gradient(120% 120% at 50% 0%,color-mix(in srgb,var(--acc) 18%,transparent),transparent 60%),var(--bg2)}
+.final img{width:84px;margin:0 auto 20px}
+footer{padding:56px 0 48px;color:var(--mut);font-size:14px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+footer a:hover{color:var(--fg)}
+/* reveal */
+.rv{opacity:0;transform:translateY(24px);transition:opacity .8s cubic-bezier(.2,.8,.2,1),transform .8s cubic-bezier(.2,.8,.2,1)}
+.rv.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.rv{opacity:1;transform:none}}
+[data-zh]{}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <img class="icon" src="screenshots/app-icon-proposal.png" alt="MijiaBar icon">
-    <div>
-      <h1>MijiaBar</h1>
-      <p class="tag">Xiaomi Mi Home devices in the macOS menu bar</p>
-    </div>
-    <div class="langs"><a href="zh-CN.html">简体中文</a> · EN</div>
-  </header>
-
-  <div class="badges">
-    <a href="https://github.com/neardws/MijiaBar/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/neardws/MijiaBar?label=version"></a>
-    <a href="https://github.com/neardws/MijiaBar/releases"><img alt="downloads" src="https://img.shields.io/github/downloads/neardws/MijiaBar/total"></a>
-    <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-blue">
-    <img alt="notarized" src="https://img.shields.io/badge/Gatekeeper-notarized-success">
-    <a href="https://github.com/neardws/MijiaBar/blob/main/LICENSE"><img alt="MIT" src="https://img.shields.io/github/license/neardws/MijiaBar"></a>
-    <a href="https://github.com/neardws/MijiaBar/actions"><img alt="build" src="https://img.shields.io/github/actions/workflow/status/neardws/MijiaBar/build.yml?branch=main"></a>
+<nav><div class="w">
+  <a class="brand" href="#"><img src="assets/icon.png" alt="">MijiaBar</a>
+  <div class="links">
+    <a class="hide-m" href="#features" data-i="nav_f">Features</a>
+    <a class="hide-m" href="#agent">Agent</a>
+    <a class="hide-m" href="#faq">FAQ</a>
+    <a href="https://github.com/neardws/MijiaBar" aria-label="GitHub"><svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38v-1.33c-2.23.48-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.8.06 1.23.83 1.23.83.72 1.22 1.87.87 2.33.66.07-.52.28-.87.5-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 014 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0016 8c0-4.42-3.58-8-8-8z"/></svg></a>
+    <div class="lang"><button data-l="en">EN</button><button data-l="zh">中文</button></div>
   </div>
+</div></nav>
 
-  <div class="hero">
-    <div class="card">
-      <p>Control air conditioners, lights, plugs, fans, TVs, cameras and more — without opening the Mi Home app. Signed with Developer ID and notarized by Apple.</p>
-      <p style="margin:18px 0;">
-        <a class="btn" id="dl" href="https://github.com/neardws/MijiaBar/releases/latest">Download latest DMG</a>
-        &nbsp;
-        <a class="btn secondary" href="https://github.com/neardws/MijiaBar">GitHub</a>
-      </p>
-      <ul class="feats">
-        <li>QR sign-in · China region by default · room grouping, search, favorites</li>
-        <li>LAN first, cloud fallback · away-from-home detection</li>
-        <li>Inline camera live view (bundled go2rtc) · Agent CLI / MCP</li>
-        <li>9 languages · in-app Sparkle updates (from this build onward)</li>
-      </ul>
+<header class="hero">
+  <div class="aurora"><i></i><i></i><i></i></div>
+  <div class="w">
+    <span class="pill"><span class="dot"></span><b class="ver">v0.1.9</b><span data-i="pill">In-app updates are here</span></span>
+    <img class="icon" src="assets/icon.png" alt="MijiaBar">
+    <h1 data-i="h1">Your Mi Home,<br><span class="g">one click away.</span></h1>
+    <p class="sub" data-i="sub">A native macOS menu bar app for Xiaomi Mi Home. Air conditioners, lights, fans, cameras — controlled in a glance, not an app switch.</p>
+    <div class="cta">
+      <a class="btn p dl" href="https://github.com/neardws/MijiaBar/releases/latest"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.37 12.6c-.02-2.3 1.88-3.4 1.97-3.46-1.07-1.57-2.74-1.78-3.33-1.8-1.42-.14-2.77.83-3.49.83-.72 0-1.83-.81-3.01-.79-1.55.02-2.98.9-3.78 2.29-1.61 2.8-.41 6.94 1.16 9.21.77 1.11 1.68 2.36 2.88 2.31 1.16-.05 1.6-.75 3-.75s1.79.75 3.01.72c1.24-.02 2.03-1.13 2.79-2.25.88-1.29 1.24-2.53 1.26-2.6-.03-.01-2.42-.93-2.46-3.71zM14.08 5.85c.64-.77 1.07-1.85.95-2.92-.92.04-2.03.61-2.69 1.38-.59.68-1.11 1.77-.97 2.82 1.03.08 2.07-.52 2.71-1.28z"/></svg><span data-i="dl">Download for macOS</span></a>
+      <a class="btn s" href="https://github.com/neardws/MijiaBar"><span data-i="star">View on GitHub</span></a>
     </div>
-    <div>
-      <img class="shot" src="screenshots/list-dark.png" alt="Device list">
+    <div class="trust"><span>✓ <span data-i="t1">Notarized by Apple</span></span><span>✓ macOS 14+</span><span>✓ <span data-i="t2">Free &amp; open source</span></span><span>✓ Apple Silicon &amp; Intel</span></div>
+
+    <div class="stage rv">
+      <div class="menubar"><b></b><span data-i="mb_app">Finder</span><span class="r"><span class="mb">🏠 26°</span><span>Wi‑Fi</span><span class="clock">9:41</span></span></div>
+      <div class="float-card fc1"><img src="screenshots/fan-dark.png" alt=""></div>
+      <div class="float-card fc2"><img src="screenshots/light-light.png" alt=""></div>
+      <div class="pop" id="pop">
+        <img class="base" src="screenshots/list-dark.png" alt="MijiaBar popover">
+        <img class="layer" src="screenshots/ac-cool-dark.png" alt="">
+        <img class="layer" src="screenshots/camera-live-light.png" alt="">
+      </div>
     </div>
   </div>
+</header>
 
-  <h2>Screenshots</h2>
-  <div class="hero">
-    <img class="shot" src="screenshots/ac-cool-dark.png" alt="Air conditioner">
-    <img class="shot" src="screenshots/camera-live-light.png" alt="Camera live view" onerror="this.src='screenshots/login-dark.png'">
+<main class="w">
+  <section id="features">
+    <div class="rv"><div class="eyebrow" data-i="e1">Designed per device</div>
+    <h2 data-i="h2a">Every device gets a page that feels like the real thing.</h2>
+    <p class="lead" data-i="la">Skeuomorphic illustrations that breathe with state — airflow follows fan speed, bulbs glow at their color temperature, plugs show current. Light and dark follow your Mac.</p></div>
+    <div class="gallery rv">
+      <figure><img src="screenshots/ac-cool-light.png" alt=""><figcaption data-i="g1">Air conditioner</figcaption></figure>
+      <figure><img src="screenshots/fan-dark.png" alt=""><figcaption data-i="g2">Fan</figcaption></figure>
+      <figure><img src="screenshots/light-light.png" alt=""><figcaption data-i="g3">Light</figcaption></figure>
+      <figure><img src="screenshots/plug-dark.png" alt=""><figcaption data-i="g4">Smart plug</figcaption></figure>
+      <figure><img src="screenshots/ac-heat-dark.png" alt=""><figcaption data-i="g5">Heating</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="split rv">
+      <div>
+        <div class="eyebrow" data-i="e2">Live camera</div>
+        <h2 data-i="h2b">Check the camera without leaving the menu bar.</h2>
+        <p class="lead" data-i="lb">Live video plays right inside the device card. Pop it out into a resizable window when you need a closer look.</p>
+        <ul class="ticks">
+          <li data-i="b1">Runs only while you watch, on 127.0.0.1</li>
+          <li data-i="b2">Nothing is recorded; keys stay in the Keychain</li>
+          <li data-i="b3">Agents can never see your cameras</li>
+        </ul>
+      </div>
+      <div class="shot" style="max-width:380px;justify-self:center"><img src="screenshots/camera-live-light.png" alt=""></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="rv"><div class="eyebrow" data-i="e3">Built right</div><h2 data-i="h2c">Fast, private, everywhere you are.</h2></div>
+    <div class="bento rv">
+      <div class="card c4"><h3 data-i="k1">LAN first. Cloud when needed.</h3><p data-i="k1p">Commands go straight to devices over your local network. Away from home, MijiaBar switches to the cloud automatically — and every card tells you which path it took.</p>
+        <div class="flow"><span>💻 Mac</span><em>→</em><span data-i="lan">LAN · miIO</span><em>→</em><span>❄️ AC</span><em data-i="or">or</em><span>☁️ Xiaomi Cloud</span></div></div>
+      <div class="card c2"><div class="big">9</div><h3 data-i="k2">languages</h3><div class="langs-cloud"><span>简体中文</span><span>繁體中文</span><span>English</span><span>日本語</span><span>Deutsch</span><span>Français</span><span>Español</span><span>Italiano</span><span>Русский</span></div></div>
+      <div class="card c2"><h3 data-i="k3">QR sign-in</h3><p data-i="k3p">Scan with the Mi Home app. No passwords typed, ever.</p></div>
+      <div class="card c2"><h3 data-i="k4">Keyboard-first</h3><p data-i="k4p">↑↓ to move, Space to toggle, ← → to adjust, / to search.</p></div>
+      <div class="card c2"><h3 data-i="k5">Auto-updating</h3><p data-i="k5p">Sparkle-signed updates, notarized by Apple.</p></div>
+    </div>
+  </section>
+
+  <section id="agent">
+    <div class="split rev rv">
+      <div class="shot" style="max-width:420px;justify-self:center"><img src="screenshots/agent-light.png" alt=""></div>
+      <div>
+        <div class="eyebrow" data-i="e4">Agent-ready</div>
+        <h2 data-i="h2d">Let Claude Code, Codex or Cursor run your home.</h2>
+        <p class="lead" data-i="ld">A built-in CLI and MCP server. Paste one message — the agent installs itself. Read-only by default; writes need your allowlist and a confirmation on your Mac.</p>
+        <div class="prompt"><div class="bar"><i></i><i></i><i></i><button id="cp" data-i="copy">Copy</button></div><pre id="pt"></pre></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="rv"><div class="eyebrow">FAQ</div><h2 data-i="h2e">Questions, answered.</h2></div>
+    <div class="faq rv">
+      <details><summary data-i="q1">What do I need?</summary><p data-i="a1">macOS 14 Sonoma or later on Apple Silicon or Intel, and a Xiaomi account with devices in Mi Home.</p></details>
+      <details><summary data-i="q2">Is it safe to install?</summary><p data-i="a2">Yes. Every build is signed with a Developer ID and notarized by Apple, and the source code is on GitHub under the MIT license.</p></details>
+      <details><summary data-i="q3">Does it work away from home?</summary><p data-i="a3">Controls fall back to the Xiaomi cloud automatically. Live camera view only works on your home network.</p></details>
+      <details><summary data-i="q4">How do updates work?</summary><p data-i="a4">MijiaBar checks for updates on its own from 0.1.9 on. If you're on 0.1.8 or earlier, download this version once.</p></details>
+    </div>
+  </section>
+
+  <div class="final rv">
+    <img src="assets/icon.png" alt="">
+    <h2 data-i="h2f">Put your home in the menu bar.</h2>
+    <div class="cta"><a class="btn p dl" href="https://github.com/neardws/MijiaBar/releases/latest"><span data-i="dl">Download for macOS</span></a></div>
+    <div class="trust"><span class="ver2">v0.1.9</span><span data-i="t1">Notarized by Apple</span></div>
   </div>
-
-  <h2>Agent / MCP</h2>
-  <div class="card">
-    <p>Paste the short setup blurb from <strong>Settings → Agent interface</strong> into Claude Code, Codex or Cursor. Full steps:</p>
-    <p>
-      <a href="AGENT_SETUP.md">English</a> ·
-      <a href="AGENT_SETUP.zh-CN.md">简体中文</a> ·
-      <a href="AGENT_SETUP.zh-TW.md">繁體中文</a> ·
-      <a href="AGENT_SETUP.de.md">Deutsch</a> ·
-      <a href="AGENT_SETUP.fr.md">Français</a> ·
-      <a href="AGENT_SETUP.ru.md">Русский</a>
-    </p>
-  </div>
-
-  <h2>Privacy — live video</h2>
-  <div class="card">
-    <ul class="feats">
-      <li>go2rtc runs only while you watch, listens on <code>127.0.0.1</code> only</li>
-      <li>Credentials stay in the Keychain; nothing is recorded</li>
-      <li>Agents / MCP cannot access camera video</li>
-    </ul>
-  </div>
-
-  <h2>Docs</h2>
-  <p>
-    <a href="https://github.com/neardws/MijiaBar/blob/main/README.md">README</a> ·
-    <a href="https://github.com/neardws/MijiaBar/blob/main/README.zh-CN.md">README 简中</a> ·
-    <a href="UPDATING.md">Sparkle / publishing</a> ·
-    <a href="DESIGN.md">Design guide</a> ·
-    <a href="appcast.xml">appcast.xml</a>
-  </p>
 
   <footer>
-    MIT © neardws · Built for macOS menu bar ·
-    Update feed: <code>https://www.neardws.com/MijiaBar/appcast.xml</code>
+    <span>MIT © neardws · <span data-i="ft">Not affiliated with Xiaomi.</span></span>
+    <span><a href="https://github.com/neardws/MijiaBar">GitHub</a> · <a href="https://github.com/neardws/MijiaBar/releases">Releases</a> · <a href="AGENT_SETUP.md">Agent setup</a> · <a href="appcast.xml">Appcast</a></span>
   </footer>
-</div>
+</main>
+
 <script>
-fetch('https://api.github.com/repos/neardws/MijiaBar/releases/latest')
-  .then(r => r.ok ? r.json() : null)
-  .then(j => {
-    if (!j) return;
-    const asset = (j.assets || []).find(a => /MijiaBar-.*\.dmg$/.test(a.name) && !/-unsigned/.test(a.name));
-    if (asset) {
-      const a = document.getElementById('dl');
-      a.href = asset.browser_download_url;
-      a.textContent = 'Download ' + j.tag_name;
-    }
-  }).catch(() => {});
+const T={zh:{nav_f:"功能",pill:"现已支持应用内更新",h1:'米家，<br><span class="g">一点即达。</span>',sub:"原生的 macOS 菜单栏米家应用。空调、灯、风扇、摄像头，看一眼就能控制，不用切换 App。",dl:"下载 macOS 版",star:"在 GitHub 查看",t1:"已通过苹果公证",t2:"免费开源",mb_app:"访达",e1:"每种设备单独设计",h2a:"每台设备，都有一张像实物的卡片。",la:"拟物插画随状态变化：气流跟着风速，灯泡按色温发光，插座显示电流。浅色、深色跟随你的 Mac。",g1:"空调",g2:"风扇",g3:"灯",g4:"智能插座",g5:"制热",e2:"实时画面",h2b:"不离开菜单栏，就能看摄像头。",lb:"直播画面直接在设备卡片里播放，需要细看时弹出成可调大小的窗口。",b1:"只在观看时运行，只监听本机 127.0.0.1",b2:"不录制；密钥只存在钥匙串",b3:"Agent 永远看不到摄像头画面",e3:"用心打造",h2c:"快速、私密、走到哪都能用。",k1:"优先局域网，需要时走云端。",k1p:"指令通过局域网直达设备。不在家时自动切到小米云，每张卡片都会标出走的是哪条通道。",lan:"局域网 · miIO",or:"或",k2:"种语言",k3:"扫码登录",k3p:"用米家 App 扫一下，不用输入密码。",k4:"键盘优先",k4p:"↑↓ 选择，空格开关，← → 微调，/ 搜索。",k5:"自动更新",k5p:"Sparkle 签名更新，经苹果公证。",e4:"为 Agent 准备",h2d:"让 Claude Code、Codex 或 Cursor 帮你管家。",ld:"内置 CLI 和 MCP 服务。粘贴一段话，Agent 自己完成安装。默认只读；写操作需要白名单，并在 Mac 上弹窗确认。",copy:"复制",h2e:"常见问题",q1:"需要什么条件？",a1:"macOS 14 Sonoma 或更新版本（Apple 芯片或 Intel），以及绑定了米家设备的小米账号。",q2:"安装安全吗？",a2:"安全。每个版本都用 Developer ID 签名并经苹果公证，源码以 MIT 协议公开在 GitHub。",q3:"不在家能用吗？",a3:"控制会自动改走小米云；摄像头直播只能在家庭网络里看。",q4:"怎么更新？",a4:"从 0.1.9 起会自动检查更新。如果你还在用 0.1.8 或更早的版本，手动下载安装一次这个版本即可。",h2f:"把家放进菜单栏。",ft:"与小米公司无关。"}};
+const P={en:"Read https://raw.githubusercontent.com/neardws/MijiaBar/main/docs/AGENT_SETUP.md and follow it to set up MijiaBar as your MCP tool.\nCLI path: /Applications/MijiaBar.app/Contents/Resources/bin/mijiabar\nDon't change any device's state without my consent.",zh:"请阅读 https://raw.githubusercontent.com/neardws/MijiaBar/main/docs/AGENT_SETUP.zh-CN.md ，按其中的步骤把 MijiaBar 接入为你的 MCP 工具。\nCLI 路径：/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar\n未经我同意，不要改变任何设备的状态。"};
+const EN={};document.querySelectorAll('[data-i]').forEach(e=>EN[e.dataset.i]=e.innerHTML);
+function setLang(l){document.documentElement.lang=l==='zh'?'zh-CN':'en';document.querySelectorAll('[data-i]').forEach(e=>{const v=l==='zh'?T.zh[e.dataset.i]:EN[e.dataset.i];if(v)e.innerHTML=v});document.getElementById('pt').textContent=P[l];document.querySelectorAll('.lang button').forEach(b=>b.classList.toggle('on',b.dataset.l===l));document.title=l==='zh'?'MijiaBar — 菜单栏里的米家':'MijiaBar — Your Mi Home, one click away';try{localStorage.lang=l}catch(e){}}
+document.querySelectorAll('.lang button').forEach(b=>b.onclick=()=>setLang(b.dataset.l));
+const q=new URLSearchParams(location.search).get('lang');let L=q||(()=>{try{return localStorage.lang}catch(e){}})()||(navigator.language.startsWith('zh')?'zh':'en');setLang(L==='zh'?'zh':'en');
+document.getElementById('cp').onclick=e=>{navigator.clipboard.writeText(document.getElementById('pt').textContent);const b=e.target,o=b.textContent;b.textContent='✓';setTimeout(()=>b.textContent=o,1400)};
+const io=new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting){x.target.classList.add('in');io.unobserve(x.target)}}),{threshold:.12});document.querySelectorAll('.rv').forEach(e=>io.observe(e));
+if(!matchMedia('(prefers-reduced-motion: reduce)').matches){const ls=[...document.querySelectorAll('#pop .layer')];let i=-1;setInterval(()=>{ls.forEach(x=>x.classList.remove('on'));i=(i+1)%(ls.length+1);if(i<ls.length)ls[i].classList.add('on')},3200)}
+fetch('https://api.github.com/repos/neardws/MijiaBar/releases/latest').then(r=>r.ok?r.json():null).then(j=>{if(!j)return;const a=(j.assets||[]).find(a=>/\.dmg$/.test(a.name)&&!/unsigned/.test(a.name));if(a)document.querySelectorAll('.dl').forEach(x=>x.href=a.browser_download_url);document.querySelectorAll('.ver,.ver2').forEach(x=>x.textContent=j.tag_name)}).catch(()=>{});
 </script>
 </body>
 </html>
