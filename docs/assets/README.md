@@ -1,9 +1,6 @@
 # Site assets
 
-App screenshots for the landing page are served from Cloudflare R2:
+Screenshots, device art and the share image live in Cloudflare R2 (bucket `neardws-files`, prefix `mijiabar/site/`), served from
+`https://files.neardws.com/mijiabar/site/{shots/<lang>,art}/*.webp` and `.../og.jpg`.
 
-`https://files.neardws.com/mijiabar/shots/{en|zh}/*.webp` (JPEG fallback: `.jpg`)
-
-Icon: `https://files.neardws.com/mijiabar/icon.webp`
-
-Do not commit large PNGs here. Upload new shots to the `neardws-files` R2 bucket under `mijiabar/`.
+`scripts/site-shots.sh` still writes them to `docs/assets/` locally; upload that output to R2 and do not commit it (it is gitignored).
