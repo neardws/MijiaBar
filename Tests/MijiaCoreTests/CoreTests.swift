@@ -330,3 +330,11 @@ func acSpec() throws -> DeviceSpec {
         #expect(XiaomiCloud.parseSamples(["result": [["time": 5, "value": "true"]]]) == [Sample(t: 5, v: 1)])
     }
 }
+
+@Suite struct SensorEventTests {
+    @Test func keepsOnlyStateChanges() {
+        let s = [Sample(t: 1, v: 1), Sample(t: 2, v: 1), Sample(t: 3, v: 0), Sample(t: 4, v: 0), Sample(t: 5, v: 1)]
+        #expect(SensorEvents.changes(s).map(\.t) == [1, 3, 5])
+        #expect(SensorEvents.changes([]).isEmpty)
+    }
+}

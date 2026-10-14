@@ -132,3 +132,12 @@ extension XiaomiCloud {
         }.sorted { $0.t < $1.t }
     }
 }
+
+public enum SensorEvents {
+    /// 只保留状态发生变化的采样（第一条也算），用于门窗 / 水浸的「最近记录」
+    public static func changes(_ s: [Sample]) -> [Sample] {
+        var out: [Sample] = []
+        for x in s where out.last.map({ ($0.v > 0.5) != (x.v > 0.5) }) ?? true { out.append(x) }
+        return out
+    }
+}

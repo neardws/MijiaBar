@@ -21,6 +21,10 @@ final class Recorder: ObservableObject {
     static func metrics(_ d: Device, _ s: DeviceState) -> [Metric] {
         var out: [Metric] = []
         if let w = powerWatts(d, s) { out.append(Metric(name: "power", value: w, energy: true)) }
+        guard d.category == .sensor || d.category == .purifier, let spec = s.spec else { return out }
+        for (prop, name) in sensorProps {
+            if let p = spec.prop(named: prop), let v = s.values[p.key]?.doubleValue { out.append(Metric(name: name, value: v, energy: false)) }
+        }
         return out
     }
     static func powerWatts(_ d: Device, _ s: DeviceState) -> Double? {
@@ -28,8 +32,11 @@ final class Recorder: ObservableObject {
         guard d.category == .plug, let p = s.spec?.prop(named: "electric-power") else { return nil }
         return s.values[p.key]?.doubleValue
     }
-    /// 后台轮询哪些设备：插座、空调伴侣（有功率读数的）
-    static func shouldPoll(_ d: Device) -> Bool { d.isOnline && (d.category == .plug || d.category == .ac) }
+    /// 传感器要记录的属性 → 指标名。门窗 contact-state 为 1 表示关着；水浸 submersion-state 为 1 表示有水
+    static let sensorProps = [("temperature", "temperature"), ("relative-humidity", "humidity"), ("illumination", "illumination"),
+                              ("contact-state", "contact"), ("submersion-state", "leak")]
+    /// 后台轮询哪些设备：插座、空调伴侣（有功率读数的）和传感器
+    static func shouldPoll(_ d: Device) -> Bool { d.isOnline && (d.category == .plug || d.category == .ac || d.category == .sensor) }
 
     func series(_ did: String, _ metric: String) -> Series {
         let k = did + "|" + metric
@@ -64,6 +71,18 @@ final class Recorder: ObservableObject {
             data = dd
         }
         cloud[d.did] = (Date(), data); revision += 1
+        return data
+    }
+
+    /// 米家云的属性历史（最近 7 天），缓存 30 分钟
+    private var cloudProps: [String: (at: Date, data: [Sample])] = [:]
+    func cloudSamples(_ d: Device, metric: String, state: DeviceState?, model m: AppModel) async -> [Sample] {
+        guard !mock, let api = m.controller.cloud, let prop = Self.sensorProps.first(where: { $0.1 == metric })?.0,
+              let key = state?.spec?.prop(named: prop)?.key else { return [] }
+        let k = d.did + "|" + metric
+        if let c = cloudProps[k], Date().timeIntervalSince(c.at) < 1800 { return c.data }
+        let data = (try? await api.deviceData(did: d.did, key: key, type: "prop", from: Date().addingTimeInterval(-7 * 86400), to: Date())) ?? []
+        cloudProps[k] = (Date(), data)
         return data
     }
 

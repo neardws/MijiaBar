@@ -50,6 +50,8 @@ extension AppModel {
         states["d4"] = DeviceState(values: ["2.1": .bool(false), "2.2": .int(2), "2.4": .bool(true)], spec: fan, legacy: false, source: "cloud")
         let plug = DeviceSpec(type: "", description: "", services: [S(2, "switch", [P(2, 1, "on", "bool")]), S(11, "power-consumption", [P(11, 2, "electric-power", "float", ["read"], unit: "watt")])])
         Recorder.shared.seed("d5", "power", Self.demoPowerSeries())
+        Recorder.shared.seed("d6", "temperature", Self.demoWave(25.6, 2.2)); Recorder.shared.seed("d6", "humidity", Self.demoWave(58, 6))
+        Recorder.shared.seed("d12", "contact", Self.demoToggles()); Recorder.shared.seed("d13", "leak", Self.demoToggles(start: 0))
         states["d5"] = DeviceState(values: ["2.1": .bool(true), "11.2": .double(36.5)], spec: plug, legacy: false, source: "cloud")
         let ht = DeviceSpec(type: "", description: "", services: [S(2, "temperature-humidity-sensor", [P(2, 1, "temperature", "float", ["read"], unit: "celsius"), P(2, 2, "relative-humidity", "uint8", ["read"], unit: "percentage")])])
         states["d6"] = DeviceState(values: ["2.1": .double(25.6), "2.2": .int(58)], spec: ht, legacy: false, source: "cloud")
@@ -200,6 +202,8 @@ enum Snapshot {
             m.atHome = false; render(root, f("camera-away")); m.atHome = nil
             m.page = .detail("d11"); render(root, f("doorbell")); m.page = .detail("d12"); render(root, f("contact"))
             m.page = .detail("d13"); render(root, f("leak"))
+            m.page = .detail("d6"); render(root, f("thermo-history"), size: CGSize(width: 360, height: 900))
+            m.page = .detail("d12"); render(root, f("contact-history"), size: CGSize(width: 360, height: 640))
             LiveControls.snapshotWatching = true
             m.page = .detail("d10"); render(root, f("camera-live")); m.page = .detail("d11"); render(root, f("doorbell-live"))
             LiveControls.snapshotWatching = false
@@ -315,6 +319,24 @@ extension AppModel {
             let w = base + 10 * sin(Double(i) / 7) + Double((i * 37) % 11)
             History.record(&s, w, at: t, minInterval: 0, energy: true)
             t = t.addingTimeInterval(600); i += 1
+        }
+        return s
+    }
+    /// 演示用：最近 7 天、每 15 分钟一个、按日起伏的读数
+    static func demoWave(_ mid: Double, _ amp: Double) -> Series {
+        var s = Series(); let now = Date(); var t = now.addingTimeInterval(-7 * 86400); var i = 0
+        while t < now {
+            let h = Double(Calendar.current.component(.hour, from: t)) + Double(Calendar.current.component(.minute, from: t)) / 60
+            History.record(&s, ((mid + amp * sin((h - 9) / 24 * 2 * .pi) + Double(i % 5) * 0.06) * 10).rounded() / 10, at: t, minInterval: 0)
+            t = t.addingTimeInterval(900); i += 1
+        }
+        return s
+    }
+    /// 演示用：几次开 / 关
+    static func demoToggles(start: Double = 1) -> Series {
+        var s = Series(); let now = Date()
+        for (i, back) in [26.0, 9.5, 9.2, 3.1, 2.8, 0.4].enumerated() {
+            History.record(&s, (i % 2 == 0) == (start == 1) ? 1 : 0, at: now.addingTimeInterval(-back * 3600), minInterval: 0)
         }
         return s
     }
