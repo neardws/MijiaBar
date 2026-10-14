@@ -2,7 +2,7 @@
 """生成网站 docs/index.html 及各语言页面（GitHub Pages 从 docs/ 发布）。
 
 模板：site/template.html；文案：i18n/site/<lang>.json（以 en.json 为准，缺键报错）。
-目前只发布英文和简体中文；其他语言的译稿在 i18n/site/drafts/，页面稳定后再加回 LANGS（加回前不用更新它们）。
+目前只发布英文和简体中文；繁体中文译稿在 i18n/site/drafts/zh-Hant.json，页面稳定后再加回 LANGS（加回前不用更新它）。
 Agent 安装提示直接取自 Sources/MijiaCore/AgentPrompt.swift，版本号取自 docs/appcast.xml。
 截图和插画由 scripts/site-shots.sh 生成到 docs/assets/。
 
@@ -13,15 +13,14 @@ import html, json, os, re, sys
 
 os.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
-APP_LANGS = [('en', 'English'), ('zh-Hans', '简体中文'), ('zh-Hant', '繁體中文'), ('de', 'Deutsch'), ('fr', 'Français'),
-             ('es', 'Español'), ('it', 'Italiano'), ('ru', 'Русский'), ('ja', '日本語')]
+APP_LANGS = [('en', 'English'), ('zh-Hans', '简体中文'), ('zh-Hant', '繁體中文')]
 SITE = 'https://www.neardws.com/MijiaBar/'
 # 截图、插画、分享图放在 R2（neardws-files 桶 mijiabar/site/），不进仓库；上传见 docs/assets/README.md
 CDN = 'https://files.neardws.com/mijiabar/site'
 REPO = 'https://github.com/neardws/MijiaBar'
 CLI = '/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar'
 # (文案文件, 页面代码 = 文件名 / 截图目录, html lang, hreflang, og:locale, Swift AppLang, 本语言名称)
-# 加回其他语言时照这个格式写，例如 ('ja', 'ja', 'ja', 'ja', 'ja_JP', 'ja', '日本語')，并在 scripts/site-shots.sh 里加上截图
+# 加回繁体时照这个格式写，例如 ('zh-Hant', 'zh-TW', 'zh-TW', 'zh-Hant', 'zh_TW', 'zhHant', '繁體中文')，并在 scripts/site-shots.sh 里加上截图
 LANGS = [
     ('en', 'en', 'en', 'en', 'en_US', 'en', 'English'),
     ('zh-Hans', 'zh-CN', 'zh-CN', 'zh-Hans', 'zh_CN', 'zhHans', '简体中文'),

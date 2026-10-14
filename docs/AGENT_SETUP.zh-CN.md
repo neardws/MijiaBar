@@ -1,6 +1,6 @@
 # MijiaBar · Agent / MCP setup
 
-[English](AGENT_SETUP.md) · **简体中文** · [繁體中文](AGENT_SETUP.zh-TW.md) · [Deutsch](AGENT_SETUP.de.md) · [Français](AGENT_SETUP.fr.md) · [Español](AGENT_SETUP.es.md) · [Italiano](AGENT_SETUP.it.md) · [Русский](AGENT_SETUP.ru.md) · [日本語](AGENT_SETUP.ja.md)
+[English](AGENT_SETUP.md) · **简体中文** · [繁體中文](AGENT_SETUP.zh-TW.md)
 
 请帮我把 MijiaBar（macOS 菜单栏米家控制应用）接入为你的 MCP 工具，按以下步骤自己完成：
 
