@@ -1,1 +1,686 @@
-<!DOCTYPE html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=index.html?lang=zh"><link rel="canonical" href="index.html?lang=zh"><a href="index.html?lang=zh">MijiaBar 中文</a>
+<!DOCTYPE html>
+<html lang="zh-CN" dir="ltr">
+<head>
+<!-- 由 scripts/gen-site.py 根据 site/template.html 和 i18n/site/*.json 生成，请勿直接修改 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MijiaBar — 菜单栏里的米家</title>
+<meta name="description" content="MijiaBar 是一款免费开源的 macOS 菜单栏米家应用。轻点一下就能控制空调、灯、风扇和摄像机，也能安全地交给 AI Agent 帮忙。">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="canonical" href="https://www.neardws.com/MijiaBar/zh-CN.html">
+<link rel="alternate" hreflang="en" href="https://www.neardws.com/MijiaBar/">
+<link rel="alternate" hreflang="zh-Hans" href="https://www.neardws.com/MijiaBar/zh-CN.html">
+<link rel="alternate" hreflang="x-default" href="https://www.neardws.com/MijiaBar/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MijiaBar">
+<meta property="og:title" content="MijiaBar — 菜单栏里的米家">
+<meta property="og:description" content="MijiaBar 是一款免费开源的 macOS 菜单栏米家应用。轻点一下就能控制空调、灯、风扇和摄像机，也能安全地交给 AI Agent 帮忙。">
+<meta property="og:url" content="https://www.neardws.com/MijiaBar/zh-CN.html">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://www.neardws.com/MijiaBar/assets/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="MijiaBar — 菜单栏里的米家">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="assets/icon.png">
+<link rel="apple-touch-icon" href="assets/icon.png">
+<link rel="preload" as="image" href="assets/shots/zh-CN/list-light.webp" media="(prefers-color-scheme: light)">
+<link rel="preload" as="image" href="assets/shots/zh-CN/list-dark.webp" media="(prefers-color-scheme: dark)">
+
+<style>
+/* 颜色、字号、动效 token：跟 App 的 Theme / Motion 同一套思路——语义色、无回弹、退出比进入快 */
+:root{
+  color-scheme:light dark;
+  --bg:#fff;--bg-alt:#f5f5f7;--tile:#f5f5f7;--tile-on-alt:#fff;
+  --fg:#1d1d1f;--fg2:#6e6e73;--fg3:#86868b;
+  --hair:rgba(0,0,0,.08);--line:rgba(0,0,0,.14);
+  --link:#0066cc;--btn:#0071e3;--btn-hover:#0077ed;--focus:#0071e3;
+  --nav:rgba(255,255,255,.78);--nav-fg:rgba(0,0,0,.8);
+  --paddle:rgba(210,210,215,.64);--paddle-hover:rgba(223,223,227,.78);--paddle-fg:rgba(0,0,0,.56);
+  --shot-shadow:0 0 0 .5px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.04),0 18px 48px -12px rgba(0,0,0,.22);
+  --key:#fff;--key-edge:rgba(0,0,0,.16);
+  --w:1040px;--narrow:720px;--gutter:max(22px,env(safe-area-inset-left));
+  --pad:max(var(--gutter),calc((100vw - var(--w)) / 2));
+  --ease:cubic-bezier(.32,.72,0,1);
+  --press:160ms;--snappy:200ms;--smooth:300ms;--reveal:600ms;
+  --ls-hero:-.015em;--ls-h2:-.009em;--ls-body:-.022em;--ls-small:-.01em;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Icons","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#000;--bg-alt:#161617;--tile:#1c1c1e;--tile-on-alt:#1d1d1f;
+  --fg:#f5f5f7;--fg2:#a1a1a6;--fg3:#86868b;
+  --hair:rgba(255,255,255,.1);--line:rgba(255,255,255,.18);
+  --link:#2997ff;--focus:#2997ff;
+  --nav:rgba(22,22,23,.78);--nav-fg:rgba(255,255,255,.8);
+  --paddle:rgba(66,66,69,.72);--paddle-hover:rgba(73,73,76,.82);--paddle-fg:rgba(255,255,255,.64);
+  --shot-shadow:0 0 0 .5px rgba(255,255,255,.14),0 18px 48px -12px rgba(0,0,0,.9);
+  --key:#2c2c2e;--key-edge:rgba(255,255,255,.12);
+}}
+/* 中日文：不加负字距，换行更讲究 */
+:lang(zh),:lang(ja){--ls-hero:0;--ls-h2:0;--ls-body:0;--ls-small:0}
+:lang(zh-CN){--font:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+:lang(zh-TW){--font:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang TC","Microsoft JhengHei",sans-serif}
+:lang(ja){--font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Meiryo",sans-serif}
+:lang(zh),:lang(ja){line-break:strict}
+/* 中日文标题只在标点处换行，放不下时才断字 */
+:lang(zh) :is(h1,h2,h3),:lang(ja) :is(h1,h2,h3){word-break:keep-all;overflow-wrap:anywhere}
+@supports (word-break:auto-phrase){:lang(ja) :is(h1,h2,h3,.lead){word-break:auto-phrase}}
+:lang(de) :is(h1,h2,h3),:lang(ru) :is(h1,h2,h3),:lang(fr) :is(h1,h2,h3),:lang(it) :is(h1,h2,h3),:lang(es) :is(h1,h2,h3){hyphens:auto}
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;scroll-padding-top:64px}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 17px/1.47 var(--font);letter-spacing:var(--ls-body);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow-x:hidden}
+h1,h2,h3,p,ul,ol,figure,dl,dd{margin:0}
+ul,ol{padding:0;list-style:none}
+img{display:block;max-width:100%;height:auto}
+a{color:var(--link);text-decoration:none}
+a:hover{text-decoration:underline}
+button{font:inherit;color:inherit;letter-spacing:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:3px;border-radius:6px}
+.sr{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip{position:fixed;left:12px;top:-60px;z-index:100;padding:10px 16px;border-radius:10px;background:var(--btn);color:#fff;font-size:14px}
+.skip:focus{top:12px;text-decoration:none}
+.wrap{width:100%;max-width:calc(var(--w) + var(--gutter) * 2);margin:0 auto;padding:0 var(--gutter)}
+.center{text-align:center}
+.chev{display:inline-block;width:.42em;height:.72em;margin-left:.3em;vertical-align:-.02em;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+
+/* —— 导航 —— */
+.nav{position:sticky;top:0;z-index:50;background:var(--nav);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--hair)}
+.nav .wrap{display:flex;align-items:center;gap:24px;height:52px}
+.brand{display:flex;align-items:center;gap:8px;color:var(--fg);font-size:19px;font-weight:600;letter-spacing:-.01em}
+.brand:hover{text-decoration:none}
+.brand img{width:28px;height:28px}
+.nav-links{display:flex;gap:24px;margin-left:auto;font-size:12px;letter-spacing:-.01em}
+.nav-links a{color:var(--nav-fg)}
+.nav-links a:hover{color:var(--fg);text-decoration:none}
+.nav-end{display:flex;align-items:center;gap:14px}
+.btn-sm{display:inline-flex;align-items:center;min-height:28px;padding:0 12px;border-radius:980px;background:var(--btn);color:#fff;font-size:12px;font-weight:400;letter-spacing:-.01em;transition:background-color var(--snappy) var(--ease),transform var(--press) var(--ease)}
+.btn-sm:hover{background:var(--btn-hover);text-decoration:none}
+.btn-sm:active{transform:scale(.97)}
+@media (max-width:833px){.nav-links{display:none}.nav-end{margin-left:auto}}
+
+/* 语言菜单：<details>，没有 JS 也能用 */
+.lang{position:relative;font-size:12px}
+.lang summary{display:flex;align-items:center;gap:5px;min-height:28px;padding:0 8px;border-radius:8px;color:var(--nav-fg);cursor:pointer;list-style:none;user-select:none;transition:background-color var(--snappy) var(--ease)}
+.lang summary::-webkit-details-marker{display:none}
+.lang summary:hover,.lang[open] summary{background:var(--hair);color:var(--fg)}
+.lang summary svg{width:14px;height:14px;flex:none}
+.lang .caret{width:8px;height:8px;transition:transform var(--snappy) var(--ease)}
+.lang[open] .caret{transform:rotate(180deg)}
+.lang-list{position:absolute;right:0;top:calc(100% + 8px);min-width:180px;padding:6px;border-radius:12px;background:var(--bg);border:1px solid var(--hair);box-shadow:0 12px 40px -8px rgba(0,0,0,.28)}
+.lang[open] .lang-list{animation:pop-in var(--smooth) var(--ease)}
+.lang-list a{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:8px 10px;border-radius:8px;color:var(--fg);font-size:14px;letter-spacing:0}
+.lang-list a:hover{background:var(--bg-alt);text-decoration:none}
+.lang-list a[aria-current]::after{content:"";width:12px;height:12px;background:var(--link);-webkit-mask:var(--check) center/contain no-repeat;mask:var(--check) center/contain no-repeat}
+:root{--check:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 6.5l2.5 2.5L10 3' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+@keyframes pop-in{from{opacity:0;transform:translateY(-4px) scale(.97)}}
+@media (max-width:480px){.lang summary .lang-name{display:none}}
+
+/* —— 按钮与链接 —— */
+.cta{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:16px 28px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 26px;border-radius:980px;background:var(--btn);color:#fff;font-size:17px;font-weight:400;transition:background-color var(--snappy) var(--ease),transform var(--press) var(--ease)}
+.btn:hover{background:var(--btn-hover);text-decoration:none}
+.btn:active{transform:scale(.97)}
+.more{font-size:17px;white-space:nowrap}
+
+/* —— 字体层级 —— */
+.eyebrow{font-size:19px;line-height:1.21;font-weight:600;letter-spacing:.012em;color:var(--fg2);margin-bottom:10px}
+:lang(zh) .eyebrow,:lang(ja) .eyebrow{letter-spacing:0}
+.h2{font-size:clamp(32px,5vw,56px);line-height:1.07;font-weight:600;letter-spacing:var(--ls-h2);text-wrap:balance}
+.lead{margin-top:20px;max-width:var(--narrow);font-size:clamp(19px,2vw,21px);line-height:1.38;font-weight:600;letter-spacing:.011em;color:var(--fg3);text-wrap:pretty}
+.lead b{color:var(--fg);font-weight:600}
+:lang(zh) .lead,:lang(ja) .lead{letter-spacing:0;line-height:1.5;font-weight:500;color:var(--fg2)}
+.center .lead{margin-left:auto;margin-right:auto}
+section{padding:120px 0}
+@media (max-width:734px){section{padding:80px 0}}
+.alt{background:var(--bg-alt);--tile:var(--tile-on-alt)}
+
+/* —— 首屏 —— */
+.hero{padding:72px 0 0;text-align:center;overflow:hidden}
+.hero-icon{width:112px;height:112px;margin:0 auto 4px}
+.hero-name{font-size:24px;font-weight:600;letter-spacing:.009em}
+.hero h1{margin-top:6px;font-size:clamp(44px,7.4vw,80px);line-height:1.05;font-weight:600;letter-spacing:var(--ls-hero);text-wrap:balance}
+:lang(zh) .hero h1,:lang(ja) .hero h1{line-height:1.15}
+.hero-sub{max-width:640px;margin:22px auto 0;font-size:clamp(19px,2.2vw,24px);line-height:1.33;letter-spacing:.009em;color:var(--fg2);text-wrap:pretty}
+:lang(zh) .hero-sub,:lang(ja) .hero-sub{letter-spacing:0;line-height:1.5}
+.hero .cta{margin-top:32px}
+.fine{margin-top:18px;font-size:14px;line-height:1.43;letter-spacing:var(--ls-small);color:var(--fg2)}
+.fine .dot{margin:0 .45em;color:var(--fg3)}
+.note-mac{display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:8px 14px;border-radius:12px;background:var(--bg-alt);font-size:14px;color:var(--fg2)}
+.note-mac[hidden]{display:none}
+
+/* 桌面场景：真实的菜单栏弹出窗口截图 */
+/* 壁纸：单一蓝色系的分层波浪（不混入暖色，蓝橙直接混合会发灰） */
+.desk{--sky-a:#3576ee;--sky-b:#8ec0ff;--w1a:#4f8ff7;--w1b:#8fc0ff;--w2a:#a9cfff;--w2b:#d6e8ff;--w3a:#eef5ff;--w3b:#fff;
+  --bar:rgba(255,255,255,.4);--bar-fg:#1d1d1f;--bar-sel:rgba(0,0,0,.1);
+  position:relative;margin:64px auto 0;max-width:var(--w);border-radius:24px 24px 0 0;background:var(--sky-b);overflow:hidden;isolation:isolate}
+.desk::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.12);pointer-events:none}
+.wall{position:absolute;inset:0;z-index:-1;width:100%;height:100%}
+@media (prefers-color-scheme:dark){.desk{--sky-a:#040916;--sky-b:#0c1f4d;--w1a:#1a4196;--w1b:#123276;--w2a:#0f2860;--w2b:#0b1d47;--w3a:#08142f;--w3b:#050b1c;
+  --bar:rgba(0,0,0,.34);--bar-fg:#f5f5f7;--bar-sel:rgba(255,255,255,.18)}
+  .desk::after{box-shadow:inset 0 0 0 .5px rgba(255,255,255,.14)}}
+.menubar{display:flex;align-items:center;gap:20px;height:30px;padding:0 16px;background:var(--bar);-webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);color:var(--bar-fg);font-size:13px;letter-spacing:0;white-space:nowrap}
+.menubar .menus{display:flex;gap:20px;overflow:hidden}
+.menubar .menus span:first-child{font-weight:700}
+.menubar .status{display:flex;align-items:center;gap:16px;margin-left:auto}
+.menubar svg{display:block;fill:currentColor}
+.menubar .item{display:flex;align-items:center;gap:4px;height:22px;padding:0 7px;border-radius:5px;background:var(--bar-sel);font-variant-numeric:tabular-nums}
+.pop-wrap{display:flex;justify-content:flex-end;padding:6px clamp(16px,11%,128px) 0}
+.pop{width:360px;max-width:100%;border-radius:12px 12px 0 0;overflow:hidden;box-shadow:0 0 0 .5px rgba(0,0,0,.18),0 24px 70px -10px rgba(0,30,90,.45)}
+@media (prefers-color-scheme:dark){.pop{box-shadow:0 0 0 .5px rgba(255,255,255,.2),0 24px 70px -10px rgba(0,0,0,.8)}}
+.pop img{width:100%}
+@media (max-width:734px){.desk{border-radius:18px 18px 0 0;margin-top:48px}.menubar .menus span:nth-child(n+3){display:none}.pop-wrap{justify-content:center;padding:6px 16px 0}}
+@media (max-width:420px){.menubar .menus{display:none}.menubar .opt{display:none}}
+.js .pop-wrap{justify-content:flex-start;padding-left:0;padding-right:0}
+
+/* —— 设备页画廊 —— */
+.gallery{position:relative;margin-top:56px}
+.g-track{display:flex;gap:24px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scroll-padding-inline:var(--pad);padding:8px var(--pad) 44px;scrollbar-width:none}
+.g-track::-webkit-scrollbar{display:none}
+.g-item{flex:0 0 min(320px,78vw);scroll-snap-align:start}
+.g-item picture{display:block;border-radius:18px;overflow:hidden;box-shadow:var(--shot-shadow);background:var(--bg)}
+.g-item p{margin-top:22px;padding-right:12px;font-size:17px;line-height:1.47;color:var(--fg2);font-weight:400}
+.g-item p b{color:var(--fg);font-weight:600}
+.paddles{display:flex;justify-content:flex-end;gap:16px;padding:0 var(--pad)}
+.paddle{display:grid;place-items:center;width:36px;height:36px;border:0;border-radius:50%;background:var(--paddle);color:var(--paddle-fg);cursor:pointer;transition:background-color var(--snappy) var(--ease),opacity var(--snappy) var(--ease),transform var(--press) var(--ease)}
+.paddle:hover{background:var(--paddle-hover)}
+.paddle:active{transform:scale(.95)}
+.paddle:disabled{opacity:.42;cursor:default;transform:none}
+.paddle svg{width:9px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+html:not(.js) .paddles{display:none}
+
+/* —— 设备阵列 —— */
+.lineup{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:44px 12px;margin-top:64px}
+.lineup li{display:flex;flex-direction:column;align-items:center;text-align:center}
+.lineup .art{display:flex;align-items:center;justify-content:center;width:100%;height:112px}
+.lineup img{height:112px;width:auto;max-width:100%;object-fit:contain}
+.lineup img,.duo img{-webkit-mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent),linear-gradient(transparent,#000 10%,#000 90%,transparent);-webkit-mask-composite:source-in;
+  mask:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent),linear-gradient(transparent,#000 10%,#000 90%,transparent);mask-composite:intersect}
+.lineup span{margin-top:14px;font-size:14px;line-height:1.3;font-weight:600;letter-spacing:var(--ls-small)}
+.lineup .more-li span{color:var(--fg2)}
+@media (max-width:560px){.lineup{grid-template-columns:repeat(2,minmax(0,1fr));gap:32px 8px}.lineup .art,.lineup img{height:88px}}
+
+/* —— 两栏 —— */
+.split{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:72px;align-items:center}
+.split .shot{width:340px}
+@media (max-width:833px){.split{grid-template-columns:1fr;gap:48px}.split .shot{width:min(340px,100%);margin:0 auto}}
+.shot picture{display:block;border-radius:18px;overflow:hidden;box-shadow:var(--shot-shadow);background:var(--bg)}
+.points{display:grid;gap:22px;margin-top:40px}
+.points li{display:grid;grid-template-columns:28px 1fr;gap:14px;align-items:start}
+.points svg{width:28px;height:28px;stroke:var(--fg);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.points b{display:block;font-weight:600}
+.points span{color:var(--fg2)}
+.aside{margin-top:28px;font-size:14px;color:var(--fg2)}
+
+/* —— 磁贴 —— */
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:64px}
+.tile{position:relative;display:flex;flex-direction:column;padding:36px;border-radius:28px;background:var(--tile);overflow:hidden;min-height:300px}
+.tile.wide{grid-column:span 2}
+.tile .ic{width:40px;height:40px;margin-bottom:auto;stroke:var(--fg);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.tile h3{margin-top:28px;font-size:24px;line-height:1.17;font-weight:600;letter-spacing:.009em;text-wrap:balance}
+:lang(zh) .tile h3,:lang(ja) .tile h3{letter-spacing:0}
+.tile p{margin-top:10px;color:var(--fg2)}
+.tile .small{margin-top:14px;font-size:14px;color:var(--fg2)}
+@media (max-width:1023px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.tile.wide{grid-column:span 2}}
+@media (max-width:640px){.tiles{grid-template-columns:1fr}.tile.wide{grid-column:auto}.tile{padding:28px;min-height:0}.tile .ic{margin-bottom:0}}
+.chips{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:auto}
+.chip{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px;border-radius:980px;background:var(--bg);font-size:14px;font-weight:600;color:var(--fg)}
+.alt .chip{background:var(--bg-alt)}
+/* 和 App 设备页标题下的通道标记一致：云端灰色，局域网绿色 */
+.chip.lan{color:#1f7a35;background:rgba(52,199,89,.16)}
+@media (prefers-color-scheme:dark){.chip.lan{color:#30d158;background:rgba(48,209,88,.16)}}
+.chip svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.big{font-size:96px;line-height:1;font-weight:600;letter-spacing:-.03em;margin-bottom:auto;background:linear-gradient(180deg,#5aa6ff,#0071e3);-webkit-background-clip:text;background-clip:text;color:transparent}
+.langs{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:12px;color:var(--fg2);font-size:15px;letter-spacing:0}
+.keys{display:flex;flex-wrap:wrap;gap:18px 26px;margin-bottom:auto}
+.key{display:flex;flex-direction:column;align-items:flex-start;gap:8px;font-size:14px;color:var(--fg2)}
+.key span{display:flex;gap:6px}
+kbd{display:inline-grid;place-items:center;min-width:40px;height:40px;padding:0 10px;border-radius:9px;background:var(--key);box-shadow:inset 0 -1.5px 0 var(--key-edge),0 0 0 .5px var(--key-edge),0 1px 2px rgba(0,0,0,.08);font:500 16px/1 var(--font);letter-spacing:0;color:var(--fg)}
+kbd.w{min-width:88px;font-size:13px}
+.duo{display:grid;grid-template-columns:1fr 1fr;margin:-36px -36px auto;height:170px}
+.duo div{display:grid;place-items:center}
+.duo .l{background:#fff}.duo .d{background:#000}
+.duo img{height:110px;width:auto}
+@media (max-width:640px){.duo{margin:-28px -28px 0}}
+
+/* —— Agent：深色区块，浅色/深色模式都一样 —— */
+.dark{background:#000;color:#f5f5f7;--fg:#f5f5f7;--fg2:#a1a1a6;--fg3:#86868b;--tile:#1c1c1e;--hair:rgba(255,255,255,.12);--link:#2997ff;--focus:#2997ff}
+@media (prefers-color-scheme:dark){.dark{background:#0d0d0e}}
+.agent-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:24px;margin-top:64px;align-items:stretch}
+@media (max-width:900px){.agent-grid{grid-template-columns:1fr}}
+.term{display:flex;flex-direction:column;border-radius:20px;background:#1c1c1e;box-shadow:0 0 0 .5px rgba(255,255,255,.1);overflow:hidden}
+.term-bar{display:flex;align-items:center;gap:8px;padding:12px 14px 12px 18px;border-bottom:1px solid rgba(255,255,255,.08)}
+.term-bar i{width:12px;height:12px;border-radius:50%;background:#ff5f57}.term-bar i+i{background:#febc2e}.term-bar i+i+i{background:#28c840}
+.term-bar .t{margin-left:8px;font-size:13px;color:#a1a1a6}
+.copy{display:inline-flex;align-items:center;gap:6px;margin-left:auto;min-height:30px;padding:0 12px;border:0;border-radius:980px;background:rgba(255,255,255,.1);color:#f5f5f7;font-size:13px;cursor:pointer;transition:background-color var(--snappy) var(--ease),transform var(--press) var(--ease)}
+.copy:hover{background:rgba(255,255,255,.16)}
+.copy:active{transform:scale(.96)}
+.copy svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.copy .ok{display:none}.copy.done .ok{display:block}.copy.done .cp{display:none}
+.term pre{margin:0;padding:22px 24px 26px;font:14px/1.7 var(--mono);color:#e5e5ea;white-space:pre-wrap;overflow-wrap:anywhere;letter-spacing:0}
+.term pre .u{color:#64d2ff}
+.term-foot{margin-top:auto;padding:16px 24px 22px;border-top:1px solid rgba(255,255,255,.08);font-size:14px;color:#a1a1a6}
+.term-foot code{font-family:var(--mono);font-size:13px;color:#e5e5ea}
+.perm{padding:32px;border-radius:20px;background:#1c1c1e;box-shadow:0 0 0 .5px rgba(255,255,255,.1)}
+.perm h3{font-size:21px;font-weight:600;letter-spacing:.011em}
+.levels{display:grid;gap:2px;margin-top:20px;padding:3px;border-radius:12px;background:rgba(255,255,255,.06)}
+.levels li{display:grid;grid-template-columns:minmax(110px,auto) 1fr;gap:16px;align-items:baseline;padding:12px 14px;border-radius:9px}
+.levels li.on{background:rgba(255,255,255,.12)}
+.levels b{font-weight:600}
+.levels em{font-style:normal;margin-left:6px;padding:1px 7px;border-radius:980px;background:#0071e3;color:#fff;font-size:11px;font-weight:600;vertical-align:1px;white-space:nowrap}
+.levels span{color:#a1a1a6;font-size:15px}
+@media (max-width:560px){.perm{padding:24px}.levels li{grid-template-columns:1fr;gap:2px}}
+.perm .confirm{display:flex;gap:12px;align-items:flex-start;margin-top:20px;color:#a1a1a6;font-size:15px}
+.perm .confirm b{color:#f5f5f7;font-weight:600}
+.switch{flex:none;width:38px;height:22px;margin-top:1px;border-radius:980px;background:#30d158;position:relative}
+.switch::after{content:"";position:absolute;right:2px;top:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.tools{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.tools code{padding:4px 10px;border-radius:8px;background:rgba(255,255,255,.08);font:13px/1.5 var(--mono);color:#e5e5ea}
+.agent-more{margin-top:40px}
+
+/* —— 上手三步 —— */
+.steps{display:grid;gap:36px;margin-top:48px;counter-reset:s}
+.steps li{display:grid;grid-template-columns:44px 1fr;gap:18px;counter-increment:s}
+.steps li::before{content:counter(s);display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--tile);font-size:19px;font-weight:600;color:var(--fg)}
+.steps b{display:block;font-size:21px;line-height:1.24;font-weight:600;letter-spacing:.011em;padding-top:8px}
+:lang(zh) .steps b,:lang(ja) .steps b{letter-spacing:0}
+.steps span{display:block;margin-top:6px;color:var(--fg2)}
+
+/* —— 常见问题 —— */
+.faq{max-width:820px;margin:48px auto 0;border-top:1px solid var(--line)}
+.faq details{border-bottom:1px solid var(--line)}
+.faq summary{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:22px 0;font-size:19px;line-height:1.3;font-weight:600;letter-spacing:.012em;cursor:pointer;list-style:none}
+:lang(zh) .faq summary,:lang(ja) .faq summary{letter-spacing:0}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary svg{flex:none;width:14px;height:14px;stroke:var(--fg2);fill:none;stroke-width:1.8;stroke-linecap:round;transition:transform var(--smooth) var(--ease)}
+.faq details[open] summary svg{transform:rotate(45deg)}
+.faq summary:focus-visible{outline-offset:-2px}
+.faq details p{padding:0 48px 24px 0;color:var(--fg2);max-width:720px}
+.faq details[open] p{animation:fade-in var(--smooth) var(--ease)}
+@keyframes fade-in{from{opacity:0}}
+
+/* —— 结尾 —— */
+.final{text-align:center}
+.final img{width:96px;height:96px;margin:0 auto 18px}
+.final .cta{margin-top:30px}
+
+/* —— 页脚 —— */
+footer{padding:28px 0 40px;background:var(--bg-alt);color:var(--fg2);font-size:12px;line-height:1.5;letter-spacing:-.01em}
+footer .wrap>*+*{margin-top:14px}
+footer .disc{padding-bottom:14px;border-bottom:1px solid var(--line)}
+footer a{color:var(--fg)}
+.foot-row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px 24px}
+.foot-links{display:flex;flex-wrap:wrap;gap:4px 20px}
+.foot-langs{display:flex;flex-wrap:wrap;gap:4px 16px}
+.foot-langs a[aria-current]{color:var(--fg2);pointer-events:none}
+
+/* —— 出现动画：只在首次进入视野时淡入一次；减弱动态效果时不做 —— */
+@media (prefers-reduced-motion:no-preference){
+  .js .rv{opacity:0;transform:translateY(20px);transition:opacity var(--reveal) var(--ease),transform var(--reveal) var(--ease)}
+  .js .rv.in{opacity:1;transform:none}
+  /* 首屏不等滚动监听：载入后依次淡入（「很少 / 首次」的场景，可以稍长） */
+  .hero .rv,.js .hero .rv{opacity:1;transform:none;transition:none;animation:rise var(--reveal) var(--ease) both;animation-delay:calc(var(--i,0) * 70ms)}
+}
+@keyframes rise{from{opacity:0;transform:translateY(20px)}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="MijiaBar"><img src="assets/icon.png" alt="" width="28" height="28">MijiaBar</a>
+    <nav class="nav-links" aria-label="页面导航">
+      <a href="#devices">设备</a>
+      <a href="#camera">摄像机</a>
+      <a href="#details">细节</a>
+      <a href="#agents">Agent</a>
+      <a href="#faq">常见问题</a>
+    </nav>
+    <div class="nav-end">
+      <details class="lang" data-lang-menu>
+        <summary><svg viewBox="0 0 16 16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="8" cy="8" r="6.6"/><ellipse cx="8" cy="8" rx="2.9" ry="6.6"/><path d="M1.6 5.6h12.8M1.6 10.4h12.8"/></g></svg><span class="sr">语言: </span><span class="lang-name">简体中文</span><svg class="caret" viewBox="0 0 8 8" aria-hidden="true"><path d="M1 2.6l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></summary>
+        <ul class="lang-list" role="list">
+          <li><a href="./" hreflang="en" lang="en" data-lang="en">English</a></li>
+          <li><a href="zh-CN.html" hreflang="zh-Hans" lang="zh-CN" data-lang="zh-CN" aria-current="page">简体中文</a></li>
+        </ul>
+      </details>
+      <a class="btn-sm" href="https://github.com/neardws/MijiaBar/releases/latest" data-dl>下载</a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero" id="top">
+    <div class="wrap">
+      <img class="hero-icon rv" style="--i:0" src="assets/icon.png" alt="" width="112" height="112">
+      <p class="hero-name rv" style="--i:1">MijiaBar</p>
+      <h1 class="rv" style="--i:2">你的米家，<br>就在菜单栏。</h1>
+      <p class="hero-sub rv" style="--i:3">空调、灯、风扇、摄像机，轻点一下就能控制，不用再去找手机。</p>
+      <div class="cta rv" style="--i:4">
+        <a class="btn" href="https://github.com/neardws/MijiaBar/releases/latest" data-dl>下载 Mac 版</a>
+        <a class="more" href="https://github.com/neardws/MijiaBar">在 GitHub 上查看<svg class="chev" viewBox="0 0 8 14" aria-hidden="true"><path d="M1.5 1.5l5 5.5-5 5.5"/></svg></a>
+      </div>
+      <p class="fine rv" style="--i:5">免费开源<span class="dot" aria-hidden="true">·</span>macOS 14 或更高版本<span class="dot" aria-hidden="true">·</span>支持 Apple 芯片和 Intel</p>
+      <p class="note-mac" data-not-mac hidden>MijiaBar 是一款 Mac 应用，请在 Mac 上打开本页面下载。</p>
+    </div>
+    <div class="wrap">
+      <figure class="desk rv" style="--i:6">
+        <svg class="wall" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <defs>
+            <linearGradient id="wl0" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--sky-a)"/><stop offset="1" style="stop-color:var(--sky-b)"/></linearGradient>
+            <linearGradient id="wl2" x1="0" y1="0" x2="1" y2=".6"><stop offset="0" style="stop-color:var(--w1a)"/><stop offset="1" style="stop-color:var(--w1b)"/></linearGradient>
+            <linearGradient id="wl3" x1="1" y1="0" x2="0" y2=".7"><stop offset="0" style="stop-color:var(--w2a)"/><stop offset="1" style="stop-color:var(--w2b)"/></linearGradient>
+            <linearGradient id="wl4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--w3a)"/><stop offset="1" style="stop-color:var(--w3b)"/></linearGradient>
+          </defs>
+          <rect width="1600" height="1000" fill="url(#wl0)"/>
+          <path d="M0 470C260 380 560 560 900 470S1420 300 1600 380V1000H0Z" fill="url(#wl2)" opacity=".8"/>
+          <path d="M0 640C340 540 700 760 1060 640S1470 520 1600 580V1000H0Z" fill="url(#wl3)" opacity=".85"/>
+          <path d="M0 820C420 720 840 920 1220 800S1520 740 1600 760V1000H0Z" fill="url(#wl4)" opacity=".9"/>
+        </svg>
+        <div class="menubar" aria-hidden="true">
+          <span class="menus"><span>访达</span><span>文件</span><span>编辑</span><span>显示</span><span>前往</span><span>窗口</span><span>帮助</span></span>
+          <span class="status">
+            <span class="item"><svg width="15" height="14" viewBox="0 0 15 14"><path d="M7.5.9a1 1 0 01.66.25l6 5.3a.6.6 0 01-.4 1.05h-1.06v5.1a1.2 1.2 0 01-1.2 1.2H9.6V9.6a.9.9 0 00-.9-.9H6.3a.9.9 0 00-.9.9v4.2H3.5a1.2 1.2 0 01-1.2-1.2V7.5H1.24a.6.6 0 01-.4-1.05l6-5.3A1 1 0 017.5.9z"/></svg>24°</span>
+            <svg class="opt" width="13" height="13" viewBox="0 0 13 13"><circle cx="5.4" cy="5.4" r="4.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8.5 8.5l3.4 3.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            <svg class="wifi" width="17" height="12" viewBox="0 0 17 12"><path d="M8.5 2.3c2.4 0 4.6.9 6.3 2.5l1.2-1.3A10.8 10.8 0 008.5.5 10.8 10.8 0 001 3.5l1.2 1.3a9 9 0 016.3-2.5zm0 3.6c1.4 0 2.7.5 3.7 1.4l1.2-1.3a7.2 7.2 0 00-9.8 0l1.2 1.3c1-.9 2.3-1.4 3.7-1.4zm0 3.6c.5 0 1 .2 1.3.5L8.5 11.6 7.2 10c.3-.3.8-.5 1.3-.5z"/></svg>
+            <svg width="25" height="12" viewBox="0 0 25 12"><rect x=".6" y=".6" width="21" height="10.8" rx="3" fill="none" stroke="currentColor" stroke-opacity=".45" stroke-width="1.1"/><rect x="2.2" y="2.2" width="15" height="7.6" rx="1.6"/><path d="M23.2 4.2v3.6c.7-.2 1.2-.9 1.2-1.8s-.5-1.6-1.2-1.8z" fill-opacity=".45"/></svg>
+            <svg class="opt" width="16" height="13" viewBox="0 0 16 13"><rect x=".7" y=".7" width="14.6" height="4.8" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="12.9" cy="3.1" r="1.5"/><rect x=".7" y="7.5" width="14.6" height="4.8" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="3.1" cy="9.9" r="1.5"/></svg>
+            <span>9:41</span>
+          </span>
+        </div>
+        <div class="pop-wrap">
+          <picture class="pop">
+            <source srcset="assets/shots/zh-CN/list-dark.webp" media="(prefers-color-scheme: dark)">
+            <img src="assets/shots/zh-CN/list-light.webp" width="360" height="560" alt="从菜单栏打开的 MijiaBar：两台空调在「收藏」里，其他设备按房间分组。" fetchpriority="high">
+          </picture>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <section class="alt" id="devices">
+    <div class="wrap rv">
+      <p class="eyebrow">设备页面</p>
+      <h2 class="h2">每台设备，都像实物一样。</h2>
+      <p class="lead">每类设备都有专属页面，<b>插画会随设备状态一起变化。</b>气流跟着风速，灯泡按色温发光，插座上能看到电流在流动。</p>
+    </div>
+    <div class="gallery rv" data-gallery>
+      <ul class="g-track" role="list" tabindex="0" aria-label="设备页面">
+        <li class="g-item"><picture><source srcset="assets/shots/zh-CN/ac-cool-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/shots/zh-CN/ac-cool-light.webp" width="360" height="560" alt="空调页面：制冷中，目标温度 24 度，下方是模式、风速和扫风按钮。" loading="lazy" decoding="async"></picture><p><b>空调。</b>拖动即可设定温度，模式、风速、扫风都只需轻点一下。</p></li>
+        <li class="g-item"><picture><source srcset="assets/shots/zh-CN/light-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/shots/zh-CN/light-light.webp" width="360" height="560" alt="灯的页面，可以调节亮度和色温。" loading="lazy" decoding="async"></picture><p><b>灯。</b>调节亮度和色温，灯泡也会发出相应的光。</p></li>
+        <li class="g-item"><picture><source srcset="assets/shots/zh-CN/fan-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/shots/zh-CN/fan-light.webp" width="360" height="560" alt="风扇页面，可以调节风速。" loading="lazy" decoding="async"></picture><p><b>风扇。</b>扇叶按你设定的风速转动，关机后再慢慢停下。</p></li>
+        <li class="g-item"><picture><source srcset="assets/shots/zh-CN/plug-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/shots/zh-CN/plug-light.webp" width="360" height="560" alt="智能插座页面，显示当前功率。" loading="lazy" decoding="async"></picture><p><b>智能插座。</b>此刻的用电功率，一眼就能看到。</p></li>
+        <li class="g-item"><picture><source srcset="assets/shots/zh-CN/ac-heat-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/shots/zh-CN/ac-heat-light.webp" width="360" height="560" alt="制热模式下的空调页面，整体呈暖橙色。" loading="lazy" decoding="async"></picture><p><b>制热。</b>颜色跟着模式走：制冷是清爽的蓝，制热是温暖的橙。</p></li>
+      </ul>
+      <div class="paddles">
+        <button class="paddle" type="button" data-dir="-1" aria-label="上一张" disabled><svg viewBox="0 0 9 16" aria-hidden="true"><path d="M7.5 1.5L1.5 8l6 6.5"/></svg></button>
+        <button class="paddle" type="button" data-dir="1" aria-label="下一张"><svg viewBox="0 0 9 16" aria-hidden="true"><path d="M1.5 1.5l6 6.5-6 6.5"/></svg></button>
+      </div>
+    </div>
+  </section>
+
+  <section id="lineup">
+    <div class="wrap">
+      <div class="center rv">
+        <p class="eyebrow">支持的设备</p>
+        <h2 class="h2">一个菜单，管好全屋。</h2>
+        <p class="lead">从空调到打印机，常用的设备都有专属页面。<b>米家里的其他设备也照样能用</b>，MijiaBar 会根据设备的 MIoT 规格自动生成控件。</p>
+      </div>
+      <ul class="lineup rv" role="list">
+        <li><span class="art"><picture><source srcset="assets/art/ac-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/art/ac-light.webp" alt="" width="300" height="136" loading="lazy" decoding="async"></picture></span><span>空调</span></li>
+        <li><span class="art"><picture><source srcset="assets/art/fan-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/art/fan-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>风扇</span></li>
+        <li><span class="art"><picture><source srcset="assets/art/bulb-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/art/bulb-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>灯</span></li>
+        <li><span class="art"><picture><source srcset="assets/art/plug-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/art/plug-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>智能插座</span></li>
+        <li><span class="art"><picture><source srcset="assets/art/camera-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/art/camera-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>摄像机</span></li>
+        <li><span class="art"><picture><source srcset="assets/art/tv-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/art/tv-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>电视</span></li>
+        <li><span class="art"><picture><source srcset="assets/art/speaker-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/art/speaker-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>音箱</span></li>
+        <li><span class="art"><picture><source srcset="assets/art/air-purifier-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/art/air-purifier-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>空气净化器</span></li>
+        <li><span class="art"><picture><source srcset="assets/art/purifier-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/art/purifier-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>净水器</span></li>
+        <li><span class="art"><picture><source srcset="assets/art/heater-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/art/heater-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>取暖器</span></li>
+        <li><span class="art"><picture><source srcset="assets/art/dehumidifier-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/art/dehumidifier-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>除湿机</span></li>
+        <li><span class="art"><picture><source srcset="assets/art/cooker-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/art/cooker-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>厨房电器</span></li>
+        <li><span class="art"><picture><source srcset="assets/art/printer-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/art/printer-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>打印机</span></li>
+        <li><span class="art"><picture><source srcset="assets/art/thermo-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/art/thermo-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>温湿度计</span></li>
+        <li><span class="art"><picture><source srcset="assets/art/motion-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/art/motion-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>人体传感器</span></li>
+        <li class="more-li"><span class="art"><picture><source srcset="assets/art/generic-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/art/generic-light.webp" alt="" width="240" height="136" loading="lazy" decoding="async"></picture></span><span>以及更多</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="alt" id="camera">
+    <div class="wrap split">
+      <div class="rv">
+        <p class="eyebrow">实时画面</p>
+        <h2 class="h2">不离开菜单栏，就能看看摄像头。</h2>
+        <p class="lead">直播画面直接在设备卡片里播放。想看得更清楚，<b>可以弹出成单独的窗口。</b></p>
+        <ul class="points" role="list">
+          <li><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="3" y="7" width="15" height="14" rx="3"/><path d="M18 12.5l6-3.5v10l-6-3.5"/></svg><p><b>只在观看时运行。</b><span>打开画面时才开始拉流，视频只留在这台 Mac 上。</span></p></li>
+          <li><svg viewBox="0 0 28 28" aria-hidden="true"><rect x="6" y="12" width="16" height="12" rx="3"/><path d="M9.5 12V9a4.5 4.5 0 019 0v3"/></svg><p><b>不做任何录制。</b><span>画面从不保存，密钥只存在钥匙串里。</span></p></li>
+          <li><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M14 3.5l9 3.5v6.5c0 5.5-3.8 9.6-9 11-5.2-1.4-9-5.5-9-11V7z"/><path d="M10 14l3 3 5-6"/></svg><p><b>Agent 碰不到。</b><span>Agent 接口无法访问摄像头画面。</span></p></li>
+        </ul>
+        <p class="aside">Mac 连着家里的网络时，才能观看直播。</p>
+      </div>
+      <div class="shot rv"><picture><source srcset="assets/shots/zh-CN/camera-live-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/shots/zh-CN/camera-live-light.webp" width="360" height="430" alt="摄像机页面正在播放实时画面，下方有停止按钮和夜视设置。" loading="lazy" decoding="async"></picture></div>
+    </div>
+  </section>
+
+  <section id="details">
+    <div class="wrap">
+      <div class="rv">
+        <p class="eyebrow">细节</p>
+        <h2 class="h2">反应快，守隐私，人人都好用。</h2>
+      </div>
+      <div class="tiles">
+        <article class="tile wide rv">
+          <div class="chips" aria-hidden="true">
+            <span class="chip"><svg viewBox="0 0 16 16"><path d="M4.5 12.5h7.2a2.8 2.8 0 00.4-5.6 4 4 0 00-7.7-.6A3.1 3.1 0 004.5 12.5z"/></svg>云端</span>
+            <span class="chip lan"><svg viewBox="0 0 16 16"><path d="M1.8 6.2a9 9 0 0112.4 0M4 8.6a5.8 5.8 0 018 0M6.2 11a2.6 2.6 0 013.6 0"/><circle cx="8" cy="13.2" r=".6"/></svg>局域网</span>
+          </div>
+          <h3>云端或局域网，哪条路通走哪条。</h3>
+          <p>MijiaBar 通过小米云控制设备，需要时自动改走局域网。不在家时直接走云端，不用干等超时；每台设备都会标出这次走的是哪条通道。</p>
+        </article>
+        <article class="tile rv">
+          <div class="big" aria-hidden="true">9</div>
+          <h3>支持九种语言。</h3>
+          <p class="langs" lang="und"><span lang="en">English</span> <span lang="zh-CN">简体中文</span></p>
+        </article>
+        <article class="tile rv">
+          <svg class="ic" viewBox="0 0 40 40" aria-hidden="true"><rect x="5" y="5" width="11" height="11" rx="2.5"/><rect x="24" y="5" width="11" height="11" rx="2.5"/><rect x="5" y="24" width="11" height="11" rx="2.5"/><path d="M24 24h4v4h-4zM31 24h4M24 31v4M28 31h7v4"/></svg>
+          <h3>扫一扫，就登录。</h3>
+          <p>用米家 App 扫码即可，无需输入密码。登录信息只保存在 macOS 钥匙串里。</p>
+          <p class="small">服务器可选中国大陆、欧洲、美国、俄罗斯、新加坡和印度。</p>
+        </article>
+        <article class="tile wide rv">
+          <div class="keys">
+            <div class="key"><span><kbd>↑</kbd><kbd>↓</kbd></span>选择</div>
+            <div class="key"><span><kbd>↩</kbd></span>打开</div>
+            <div class="key"><span><kbd class="w">空格</kbd></span>开关</div>
+            <div class="key"><span><kbd>←</kbd><kbd>→</kbd></span>微调</div>
+            <div class="key"><span><kbd>/</kbd></span>搜索</div>
+            <div class="key"><span><kbd>esc</kbd></span>返回</div>
+          </div>
+          <h3>键盘优先。</h3>
+          <p>打开菜单后，不碰触控板也能完成所有操作。</p>
+        </article>
+        <article class="tile rv">
+          <svg class="ic" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="15"/><circle cx="20" cy="11.5" r="2.2"/><path d="M11.5 16.5c5.6 1.4 11.4 1.4 17 0M20 18v6.5M20 24.5l-4.2 7.5M20 24.5l4.2 7.5"/></svg>
+          <h3>人人都能用。</h3>
+          <p>每个控件都有 VoiceOver 标签，并全面遵循「减弱动态效果」设置。</p>
+        </article>
+        <article class="tile rv">
+          <div class="duo" aria-hidden="true"><div class="l"><img src="assets/art/bulb-light.webp" alt="" width="240" height="136" loading="lazy"></div><div class="d"><img src="assets/art/bulb-dark.webp" alt="" width="240" height="136" loading="lazy"></div></div>
+          <h3>浅色与深色。</h3>
+          <p>跟随 Mac 的外观设置，连每一张插画都会随之变化。</p>
+        </article>
+        <article class="tile rv">
+          <svg class="ic" viewBox="0 0 40 40" aria-hidden="true"><path d="M31.5 15A12.5 12.5 0 0009 12.5M8.5 25A12.5 12.5 0 0031 27.5"/><path d="M9 6.5v6h6M31 33.5v-6h-6"/></svg>
+          <h3>自动保持最新。</h3>
+          <p>经过签名的更新在应用内即可安装，每个版本都经过 Apple 公证。</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="dark" id="agents">
+    <div class="wrap">
+      <div class="rv">
+        <p class="eyebrow">为 AI Agent 准备</p>
+        <h2 class="h2">让 AI Agent 帮你管家。规矩由你来定。</h2>
+        <p class="lead">MijiaBar 自带命令行工具和 MCP 服务器。<b>把一段话粘贴给 Claude Code、Codex 或 Cursor，</b>Agent 就会自己完成配置。</p>
+      </div>
+      <div class="agent-grid">
+        <div class="term rv">
+          <div class="term-bar"><i></i><i></i><i></i><span class="t">安装说明</span>
+            <button class="copy" type="button" data-copy="prompt" data-done="已复制"><svg class="cp" viewBox="0 0 14 14" aria-hidden="true"><rect x="4.5" y="4.5" width="8" height="8" rx="1.8"/><path d="M9.5 2.6A1.6 1.6 0 007.9 1.5H3.1a1.6 1.6 0 00-1.6 1.6v4.8a1.6 1.6 0 001.1 1.5"/></svg><svg class="ok" viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5l3 3 6-7"/></svg><span>复制</span></button>
+          </div>
+          <pre id="prompt">请阅读 <span class="u">https://raw.githubusercontent.com/<wbr>neardws/<wbr>MijiaBar/<wbr>main/<wbr>docs/<wbr>AGENT_SETUP.zh-CN.md</span> ，按其中的步骤把 MijiaBar 接入为你的 MCP 工具。
+CLI 路径：/<wbr>Applications/<wbr>MijiaBar.app/<wbr>Contents/<wbr>Resources/<wbr>bin/<wbr>mijiabar
+未经我同意，不要改变任何设备的状态。</pre>
+          <p class="term-foot">这里假定 MijiaBar 装在「应用程序」里。填好你本机路径的同一段话，也可以在「设置 → Agent 接口」中复制。</p>
+          <span class="sr" role="status" data-copy-status></span>
+        </div>
+        <div class="perm rv">
+          <h3>它能做什么，由你决定。</h3>
+          <ul class="levels" role="list">
+            <li><b>关闭</b><span>Agent 什么都做不了。</span></li>
+            <li class="on"><b>只读<em>默认</em></b><span>只能列出设备、读取状态。</span></li>
+            <li><b>白名单</b><span>只能控制你勾选的设备。</span></li>
+            <li><b>全部</b><span>可以控制所有设备。</span></li>
+          </ul>
+          <p class="confirm"><span class="switch" aria-hidden="true"></span><span><b>每次写操作弹窗确认</b>——每一次改动，都要你在 Mac 上点「允许」才会生效。</span></p>
+          <div class="tools" role="group" aria-label="MCP 工具"><code>list_devices</code><code>get_device_state</code><code>set_property</code><code>run_action</code></div>
+        </div>
+      </div>
+      <p class="agent-more rv"><a class="more" href="https://github.com/neardws/MijiaBar/blob/main/docs/AGENT_SETUP.zh-CN.md">阅读安装指南<svg class="chev" viewBox="0 0 8 14" aria-hidden="true"><path d="M1.5 1.5l5 5.5-5 5.5"/></svg></a></p>
+    </div>
+  </section>
+
+  <section id="start">
+    <div class="wrap split">
+      <div class="rv">
+        <p class="eyebrow">开始使用</p>
+        <h2 class="h2">一分钟，就能用上。</h2>
+        <ol class="steps">
+          <li><p><b>下载并安装</b><span>打开磁盘映像，把 MijiaBar 拖进「应用程序」文件夹。</span></p></li>
+          <li><p><b>扫码登录</b><span>点按菜单栏里的小房子，选择服务器地区，再用米家 App 扫码。</span></p></li>
+          <li><p><b>允许访问本地网络</b><span>第一次控制设备时 macOS 会询问，点「允许」后 MijiaBar 就能直连设备。</span></p></li>
+        </ol>
+      </div>
+      <div class="shot rv"><picture><source srcset="assets/shots/zh-CN/login-dark.webp" media="(prefers-color-scheme: dark)"><img src="assets/shots/zh-CN/login-light.webp" width="360" height="560" alt="MijiaBar 登录界面，显示一个用米家 App 扫描的二维码。" loading="lazy" decoding="async"></picture></div>
+    </div>
+  </section>
+
+  <section class="alt" id="faq">
+    <div class="wrap">
+      <h2 class="h2 center rv">常见问题</h2>
+      <div class="faq rv">
+        <details><summary>需要什么条件？<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.5v11M1.5 7h11"/></svg></summary><p>一台运行 macOS 14 Sonoma 或更高版本的 Mac（Apple 芯片或 Intel 均可），以及一个在米家 App 中添加了设备的小米账号。</p></details>
+        <details><summary>MijiaBar 是小米官方出品的吗？<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.5v11M1.5 7h11"/></svg></summary><p>不是。这是一个独立的开源项目，使用与米家 App 相同的云端接口，以及局域网内的 miIO 协议。</p></details>
+        <details><summary>安装安全吗？<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.5v11M1.5 7h11"/></svg></summary><p>每个正式版本都使用 Developer ID 签名并经过 Apple 公证，源代码以 MIT 许可证公开在 GitHub 上。</p></details>
+        <details><summary>我的账号信息会发到哪里？<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.5v11M1.5 7h11"/></svg></summary><p>登录通过扫码完成，无需输入密码。登录信息保存在 macOS 钥匙串中，只会发送给小米的服务器。</p></details>
+        <details><summary>在中国大陆以外能用吗？<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.5v11M1.5 7h11"/></svg></summary><p>可以。登录时选择你的米家服务器即可：中国大陆、欧洲、美国、俄罗斯、新加坡或印度。</p></details>
+        <details><summary>不在家的时候能用吗？<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.5v11M1.5 7h11"/></svg></summary><p>可以。Mac 不在家里的网络时，控制会通过小米云完成。摄像头直播需要连着家里的网络。</p></details>
+        <details><summary>我的设备能用吗？<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.5v11M1.5 7h11"/></svg></summary><p>大概率可以。没有专属页面的设备，也会根据 MIoT 规格生成控件。如果遇到问题，<a href="https://github.com/neardws/MijiaBar/issues">欢迎在 GitHub 上反馈</a>。</p></details>
+        <details><summary>怎么更新？<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.5v11M1.5 7h11"/></svg></summary><p>从 0.1.9 版起，MijiaBar 会自动检查更新，你也可以随时在设置里手动检查。如果你还在用 0.1.8 或更早的版本，请手动下载安装一次最新版。</p></details>
+      </div>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="wrap rv">
+      <img src="assets/icon.png" alt="" width="96" height="96" loading="lazy">
+      <h2 class="h2">把家，放进菜单栏。</h2>
+      <div class="cta">
+        <a class="btn" href="https://github.com/neardws/MijiaBar/releases/latest" data-dl>下载 Mac 版</a>
+        <a class="more" href="https://github.com/neardws/MijiaBar/releases">版本说明<svg class="chev" viewBox="0 0 8 14" aria-hidden="true"><path d="M1.5 1.5l5 5.5-5 5.5"/></svg></a>
+      </div>
+      <p class="fine">版本 <span data-ver>0.1.9</span><span hidden><span class="dot" aria-hidden="true">·</span></span><span data-size hidden></span><span class="dot" aria-hidden="true">·</span>已通过 Apple 公证</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p class="disc">MijiaBar 是独立的开源项目，与小米公司无关，也未获其认可。小米和米家是其各自所有者的商标。</p>
+    <div class="foot-row">
+      <ul class="foot-links" role="list">
+        <li><a href="https://github.com/neardws/MijiaBar">GitHub</a></li>
+        <li><a href="https://github.com/neardws/MijiaBar/releases">所有版本</a></li>
+        <li><a href="https://github.com/neardws/MijiaBar/blob/main/docs/AGENT_SETUP.zh-CN.md">Agent 安装指南</a></li>
+        <li><a href="https://github.com/neardws/MijiaBar/issues">反馈问题</a></li>
+        <li><a href="https://github.com/neardws/MijiaBar/blob/main/LICENSE">MIT 许可证</a></li>
+      </ul>
+      <nav aria-label="语言"><ul class="foot-langs" role="list">
+        <li><a href="./" hreflang="en" lang="en" data-lang="en">English</a></li>
+        <li><a href="zh-CN.html" hreflang="zh-Hans" lang="zh-CN" data-lang="zh-CN" aria-current="page">简体中文</a></li>
+      </ul></nav>
+    </div>
+    <p>Copyright © 2026 neardws 及贡献者。</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var d=document,root=d.documentElement,KEY='mijiabar.lang';
+  root.classList.add('js');
+  // 记住用户在语言菜单里的选择；根页面据此（或浏览器语言）跳转
+  d.querySelectorAll('[data-lang]').forEach(function(a){a.addEventListener('click',function(){try{localStorage.setItem(KEY,a.dataset.lang)}catch(e){}})});
+  var menu=d.querySelector('[data-lang-menu]');
+  d.addEventListener('click',function(e){if(menu.open&&!menu.contains(e.target))menu.open=false});
+  d.addEventListener('keydown',function(e){if(e.key==='Escape'&&menu.open){menu.open=false;menu.querySelector('summary').focus()}});
+
+  // 非 Mac 访客：提示在 Mac 上下载
+  var ua=navigator.userAgent,isMac=/Macintosh|Mac OS X/.test(ua)&&!(navigator.maxTouchPoints>1);
+  if(!isMac&&!/bot|crawl|spider/i.test(ua)){var n=d.querySelector('[data-not-mac]');if(n)n.hidden=false}
+
+  // 最新版本：直链到 DMG，显示版本号和大小
+  function applyRelease(j){
+    if(!j||!j.tag_name)return;
+    var a=(j.assets||[]).filter(function(x){return /\.dmg$/i.test(x.name)&&!/unsigned/i.test(x.name)})[0];
+    if(a)d.querySelectorAll('[data-dl]').forEach(function(x){x.href=a.browser_download_url});
+    d.querySelectorAll('[data-ver]').forEach(function(x){x.textContent=j.tag_name.replace(/^v/,'')});
+    if(a&&a.size)try{var mb=new Intl.NumberFormat(root.lang,{style:'unit',unit:'megabyte',maximumFractionDigits:1}).format(a.size/1e6);d.querySelectorAll('[data-size]').forEach(function(x){x.textContent=mb;x.hidden=false;if(x.previousElementSibling)x.previousElementSibling.hidden=false})}catch(e){}
+  }
+  var cached;try{cached=JSON.parse(sessionStorage.getItem('mijiabar.release')||'null')}catch(e){}
+  if(cached)applyRelease(cached);
+  else fetch('https://api.github.com/repos/neardws/MijiaBar/releases/latest').then(function(r){return r.ok?r.json():null}).then(function(j){if(!j)return;var s={tag_name:j.tag_name,assets:(j.assets||[]).map(function(a){return{name:a.name,size:a.size,browser_download_url:a.browser_download_url}})};try{sessionStorage.setItem('mijiabar.release',JSON.stringify(s))}catch(e){}applyRelease(s)}).catch(function(){});
+
+  // 复制安装说明
+  var status=d.querySelector('[data-copy-status]');
+  d.querySelectorAll('[data-copy]').forEach(function(b){b.addEventListener('click',function(){
+    var pre=d.getElementById(b.dataset.copy),label=b.querySelector('span'),orig=label.textContent;
+    function done(){b.classList.add('done');label.textContent=b.dataset.done;status.textContent=b.dataset.done;setTimeout(function(){b.classList.remove('done');label.textContent=orig;status.textContent=''},2000)}
+    // 剪贴板 API 不可用或被拒绝时：选中文字再 execCommand；仍不行就保留选中，用户按 ⌘C
+    function fallback(){var r=d.createRange();r.selectNodeContents(pre);var s=getSelection();s.removeAllRanges();s.addRange(r);var ok=false;try{ok=d.execCommand('copy')}catch(e){}if(ok){s.removeAllRanges();done()}}
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(pre.textContent).then(done,fallback);else fallback();
+  })});
+
+  // 菜单栏弹出窗口：和 macOS 一样，在状态栏图标下方居中，放不下时靠边
+  var desk=d.querySelector('.desk');
+  if(desk){var item=desk.querySelector('.item'),pop=desk.querySelector('.pop');
+    var place=function(){var dr=desk.getBoundingClientRect(),ir=item.getBoundingClientRect(),w=pop.offsetWidth;
+      pop.style.marginLeft=Math.max(12,Math.min(ir.left+ir.width/2-dr.left-w/2,dr.width-w-12))+'px'};
+    place();addEventListener('resize',place)}
+
+  // 画廊左右按钮
+  d.querySelectorAll('[data-gallery]').forEach(function(g){
+    var t=g.querySelector('.g-track'),b=g.querySelectorAll('.paddle');
+    function upd(){b[0].disabled=t.scrollLeft<4;b[1].disabled=t.scrollLeft+t.clientWidth>=t.scrollWidth-4}
+    b.forEach(function(x){x.addEventListener('click',function(){var it=t.querySelector('.g-item');t.scrollBy({left:(+x.dataset.dir)*(it.offsetWidth+24),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})})});
+    t.addEventListener('scroll',upd,{passive:true});addEventListener('resize',upd);upd();
+  });
+
+  // 首次进入视野时淡入
+  var rv=d.querySelectorAll('.rv');
+  if('IntersectionObserver' in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{rootMargin:'0px 0px -8% 0px'});rv.forEach(function(e){io.observe(e)})}
+  else rv.forEach(function(e){e.classList.add('in')});
+})();
+</script>
+</body>
+</html>
