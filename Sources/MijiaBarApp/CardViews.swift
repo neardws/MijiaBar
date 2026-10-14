@@ -73,6 +73,7 @@ struct CardModel {
         .plug: ["electric-power", "power-consumption", "temperature"],
         .sensor: ["temperature", "relative-humidity", "illumination", "battery-level"],
         .speaker: ["volume"], .tv: ["volume"],
+        .airPurifier: ["pm2.5-density", "air-quality-index", "fan-level"],
     ]
     static let readoutNames = ["temperature", "relative-humidity", "electric-power", "power-consumption", "battery-level",
                                "illumination", "pm2.5-density", "filter-life-level", "voltage", "electric-current"]
@@ -140,103 +141,62 @@ struct DeviceCardView: View {
     let state: DeviceState
     @State private var drag: Double?
 
+    /// 规格驱动的通用卡片（没有专门页面的设备）：和其他详情页一样用 TypeShell + BigValue + Readout + 磁贴
     var body: some View {
         let c = CardModel(device: device, state: state, power: m.powerInfo(device))
-        let isOn = c.power?.isOn ?? true
-        let tint: Color = isOn ? c.tint : .secondary
+        let isOn = c.power?.isOn ?? device.isOnline
+        let tint = c.tint
         let primaryValue: Double? = c.primary.flatMap { state.values[$0.key]?.doubleValue }
-        let level: Double = {
-            guard let s = c.slider else { return isOn ? 0.7 : 0 }
-            let (r, _) = c.sliderRange(s)
-            return ((drag ?? primaryValue ?? r.lowerBound) - r.lowerBound) / (r.upperBound - r.lowerBound)
-        }()
-        ScrollView {
-            VStack(spacing: 12) {
-                VStack(spacing: 14) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(statusTitle(c, isOn)).font(.system(size: 13, weight: .semibold))
-                            Text(statusLine(c)).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1)
-                        }
-                        Spacer()
-                        if let p = c.power {
-                            Button { m.write(device, p.key, p.isOn ? p.off : p.on) } label: {
-                                Image(systemName: "power").font(.system(size: 16, weight: .bold))
-                                    .foregroundStyle(p.isOn ? Color.white : Color.primary)
-                                    .frame(width: 40, height: 40)
-                                    .background(Circle().fill(p.isOn ? tint : Theme.tile))
-                                    .shadow(color: p.isOn ? tint.opacity(0.5) : .clear, radius: 10)
-                            }.buttonStyle(.plain).help(L("开关（空格）", "Power (Space)")).powerAccessibility(p.isOn)
-                        }
+        TypeShell(device: device, tint: tint, isOn: isOn, title: statusTitle(c, isOn), subtitle: statusLine(c),
+                  powerOn: c.power?.isOn, onPower: c.power.map { p in { m.write(device, p.key, p.isOn ? p.off : p.on) } }) {
+            if device.category == .airPurifier {
+                let fan = state.spec?.controlServices.flatMap(\.properties).first { $0.name == "fan-level" }
+                AirPurifierArt(on: isOn, level: fan.map { propFraction($0, state.values[$0.key]?.doubleValue) } ?? 0.5, tint: tint)
+            } else {
+                GenericArt(on: isOn, tint: tint)
+            }
+        } content: {
+            if let p = c.primary {
+                BigValue(value: drag.map { displayValue(p, .double($0)) } ?? displayValue(p, state.values[p.key]),
+                         unit: p.options == nil ? unitText(p) : "", caption: zhName(p.name, fallback: p.description), dim: !isOn,
+                         number: p.options == nil ? (drag ?? primaryValue) : nil)
+                    .animation(drag == nil ? Motion.snappy : nil, value: drag ?? primaryValue ?? 0)   // 拖动时 1:1 跟手，不加动画
+            }
+            if let s = c.slider {
+                let (r, step) = c.sliderRange(s)
+                GradientSlider(value: drag ?? primaryValue ?? r.lowerBound, range: r, step: step, colors: c.gradient, enabled: isOn,
+                               minLabel: displayValue(s, .double(r.lowerBound)) + (s.options == nil ? unitText(s) : ""),
+                               maxLabel: displayValue(s, .double(r.upperBound)) + (s.options == nil ? unitText(s) : ""),
+                               onChange: { drag = $0 },
+                               onCommit: { v in drag = nil; if v != primaryValue { m.write(device, s.key, PropValue.double(v).coerced(to: s.format)) } },
+                               a11yLabel: zhName(s.name, fallback: s.description))
+            }
+            if !c.readouts.isEmpty {
+                HStack(spacing: 8) {
+                    ForEach(c.readouts, id: \.key) { p in
+                        Readout(icon: propIcon(p.name), text: displayValue(p, state.values[p.key]) + unitText(p), tint: tint).help(CardModel.label(p, state.spec))
                     }
-
-                    HeroView(category: device.category, isOn: isOn, tint: tint, level: max(0.05, min(1, level))).frame(height: 104)
-
-                    if let p = c.primary {
-                        VStack(spacing: 0) {
-                            HStack(alignment: .top, spacing: 2) {
-                                Text(drag.map { d in displayValue(p, .double(d)) } ?? displayValue(p, state.values[p.key]))
-                                    .font(.system(size: p.options == nil ? 64 : 44, weight: .thin, design: .rounded))
-                                    .monospacedDigit().contentTransition(.numericText()).lineLimit(1).minimumScaleFactor(0.5)
-                                if p.options == nil { Text(unitText(p)).font(.system(size: 18, weight: .light)).padding(.top, 12) }
-                            }
-                            Text(zhName(p.name, fallback: p.description)).font(.system(size: 11)).foregroundStyle(.secondary)
-                        }
-                        .opacity(isOn ? 1 : 0.45)
-                        .animation(.snappy, value: drag ?? primaryValue ?? 0)
-                    }
-
-                    if let s = c.slider {
-                        let (r, step) = c.sliderRange(s)
-                        GradientSlider(value: drag ?? primaryValue ?? r.lowerBound, range: r, step: step, colors: c.gradient, enabled: isOn,
-                                       minLabel: displayValue(s, .double(r.lowerBound)) + (s.options == nil ? unitText(s) : ""),
-                                       maxLabel: displayValue(s, .double(r.upperBound)) + (s.options == nil ? unitText(s) : ""),
-                                       onChange: { drag = $0 },
-                                       onCommit: { v in drag = nil; if v != primaryValue { m.write(device, s.key, PropValue.double(v).coerced(to: s.format)) } },
-                                       a11yLabel: zhName(s.name, fallback: s.description))
-                    }
-
-                    if !c.readouts.isEmpty {
-                        HStack(spacing: 8) {
-                            ForEach(c.readouts, id: \.key) { p in
-                                HStack(spacing: 5) {
-                                    Image(systemName: propIcon(p.name)).font(.system(size: 11)).foregroundStyle(tint)
-                                    Text(displayValue(p, state.values[p.key]) + unitText(p)).font(.system(size: 12, weight: .medium)).monospacedDigit()
-                                }
-                                .padding(.horizontal, 10).padding(.vertical, 6)
-                                .background(Capsule().fill(Theme.tile))
-                                .help(CardModel.label(p, state.spec))
-                            }
-                        }
-                    }
-
-                    if !c.tiles.isEmpty {
-                        HStack(spacing: 8) { ForEach(c.tiles, id: \.key) { p in tile(p, tint: tint, isOn: isOn) } }
-                    }
-                }
-                .padding(18)
-                .background(RoundedRectangle(cornerRadius: 26)
-                    .fill(LinearGradient(colors: [tint.opacity(isOn ? 0.24 : 0.07), tint.opacity(0.02)], startPoint: .top, endPoint: .bottom)))
-                .overlay(RoundedRectangle(cornerRadius: 26).stroke(Theme.stroke))
-                .animation(.easeInOut(duration: 0.35), value: isOn)
-
-                if !c.rest.isEmpty || !c.actions.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(L("更多", "More")).font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
-                        ForEach(c.rest, id: \.key) { p in PropRow(device: device, prop: p, value: state.values[p.key]) }
-                        if !c.actions.isEmpty {
-                            HStack { ForEach(c.actions, id: \.key) { a in Button(zhName(a.name, fallback: a.description)) { m.runAction(device, a) } } }
-                        }
-                    }
-                    .padding(12).frame(maxWidth: .infinity, alignment: .leading)
-                    .background(RoundedRectangle(cornerRadius: 14).fill(Theme.card))
-                }
-                if state.spec == nil {
-                    Text(L("这个型号在 miot-spec.org 上没有公开规格，暂时只能查看在线状态。", "No public MIoT spec for this model."))
-                        .font(.system(size: 11)).foregroundStyle(.secondary)
                 }
             }
-        }.scrollIndicators(.never)
+            if !c.tiles.isEmpty {
+                HStack(spacing: 8) { ForEach(c.tiles, id: \.key) { p in tile(p, tint: tint, isOn: isOn) } }
+            }
+            if !c.rest.isEmpty || !c.actions.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L("更多", "More")).font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
+                    ForEach(c.rest, id: \.key) { p in PropRow(device: device, prop: p, value: state.values[p.key]) }
+                    if !c.actions.isEmpty {
+                        HStack { ForEach(c.actions, id: \.key) { a in Button(zhName(a.name, fallback: a.description)) { m.runAction(device, a) } } }
+                    }
+                }
+                .padding(12).frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.tile))
+            }
+            if state.spec == nil {
+                Text(L("这个型号在 miot-spec.org 上没有公开规格，暂时只能查看在线状态。", "No public MIoT spec for this model."))
+                    .font(.system(size: 10)).foregroundStyle(.tertiary)
+            }
+        }
     }
 
     func statusTitle(_ c: CardModel, _ isOn: Bool) -> String {
@@ -302,60 +262,7 @@ func zhCategory(_ c: DeviceCategory) -> String {
     case .printer: return L("打印机", "Printer")
     case .purifier: return L("净水器", "Water purifier")
     case .other: return L("设备", "Device")
-    }
-}
-
-/// 设备主视觉：按类型做不同的状态动画
-struct HeroView: View {
-    let category: DeviceCategory
-    let isOn: Bool
-    let tint: Color
-    let level: Double
-    var body: some View {
-        TimelineView(.animation(paused: !isOn || !animated)) { tl in
-            let t = tl.date.timeIntervalSinceReferenceDate
-            ZStack {
-                Glow(tint, isOn ? 0.10 + 0.18 * level : 0.05, diameter: 96, softness: isOn ? 6 : 0)
-                if isOn && category == .light {
-                    Glow(tint, 0.25 * level, diameter: 96 + 40 * level, softness: 18)
-                }
-                Circle().fill(Color(nsColor: .controlBackgroundColor)).frame(width: 74, height: 74)
-                    .overlay(Circle().stroke(tint.opacity(isOn ? 0.45 : 0.15), lineWidth: 1.5))
-                    .shadow(color: isOn ? tint.opacity(0.45) : .black.opacity(0.08), radius: isOn ? 14 : 4, y: 2)
-                Image(systemName: heroIcon).font(.system(size: 32, weight: .medium))
-                    .foregroundStyle(isOn ? tint : Color.secondary)
-                    .rotationEffect(.degrees(category == .fan && isOn ? (t * (90 + 360 * level)).truncatingRemainder(dividingBy: 360) : 0))
-                    .scaleEffect(pulse ? 1 + 0.04 * sin(t * 3) : 1)
-                if isOn, category == .heater || category == .dehumidifier || category == .kitchen {
-                    Canvas { ctx, size in
-                        for i in 0..<5 {
-                            let phase = (t * 0.6 + Double(i) * 0.2).truncatingRemainder(dividingBy: 1)
-                            let x = size.width / 2 - 60 + CGFloat(i) * 30
-                            let rising = category != .dehumidifier
-                            let y = rising ? size.height * CGFloat(1 - phase) : size.height * CGFloat(phase)
-                            var p = Path()
-                            for k in 0...6 { let yy = y + CGFloat(k) * 2; let xx = x + CGFloat(3 * sin(Double(yy) / 5 + t * 3))
-                                if k == 0 { p.move(to: CGPoint(x: xx, y: yy)) } else { p.addLine(to: CGPoint(x: xx, y: yy)) } }
-                            ctx.stroke(p, with: .color(tint.opacity(0.7 * sin(.pi * phase))), style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                        }
-                    }.allowsHitTesting(false)
-                }
-            }
-            .frame(maxWidth: .infinity)
-        }
-    }
-    var animated: Bool { [.fan, .heater, .dehumidifier, .plug, .light, .kitchen, .speaker].contains(category) }
-    var pulse: Bool { isOn && [.plug, .speaker, .light].contains(category) }
-    var heroIcon: String {
-        switch category {
-        case .light: return isOn ? "lightbulb.fill" : "lightbulb"
-        case .plug: return isOn ? "bolt.fill" : "powerplug"
-        case .fan: return "fan.fill"
-        case .heater: return "heater.vertical.fill"
-        case .dehumidifier: return "dehumidifier.fill"
-        case .sensor: return "thermometer.medium"
-        default: return category.icon
-        }
+    case .airPurifier: return L("空气净化器", "Air purifier")
     }
 }
 

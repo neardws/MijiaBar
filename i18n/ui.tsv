@@ -269,3 +269,7 @@ Not supported	Nicht unterstützt	Non pris en charge	No compatible	Non supportato
 Switch	Schalter	Interrupteur	Interruptor	Interruttore	Выключатель	スイッチ
 Power on/off	Ein/Aus	Marche/arrêt	Encendido/apagado	Accensione/spegnimento	Питание	電源
 Live view: home network only	Livebild nur im Heimnetz	Direct uniquement sur le réseau domestique	Directo solo en la red de casa	Live solo sulla rete di casa	Трансляция только в домашней сети	ライブ映像は自宅のネットワークのみ
+Sign-in QR code	Anmelde-QR-Code	QR code de connexion	Código QR de inicio de sesión	Codice QR di accesso	QR-код для входа	サインイン用 QR コード
+Couldn't read state	Status konnte nicht gelesen werden	Impossible de lire l'état	No se pudo leer el estado	Impossibile leggere lo stato	Не удалось получить состояние	状態を読み取れませんでした
+Check the device's power and network connection	Prüfe Stromversorgung und Netzwerkverbindung des Geräts	Vérifiez l'alimentation et la connexion réseau de l'appareil	Comprueba la alimentación y la conexión de red del dispositivo	Controlla l'alimentazione e la connessione di rete del dispositivo	Проверьте питание и подключение устройства к сети	デバイスの電源とネットワーク接続を確認してください
+Air purifier	Luftreiniger	Purificateur d'air	Purificador de aire	Purificatore d'aria	Очиститель воздуха	空気清浄機

@@ -182,6 +182,23 @@ struct VolumeControl: View {
     }
 }
 
+/// 卡片里的整行主按钮（看直播、重试）：与磁贴同圆角、同描边；不可用时同尺寸的灰色禁用态
+struct WideButtonFace: View {
+    let title: String, icon: String, tint: Color
+    var enabled = true
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
+        Label(title, systemImage: icon)
+            .font(.system(size: 13, weight: enabled ? .semibold : .medium))
+            .contentTransition(.symbolEffect(.replace))
+            .foregroundStyle(enabled ? AnyShapeStyle(tint) : AnyShapeStyle(.secondary))
+            .frame(maxWidth: .infinity).padding(.vertical, 10)
+            .background(shape.fill(enabled ? tint.opacity(0.16) : Theme.tile))
+            .overlay(shape.stroke(enabled ? tint.opacity(0.3) : Theme.stroke))
+            .contentShape(shape)
+    }
+}
+
 struct ActionTile: View {
     let title: String, icon: String, tint: Color
     var active = false

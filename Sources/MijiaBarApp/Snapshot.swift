@@ -59,6 +59,59 @@ extension AppModel {
     }
 }
 
+/// 所有插画的开/关对照（自检用，不进 README）：没有演示设备的类型也能检查画风是否统一
+struct ArtGallery: View {
+    static let size = CGSize(width: 480, height: 2070)
+    var body: some View {
+        let rows: [(String, AnyView, AnyView)] = [
+            ("fan", AnyView(FanArt(on: true, level: 0.5, swing: false, tint: .teal)), AnyView(FanArt(on: false, level: 0.5, swing: false, tint: .teal))),
+            ("bulb", AnyView(BulbArt(on: true, brightness: 0.7, kelvin: 3800)), AnyView(BulbArt(on: false, brightness: 0.7, kelvin: 3800))),
+            ("plug", AnyView(PlugArt(on: true, watts: 36, tint: .green)), AnyView(PlugArt(on: false, watts: 36, tint: .green))),
+            ("camera", AnyView(CameraArt(on: true, tint: .purple)), AnyView(CameraArt(on: false, tint: .purple))),
+            ("tv", AnyView(TVArt(on: true, playing: true, tint: .indigo)), AnyView(TVArt(on: false, playing: false, tint: .indigo))),
+            ("speaker", AnyView(SpeakerArt(playing: true, volume: 0.6, tint: .pink)), AnyView(SpeakerArt(playing: false, volume: 0.6, tint: .pink))),
+            ("printer", AnyView(PrinterArt(busy: true, error: false, tint: .blue)), AnyView(PrinterArt(busy: false, error: false, tint: .blue))),
+            ("cooker", AnyView(CookerArt(cooking: true, tint: .orange)), AnyView(CookerArt(cooking: false, tint: .orange))),
+            ("purifier", AnyView(PurifierArt(on: true, filter: 72, tint: .blue)), AnyView(PurifierArt(on: false, filter: 72, tint: .blue))),
+            ("heater", AnyView(ApplianceArt(kind: .heater, on: true, level: 0.6, tint: Theme.heat)), AnyView(ApplianceArt(kind: .heater, on: false, level: 0.6, tint: Theme.heat))),
+            ("dehumidifier", AnyView(ApplianceArt(kind: .dehumidifier, on: true, level: 0.4, tint: .cyan)), AnyView(ApplianceArt(kind: .dehumidifier, on: false, level: 0.4, tint: .cyan))),
+            ("thermo", AnyView(ThermoArt(temp: 25.6, tint: .mint)), AnyView(ThermoArt(temp: nil, tint: .mint))),
+            ("motion", AnyView(MotionSensorArt(on: true, tint: .mint)), AnyView(MotionSensorArt(on: false, tint: .mint))),
+            ("air purifier", AnyView(AirPurifierArt(on: true, level: 0.6, tint: .cyan)), AnyView(AirPurifierArt(on: false, level: 0.6, tint: .cyan))),
+            ("generic", AnyView(GenericArt(on: true, tint: .indigo)), AnyView(GenericArt(on: false, tint: .indigo))),
+        ]
+        VStack(spacing: 0) {
+            ForEach(rows, id: \.0) { r in
+                HStack(spacing: 0) {
+                    ForEach([r.1, r.2].indices, id: \.self) { i in
+                        ZStack(alignment: .topLeading) {
+                            [r.1, r.2][i].frame(width: 240, height: 136)
+                            Text("\(r.0) · \(i == 0 ? "on" : "off")").font(.system(size: 9, design: .monospaced)).foregroundStyle(.tertiary).padding(4)
+                        }.frame(width: 240, height: 138).clipped()
+                    }
+                }
+            }
+        }
+        .background(Theme.bg)
+    }
+}
+
+/// 应用图标的图形（`--icon` 生成 Resources/AppIcon.icns），按 size 等比缩放
+struct AppMark: View {
+    let size: CGFloat
+    var body: some View {
+        let u = size / 1024
+        let shape = RoundedRectangle(cornerRadius: 230 * u, style: .continuous)
+        ZStack {
+            shape.fill(LinearGradient(colors: [Color(red: 0.16, green: 0.42, blue: 1), Color(red: 1, green: 0.52, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing))
+            shape.fill(Color.black.opacity(0.12))
+            Image(systemName: "house.fill").font(.system(size: 520 * u, weight: .semibold)).foregroundStyle(.white)
+            Image(systemName: "snowflake").font(.system(size: 210 * u, weight: .bold)).foregroundStyle(Color(red: 0.2, green: 0.45, blue: 1)).offset(y: 70 * u)
+        }
+        .frame(width: size, height: size)
+    }
+}
+
 @MainActor
 enum Snapshot {
     static var appearance = NSAppearance(named: .darkAqua)
@@ -102,7 +155,7 @@ enum Snapshot {
             m.page = .list
             render(root, out.appendingPathComponent("warmup.png")); wait(10)
             var picks: [Device] = []
-            for c in [DeviceCategory.ac, .light, .plug, .fan, .sensor, .heater, .dehumidifier, .speaker, .camera, .tv, .printer, .purifier, .other, .kitchen] {
+            for c in [DeviceCategory.ac, .light, .plug, .fan, .sensor, .heater, .dehumidifier, .speaker, .camera, .tv, .printer, .purifier, .airPurifier, .other, .kitchen] {
                 if let d = m.devices.first(where: { $0.category == c && $0.isOnline && $0.homeId == m.currentHomeId }) ?? m.devices.first(where: { $0.category == c && $0.isOnline }) ?? m.devices.first(where: { $0.category == c }) { picks.append(d) }
             }
             for d in picks where m.states[d.did] == nil {
@@ -131,11 +184,13 @@ enum Snapshot {
             m.page = .detail("d3"); render(root, f("light"))
             m.page = .detail("d5"); render(root, f("plug"))
             m.page = .detail("d4"); m.states["d4"]?.values["2.1"] = .bool(true); render(root, f("fan"))
+            m.states["d4"]?.values["2.1"] = .bool(false)   // 还原，否则深色那一轮的列表会多算一台开启
             m.page = .detail("d10"); render(root, f("camera"))
             m.atHome = false; render(root, f("camera-away")); m.atHome = nil
             LiveControls.snapshotWatching = true
             render(root, f("camera-live")); m.page = .detail("d11"); render(root, f("doorbell-live"))
             LiveControls.snapshotWatching = false
+            render(ArtGallery(), f("art-gallery"), size: ArtGallery.size)
             m.page = .settings; render(root, f("settings")); render(AgentSettingsSection().padding(12).frame(maxHeight: .infinity, alignment: .top).background(Theme.bg).environmentObject(m), f("agent"), size: CGSize(width: 360, height: 420))
             m.page = .list; m.showHidden = true; render(root, f("list-hidden")); m.showHidden = false
             m.session = nil; m.qrImage = qr("https://github.com/neardws/MijiaBar"); m.loginStatus = L("打开米家 App 扫一扫，并在手机上确认登录", "Scan with the Mi Home app")
@@ -224,13 +279,7 @@ enum Snapshot {
     }
 
     static func icon(to path: String) {
-        let v = ZStack {
-            RoundedRectangle(cornerRadius: 230, style: .continuous)
-                .fill(LinearGradient(colors: [Color(red: 0.16, green: 0.42, blue: 1), Color(red: 1, green: 0.52, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing))
-            RoundedRectangle(cornerRadius: 230, style: .continuous).fill(Color.black.opacity(0.12)).padding(0)
-            Image(systemName: "house.fill").font(.system(size: 520, weight: .semibold)).foregroundStyle(.white)
-            Image(systemName: "snowflake").font(.system(size: 210, weight: .bold)).foregroundStyle(Color(red: 0.2, green: 0.45, blue: 1)).offset(y: 70)
-        }.frame(width: 1024, height: 1024).padding(0)
+        let v = AppMark(size: 1024)
         let r = ImageRenderer(content: v.frame(width: 1024, height: 1024)); r.scale = 1
         if let img = r.nsImage, let tiff = img.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff) {
             try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: path))

@@ -498,17 +498,7 @@ struct LiveControls: View {
             }
         }
     }
-    func face(_ title: String, icon: String, enabled: Bool) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
-        return Label(title, systemImage: icon)
-            .font(.system(size: 13, weight: enabled ? .semibold : .medium))
-            .contentTransition(.symbolEffect(.replace))
-            .foregroundStyle(enabled ? AnyShapeStyle(tint) : AnyShapeStyle(.secondary))
-            .frame(maxWidth: .infinity).padding(.vertical, 10)
-            .background(shape.fill(enabled ? tint.opacity(0.16) : Theme.tile))
-            .overlay(shape.stroke(enabled ? tint.opacity(0.3) : Theme.stroke))
-            .contentShape(shape)
-    }
+    func face(_ title: String, icon: String, enabled: Bool) -> some View { WideButtonFace(title: title, icon: icon, tint: tint, enabled: enabled) }
 }
 
 /// 可调整大小的独立直播窗口

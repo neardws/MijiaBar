@@ -132,7 +132,7 @@ struct SettingsView: View {
                                 ForEach(xiaomiRegions, id: \.id) { Text($0.name).tag($0.id) }
                             }.labelsHidden().fixedSize()
                         }
-                        Button(L("退出登录", "Sign out"), role: .destructive) { m.logout() }
+                        ActionRow(title: L("退出登录", "Sign out"), icon: "rectangle.portrait.and.arrow.right", destructive: true) { m.logout() }
                     }
                     group(L("语言", "Language")) {
                         let sug = AppLang.suggested(forRegion: m.prefs.region)
@@ -150,7 +150,7 @@ struct SettingsView: View {
                         }
                     }
                     group(L("设备管理", "Devices")) {
-                        Toggle(L("显示已隐藏的设备", "Show hidden devices"), isOn: Binding(get: { m.showHidden }, set: { _ in m.toggleShowHidden() }))
+                        SwitchRow(title: L("显示已隐藏的设备", "Show hidden devices"), isOn: Binding(get: { m.showHidden }, set: { _ in m.toggleShowHidden() }))
                         Text(L("默认隐藏：离线设备，以及云端最后在线时间超过 30 天的设备。右键设备可以手动隐藏/取消隐藏、收藏和重命名。",
                                "Hidden by default: offline devices and devices not seen online for 30+ days. Right-click a device to hide, favorite or rename."))
                             .font(.system(size: 11)).foregroundStyle(.secondary)
@@ -174,16 +174,13 @@ struct SettingsView: View {
                             .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     }
                     AgentSettingsSection()
-                    Button { m.quitApp() } label: {
-                        Label(L("完全退出 MijiaBar", "Quit MijiaBar"), systemImage: "power")
-                            .font(.system(size: 13, weight: .semibold)).frame(maxWidth: .infinity).padding(.vertical, 9)
-                            .background(RoundedRectangle(cornerRadius: 12).fill(Color.red.opacity(0.14)))
-                            .foregroundStyle(.red)
-                    }.buttonStyle(.plain).help("⌘Q")
                     group(L("关于", "About")) {
-                        row("MijiaBar") { Text("v0.1.8").foregroundStyle(.secondary) }
+                        row("MijiaBar") { Text(appVersion).foregroundStyle(.secondary) }
                         Link("github.com/neardws/MijiaBar", destination: URL(string: "https://github.com/neardws/MijiaBar")!)
-
+                    }
+                    // 退出放在最后，和「退出登录」同一种危险操作行
+                    SettingsGroup {
+                        ActionRow(title: L("完全退出 MijiaBar", "Quit MijiaBar"), icon: "power", destructive: true, shortcut: "⌘Q") { m.quitApp() }
                     }
                 }
             }
@@ -196,16 +193,58 @@ struct SettingsView: View {
     }
 
     func copy(_ s: String) { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(s, forType: .string) }
-    func group<C: View>(_ title: String, @ViewBuilder _ c: () -> C) -> some View {
+    func group<C: View>(_ title: String, @ViewBuilder _ c: @escaping () -> C) -> some View { SettingsGroup(title: title, content: c) }
+    func row<C: View>(_ t: String, @ViewBuilder _ c: () -> C) -> some View { HStack { Text(t); Spacer(); c() } }
+    /// 发布包里读 Info.plist 的版本号；直接运行调试构建时没有
+    var appVersion: String { (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String).map { "v" + $0 } ?? "dev" }
+}
+
+/// 设置页的分组卡片：小标题 + 内容，圆角 14，Theme.card 底色
+struct SettingsGroup<Content: View>: View {
+    var title: String? = nil
+    @ViewBuilder let content: () -> Content
+    var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title).font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
-            c()
+            if let title { Text(title).font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary) }
+            content()
         }
         .font(.system(size: 12))
         .padding(12).frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.card))
     }
-    func row<C: View>(_ t: String, @ViewBuilder _ c: () -> C) -> some View { HStack { Text(t); Spacer(); c() } }
+}
+
+/// 开关行：文字在左、系统开关在右（和其他行一样左右对齐）
+struct SwitchRow: View {
+    let title: String
+    @Binding var isOn: Bool
+    var body: some View {
+        Toggle(title, isOn: $isOn).toggleStyle(.switch).controlSize(.mini)
+            .labelsHidden()
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .overlay(alignment: .leading) { Text(title).lineLimit(1).allowsHitTesting(false).accessibilityHidden(true) }
+    }
+}
+
+/// 操作行：整行可点，按压/悬停反馈与其他按钮一致；危险操作用红色
+struct ActionRow: View {
+    let title: String, icon: String
+    var destructive = false
+    var shortcut: String? = nil
+    let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: icon).frame(width: 16)
+                Text(title)
+                Spacer()
+                if let shortcut { Text(shortcut).foregroundStyle(Color.secondary) }
+            }
+            .foregroundStyle(destructive ? AnyShapeStyle(.red) : AnyShapeStyle(.primary))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.pressable(0.98)).hoverHighlight()
+    }
 }
 
 /// 一段可直接粘贴给 Claude Code / Codex / Cursor 等 Agent 的安装说明，Agent 读完即可自行完成配置
@@ -244,30 +283,26 @@ struct AgentPromptBox: View {
 struct AgentSettingsSection: View {
     @EnvironmentObject var m: AppModel
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(L("Agent 接口（CLI / MCP）", "Agent interface (CLI / MCP)")).font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
-                        Picker(L("权限", "Access"), selection: $m.agent.mode) {
-                            Text(L("关闭", "Off")).tag(AgentPolicy.Mode.disabled)
-                            Text(L("只读", "Read")).tag(AgentPolicy.Mode.readOnly)
-                            Text(L("白名单", "Allowlist")).tag(AgentPolicy.Mode.allowlist)
-                            Text(L("全部", "Full")).tag(AgentPolicy.Mode.full)
-                        }.pickerStyle(.segmented).labelsHidden()
-                        Toggle(L("每次写操作弹窗确认", "Confirm every write"), isOn: $m.agent.confirmWrites)
-                        if m.agent.mode == .allowlist {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(L("允许 Agent 控制的设备：", "Devices agents may control:")).font(.system(size: 11)).foregroundStyle(.secondary)
-                                ForEach(m.devices.filter { !m.isHidden($0) }) { d in
-                                    Toggle(m.displayName(d), isOn: Binding(get: { m.agent.allowlist.contains(d.did) }, set: { on in
-                                        if on { m.agent.allowlist.append(d.did) } else { m.agent.allowlist.removeAll { $0 == d.did } }
-                                    })).font(.system(size: 12))
-                                }
-                            }.transition(.pop(0.98, anchor: .top))
-                        }
-                        AgentPromptBox(text: agentSetupPrompt(cli: m.cliPath)) { copy($0); m.showToast(L("已复制，粘贴给你的 Agent 即可", "Copied — paste it into your agent")) }
-                            }
-        .font(.system(size: 12))
-        .padding(12).frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.card))
+        SettingsGroup(title: L("Agent 接口（CLI / MCP）", "Agent interface (CLI / MCP)")) {
+            Picker(L("权限", "Access"), selection: $m.agent.mode) {
+                Text(L("关闭", "Off")).tag(AgentPolicy.Mode.disabled)
+                Text(L("只读", "Read")).tag(AgentPolicy.Mode.readOnly)
+                Text(L("白名单", "Allowlist")).tag(AgentPolicy.Mode.allowlist)
+                Text(L("全部", "Full")).tag(AgentPolicy.Mode.full)
+            }.pickerStyle(.segmented).labelsHidden().frame(maxWidth: .infinity)
+            SwitchRow(title: L("每次写操作弹窗确认", "Confirm every write"), isOn: $m.agent.confirmWrites)
+            if m.agent.mode == .allowlist {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L("允许 Agent 控制的设备：", "Devices agents may control:")).font(.system(size: 11)).foregroundStyle(.secondary)
+                    ForEach(m.devices.filter { !m.isHidden($0) }) { d in
+                        SwitchRow(title: m.displayName(d), isOn: Binding(get: { m.agent.allowlist.contains(d.did) }, set: { on in
+                            if on { m.agent.allowlist.append(d.did) } else { m.agent.allowlist.removeAll { $0 == d.did } }
+                        }))
+                    }
+                }.transition(.pop(0.98, anchor: .top))
+            }
+            AgentPromptBox(text: agentSetupPrompt(cli: m.cliPath)) { copy($0); m.showToast(L("已复制，粘贴给你的 Agent 即可", "Copied — paste it into your agent")) }
+        }
         .animation(Motion.smooth, value: m.agent.mode)
     }
     func copy(_ s: String) { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(s, forType: .string) }
