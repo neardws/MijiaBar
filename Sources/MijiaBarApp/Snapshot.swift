@@ -211,6 +211,10 @@ enum Snapshot {
             m.page = .settings; render(root, f("settings")); render(AgentSettingsSection().padding(12).frame(maxHeight: .infinity, alignment: .top).background(Theme.bg).environmentObject(m), f("agent"), size: CGSize(width: 360, height: 420))
             m.page = .list; m.showHidden = true; render(root, f("list-hidden")); m.showHidden = false
             m.editingOrder = true; render(root, f("list-reorder")); m.editingOrder = false
+            GlanceStore.shared.items = [GlanceItem(did: "d6", kind: .temperature), GlanceItem(did: "d6", kind: .humidity), GlanceItem(did: "d5", kind: .power)]
+            render(GlanceSettingsSection().padding(12).frame(maxHeight: .infinity, alignment: .top).background(Theme.bg).environmentObject(m), f("glance-settings"), size: CGSize(width: 360, height: 300))
+            render(MenuLabel(model: m).padding(.horizontal, 10).frame(height: 24).background(.bar).font(.system(size: 13)), f("glance-menubar"), size: CGSize(width: 200, height: 24))
+            GlanceStore.shared.items = []
             m.session = nil; m.qrImage = qr("https://github.com/neardws/MijiaBar"); m.loginStatus = L("打开米家 App 扫一扫，并在手机上确认登录", "Scan with the Mi Home app")
             render(root, f("login"))
         }
