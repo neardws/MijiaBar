@@ -14,10 +14,12 @@ struct HouseGlyph: Shape {
     }
 }
 
-/// 登录页的品牌标志：天蓝色单色渐变圆角方块 + 白色房子，门里透出暖光（冷暖都在家里，对应空调制冷/制热）。
+/// 品牌标志（应用图标和登录页共用）：天蓝色单色渐变圆角方块 + 白色房子，门里透出暖光（冷暖都在家里，对应空调制冷/制热）。
 /// 只用一种冷色加一点暖色点缀，避免蓝橙直接混合出的灰浊中间色。
 struct BrandMark: View {
     let size: CGFloat
+    /// 应用图标按 macOS 图标模板自带投影，这里关掉
+    var shadow = true
     var body: some View {
         let s = size, shape = RoundedRectangle(cornerRadius: s * 0.2237, style: .continuous)
         let hw = s * 0.50, hh = s * 0.48
@@ -36,6 +38,6 @@ struct BrandMark: View {
             .frame(width: hw, height: hh).offset(y: s * 0.03)
         }
         .frame(width: s, height: s)
-        .shadow(color: .black.opacity(0.16), radius: s * 0.1, y: s * 0.05)
+        .shadow(color: .black.opacity(shadow ? 0.16 : 0), radius: s * 0.1, y: s * 0.05)
     }
 }
