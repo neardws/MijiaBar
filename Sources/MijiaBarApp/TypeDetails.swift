@@ -180,6 +180,7 @@ struct PlugDetail: View {
                 PresetTile(dc: dc, prop: dc.p("default-power-on-state"), title: L("来电状态", "Power-on"), icon: "arrow.clockwise.circle", tint: tint,
                            presets: [(L("断电", "Off"), 0), (L("通电", "On"), 1), (L("记忆", "Last"), 2)])
             }
+            PowerHistoryCard(device: d, tint: tint)
         }
     }
 }
