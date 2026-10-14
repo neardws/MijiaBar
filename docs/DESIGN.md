@@ -30,6 +30,7 @@ MijiaBar 一天会被打开几十次。用得越频繁，动画就越要少、�
 | `Motion.smooth` | `spring(duration: 0.3, bounce: 0)` | 设备状态（开关、模式、色调） |
 | `Motion.enter` | `spring(duration: 0.28, bounce: 0)` | 进入：页面推入、弹窗、提示 |
 | `Motion.exit` | `spring(duration: 0.2, bounce: 0)` | 退出：总比进入快 |
+| `Motion.breathe` | `easeOut(duration: 1.4)` 循环 | 「正在进行」的状态指示（直播角标的光圈），不受 300ms 限制 |
 
 规则：
 
@@ -58,7 +59,13 @@ MijiaBar 一天会被打开几十次。用得越频繁，动画就越要少、�
   - **开关过渡统一**：用 `PowerTimeline`（开机约 0.9 秒渐入，关机约 0.6 秒渐隐）；有转动部件的要有惯性（风扇加速、滑行）。
   - **不动的东西不加动画**：灯泡没有循环动画；状态（开关、档位、色温）要在静止画面里也能看出来。
 - **大号数值**：统一用 `BigValue`（60pt 细体 + 说明文字），在 `TypeShell` 里自动带上色调渐变和光晕（`cardAccent`）；传入 `number` 时数字按增减方向滚动。
-- **图标**：磁贴和按钮用线框（outline）SF Symbols；只有播放、上一首、下一首这类媒体控制用实心。
+- **图标**：磁贴和按钮用线框（outline）SF Symbols；只有播放、停止、上一首、下一首这类媒体控制用实心。
+- **直播画面**（`LiveVideo.swift`）：在插画区原地替换（同为 136 高、圆角 14），不另开一块区域。
+  - 画面是黑底视频，不随浅色/深色变化；浮在画面上的角标和按钮统一用 `LiveChrome.scrim` 底色、`LiveChrome.size` 高度，左右对齐在同一条线上。
+  - 一个操作只放一个入口：开始/停止都用下方的主按钮，画面上只放「弹出窗口」。
+  - 主按钮和磁贴同圆角（14）、同描边、同按压/悬停反馈；不能看时（离家、离线）显示同尺寸的禁用态，原因放进 `.help`，不要换成一段长文字让布局跳动。
+  - 「直播」角标的红点常亮，只让身后的光圈呼吸；减弱动态效果时完全静止。状态文字（启动中、已暂停、出错）之间淡入淡出。
+  - 门铃耗电这类提醒用次要色正文 + 彩色图标，不要整段彩色。
 
 ## 5. 实现约束
 
@@ -75,7 +82,7 @@ MijiaBar 一天会被打开几十次。用得越频繁，动画就越要少、�
 - 滑条支持 VoiceOver 上下调节：`GradientSlider` 传 `a11yLabel`。
 - 菜单里的单选项用 `OptionPicker`（系统画勾选，VoiceOver 能读出选中项），不要手写「✓」。
 - 错误提示（`showToast(_:error: true)`）带橙色警示图标、停留 5 秒（成功提示 3 秒），并且只有它会通过 `AccessibilityNotification.Announcement` 播报；「已复制」「已执行」这类成功提示只显示，不打断 VoiceOver。
-- 纯装饰的图形（插画、列表图标）加 `.accessibilityHidden(true)`。
+- 纯装饰的图形（插画、列表图标）加 `.accessibilityHidden(true)`。插画区里有可操作内容时（直播画面），给 `TypeShell` 传 `artInteractive: true`，由插画自己隐藏装饰部分，否则画面上的按钮 VoiceOver 读不到。
 
 ## 7. 待改进（欢迎 PR）
 
