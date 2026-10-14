@@ -236,3 +236,53 @@ func acSpec() throws -> DeviceSpec {
         #expect(XiaomiCloud.base("de") == "https://de.api.io.mi.com/app")
     }
 }
+
+@Suite struct OrderingTests {
+    func dev(_ id: String, _ room: String?, home: String = "h1", online: Bool = true) -> Device {
+        Device(did: id, name: id, model: "x.plug.y", isOnline: online, homeId: home, homeName: "", roomName: room)
+    }
+
+    @Test func arrangeKeepsSavedOrderAppendsNewDropsRemoved() {
+        #expect(Ordering.arrange(["a", "b", "c"], saved: nil) == ["a", "b", "c"])
+        #expect(Ordering.arrange(["a", "b", "c", "d"], saved: ["c", "gone", "a", "c"]) == ["c", "a", "b", "d"])
+    }
+
+    @Test func movesUpDownTopAndDrops() {
+        let l = ["a", "b", "c"]
+        #expect(Ordering.moved(l, "b", .up) == ["b", "a", "c"])
+        #expect(Ordering.moved(l, "b", .down) == ["a", "c", "b"])
+        #expect(Ordering.moved(l, "c", .top) == ["c", "a", "b"])
+        #expect(Ordering.moved(l, "a", .up) == l)
+        #expect(Ordering.dropped(l, "a", onto: "c") == ["b", "c", "a"])
+        #expect(Ordering.dropped(l, "c", onto: "a") == ["c", "a", "b"])
+    }
+
+    @Test func mergeVisibleLeavesHiddenInPlace() {
+        // b 被隐藏：只在可见的 a、c、d 之间调整，b 留在原位
+        #expect(Ordering.mergeVisible(full: ["a", "b", "c", "d"], visible: ["d", "a", "c"]) == ["d", "b", "a", "c"])
+    }
+
+    @Test func persistsPerHomeAndSurvivesCoding() throws {
+        var p = Prefs()
+        p.setOrder(home: "h1", key: nil, ["卧室", "办公室"])
+        p.setOrder(home: "h1", key: "卧室", ["d2", "d1"])
+        p.setOrder(home: "h2", key: nil, ["客厅"])
+        let back = try JSONDecoder().decode(Prefs.self, from: JSONEncoder().encode(p))
+        #expect(back == p)
+        #expect(back.orderedRooms(home: "h1", ["办公室", "卧室", "厨房"]) == ["卧室", "办公室", "厨房"])
+        #expect(back.orderedRooms(home: "h3", ["b", "a"]) == ["b", "a"])
+        let ds = [dev("d1", "卧室"), dev("d2", "卧室"), dev("d3", "卧室")]
+        #expect(back.orderedDevices(home: "h1", key: "卧室", ds).map(\.did) == ["d2", "d1", "d3"])
+        // 旧版 prefs.json 没有 order 字段也能读
+        let old = try JSONDecoder().decode(Prefs.self, from: Data(#"{"devices":{},"region":"cn"}"#.utf8))
+        #expect(old.order == nil)
+    }
+
+    @Test func cliListFollowsRoomAndDeviceOrder() {
+        var p = Prefs()
+        p.setOrder(home: "h1", key: nil, ["卧室", "办公室"])
+        p.setOrder(home: "h1", key: "办公室", ["o2", "o1"])
+        let ds = [dev("o1", "办公室"), dev("b1", "卧室"), dev("x", nil), dev("o2", "办公室"), dev("z", "客厅", home: "h2")]
+        #expect(p.sortedForList(ds) { $0.isEmpty ? "~" : $0 }.map(\.did) == ["b1", "o2", "o1", "x", "z"])
+    }
+}

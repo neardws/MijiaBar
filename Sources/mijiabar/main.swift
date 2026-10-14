@@ -111,7 +111,7 @@ func confirm(_ msg: String) -> Bool {
 
 @MainActor func listDevices(all: Bool, refresh: Bool) async throws -> [[String: Any]] {
     guard policy.canRead else { throw MijiaError.denied("disabled") }
-    return try await devices(refresh: refresh).filter { all || !prefs.isHidden($0) }.map(deviceInfo)
+    return prefs.sortedForList(try await devices(refresh: refresh).filter { all || !prefs.isHidden($0) }) { $0.isEmpty ? "~" : $0 }.map(deviceInfo)
 }
 @MainActor func getState(_ q: String) async throws -> [String: Any] {
     guard policy.canRead else { throw MijiaError.denied("disabled") }

@@ -183,21 +183,26 @@ struct DeviceListView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 2) {
-                            let favACs = m.favoriteACs
+                            let favACs = m.editingOrder ? [] : m.favoriteACs
+                            if m.editingOrder {
+                                OrderEditor()
+                            } else {
                             if !favACs.isEmpty {
                                 SectionTitle(L("收藏", "Favorites"))
                                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
                                     ForEach(favACs) { d in
-                                        ACMiniCard(device: d).transition(.pop(0.97)).onTapGesture { m.open(d) }
+                                        ACMiniCard(device: d, section: Prefs.favoritesKey).transition(.pop(0.97)).onTapGesture { m.open(d) }
                                             .accessibilityAddTraits(.isButton).accessibilityAction { m.open(d) }
                                     }
                                 }.padding(.bottom, 4)
                             }
                             ForEach(m.sections) { sec in
                                 if !(sec.id == "fav" && sec.devices.isEmpty) {
-                                    if sec.id != "fav" || favACs.isEmpty { SectionTitle(sec.title) }
+                                    if sec.id != "fav" || favACs.isEmpty {
+                                        SectionTitle(sec.title).contextMenu { if sec.id != "fav" { RoomMenu(key: sec.key) } else { OrderModeButton() } }
+                                    }
                                     ForEach(sec.id == "fav" ? sec.devices.filter { $0.category != .ac } : sec.devices) { d in
-                                        DeviceRow(device: d, focused: flat.indices.contains(cursor) && flat[cursor] == d.did)
+                                        DeviceRow(device: d, focused: flat.indices.contains(cursor) && flat[cursor] == d.did, section: sec.key)
                                             .transition(.pop(0.97, anchor: .top))
                                             .id(d.did)
                                             .onTapGesture { m.open(d) }
@@ -206,6 +211,7 @@ struct DeviceListView: View {
                                 }
                             }
                             footer
+                            }
                         }
                         .padding(.horizontal, 10).padding(.bottom, 12)
                     }
@@ -217,6 +223,8 @@ struct DeviceListView: View {
         }
         .focusable()
         .focusEffectDisabled()
+        .animation(Motion.smooth, value: m.editingOrder)
+        .onKeyPress(.escape) { if m.editingOrder { m.editingOrder = false; return .handled }; return .ignored }
         .onKeyPress(.downArrow) { cursor = min(cursor + 1, max(flat.count - 1, 0)); return .handled }
         .onKeyPress(.upArrow) { cursor = max(cursor - 1, 0); return .handled }
         .onKeyPress(.return) { if flat.indices.contains(cursor), let d = m.device(flat[cursor]) { m.open(d, animated: false) }; return .handled }
@@ -237,6 +245,7 @@ struct DeviceListView: View {
             }
             .menuStyle(.borderlessButton).menuIndicator(m.homes.count > 1 ? .visible : .hidden).fixedSize().disabled(m.homes.count < 2)
             Spacer()
+            IconButton(icon: "arrow.up.arrow.down", help: L("调整顺序", "Reorder"), tint: m.editingOrder ? Theme.cool : nil) { m.editingOrder.toggle() }
             IconButton(icon: "arrow.clockwise", help: L("刷新", "Refresh"), spinning: m.refreshing) { Task { await m.refresh() } }
             IconButton(icon: m.showHidden ? "eye" : "eye.slash", help: L("显示已隐藏设备", "Show hidden")) { m.toggleShowHidden() }
             IconButton(icon: "gearshape", help: L("设置", "Settings")) { m.openSettings() }
@@ -371,6 +380,7 @@ struct DeviceRow: View {
     @EnvironmentObject var m: AppModel
     let device: Device
     let focused: Bool
+    var section: String? = nil
     @State private var hover = false
     var body: some View {
         let power = m.powerInfo(device)
@@ -409,7 +419,7 @@ struct DeviceRow: View {
         .animation(Motion.smooth, value: m.isFavorite(device))
         .animation(Motion.snappy, value: m.busy.contains(device.did))
         .task { m.loadStateIfNeeded(device) }
-        .contextMenu { DeviceMenu(device: device) }
+        .contextMenu { DeviceMenu(device: device, section: section) }
     }
 }
 
@@ -417,6 +427,7 @@ struct DeviceRow: View {
 struct ACMiniCard: View {
     @EnvironmentObject var m: AppModel
     let device: Device
+    var section: String? = nil
     @State private var hover = false
     var body: some View {
         let ac = m.states[device.did].flatMap(ACState.make)
@@ -452,14 +463,22 @@ struct ACMiniCard: View {
         .animation(Motion.smooth, value: on)
         .animation(Motion.snappy, value: ac?.target)
         .task { m.loadStateIfNeeded(device) }
-        .contextMenu { DeviceMenu(device: device) }
+        .contextMenu { DeviceMenu(device: device, section: section) }
     }
 }
 
 struct DeviceMenu: View {
     @EnvironmentObject var m: AppModel
     let device: Device
+    var section: String? = nil
     var body: some View {
+        if let section {
+            Button(L("上移", "Move up")) { m.move(device, in: section, .up) }.disabled(!m.canMove(device, in: section, .up))
+            Button(L("下移", "Move down")) { m.move(device, in: section, .down) }.disabled(!m.canMove(device, in: section, .down))
+            Button(L("移到顶部", "Move to top")) { m.move(device, in: section, .top) }.disabled(!m.canMove(device, in: section, .top))
+            OrderModeButton()
+            Divider()
+        }
         Button(m.isFavorite(device) ? L("取消收藏", "Unfavorite") : L("收藏", "Favorite")) { m.toggleFavorite(device) }
         Button(L("重命名…", "Rename…")) { m.renaming = device }
         Button(m.isHidden(device) ? L("取消隐藏", "Unhide") : L("隐藏", "Hide")) { m.setHidden(device, !m.isHidden(device)) }
@@ -597,5 +616,128 @@ struct TransportBadge: View {
             }
         }
         .help(tip).accessibilityLabel(label)
+    }
+}
+
+// MARK: - 调整顺序
+
+struct OrderModeButton: View {
+    @EnvironmentObject var m: AppModel
+    var body: some View { Button(L("调整顺序…", "Reorder…")) { m.editingOrder = true } }
+}
+
+/// 房间标题的右键菜单
+struct RoomMenu: View {
+    @EnvironmentObject var m: AppModel
+    let key: String
+    var body: some View {
+        Button(L("房间上移", "Move room up")) { m.moveRoom(key, .up) }.disabled(!m.canMoveRoom(key, .up))
+        Button(L("房间下移", "Move room down")) { m.moveRoom(key, .down) }.disabled(!m.canMoveRoom(key, .down))
+        Button(L("房间移到顶部", "Move room to top")) { m.moveRoom(key, .top) }.disabled(!m.canMoveRoom(key, .top))
+        Divider()
+        OrderModeButton()
+    }
+}
+
+/// 编辑顺序模式：拖动 ≡ 把手，或用上下箭头；收藏区、各房间内的设备只在本区内移动
+struct OrderEditor: View {
+    @EnvironmentObject var m: AppModel
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(L("拖动 ≡ 或点箭头调整房间和设备的顺序", "Drag ≡ or use the arrows to reorder rooms and devices"))
+                .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 4)
+            if m.hasCustomOrder {
+                Button(L("恢复默认", "Reset")) { m.resetOrder() }.buttonStyle(.borderless).font(.system(size: 11))
+            }
+            Button(L("完成", "Done")) { m.editingOrder = false }.buttonStyle(.borderedProminent).controlSize(.small)
+                .keyboardShortcut(.defaultAction)
+        }
+        .padding(.horizontal, 6).padding(.top, 8).padding(.bottom, 2)
+        ForEach(m.sections) { sec in
+            let room = sec.id != "fav"
+            HStack(spacing: 4) {
+                if room { DragHandle() }
+                Text(sec.title).font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
+                Spacer()
+                if room {
+                    StepButton(icon: "chevron.up", help: L("房间上移", "Move room up"), enabled: m.canMoveRoom(sec.key, .up)) { m.moveRoom(sec.key, .up) }
+                    StepButton(icon: "chevron.down", help: L("房间下移", "Move room down"), enabled: m.canMoveRoom(sec.key, .down)) { m.moveRoom(sec.key, .down) }
+                }
+            }
+            .padding(.top, 10).padding(.bottom, 3).padding(.horizontal, 6)
+            .contentShape(Rectangle())
+            .modifier(Reorderable(enabled: room, payload: "room:" + sec.key) { p in
+                if p.hasPrefix("room:") { m.dropRoom(String(p.dropFirst(5)), onto: sec.key) }
+            })
+            ForEach(sec.devices) { d in
+                OrderRow(device: d, section: sec.key)
+                    .modifier(Reorderable(enabled: true, payload: "dev:" + sec.key + "\u{1F}" + d.did) { p in
+                        guard p.hasPrefix("dev:") else { return }
+                        let parts = p.dropFirst(4).split(separator: "\u{1F}", maxSplits: 1, omittingEmptySubsequences: false)
+                        if parts.count == 2, String(parts[0]) == sec.key { m.drop(String(parts[1]), onto: d, in: sec.key) }
+                    })
+            }
+        }
+    }
+}
+
+struct Reorderable: ViewModifier {
+    let enabled: Bool
+    let payload: String
+    let onDrop: (String) -> Void
+    @State private var targeted = false
+    func body(content: Content) -> some View {
+        if enabled {
+            content
+                .overlay(alignment: .top) { if targeted { Capsule().fill(Theme.cool).frame(height: 2).padding(.horizontal, 6) } }
+                .draggable(payload)
+                .dropDestination(for: String.self) { items, _ in
+                    guard let p = items.first else { return false }
+                    onDrop(p); return true
+                } isTargeted: { t in withAnimation(Motion.snappy) { targeted = t } }
+        } else { content }
+    }
+}
+
+struct DragHandle: View {
+    var body: some View {
+        Image(systemName: "line.3.horizontal").font(.system(size: 11, weight: .medium)).foregroundStyle(.tertiary)
+            .frame(width: 18, height: 22).accessibilityHidden(true)
+    }
+}
+
+struct StepButton: View {
+    let icon: String; let help: String; let enabled: Bool; let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon).font(.system(size: 10, weight: .semibold)).frame(width: 22, height: 22).contentShape(Rectangle())
+        }
+        .buttonStyle(.pressable(0.9)).foregroundStyle(enabled ? Color.secondary : Color.secondary.opacity(0.3))
+        .disabled(!enabled).help(help).accessibilityLabel(help).hoverHighlight()
+    }
+}
+
+/// 编辑顺序模式里的设备行：不能打开、不能开关，只能移动
+struct OrderRow: View {
+    @EnvironmentObject var m: AppModel
+    let device: Device
+    let section: String
+    var body: some View {
+        HStack(spacing: 8) {
+            DragHandle()
+            Image(systemName: device.icon).font(.system(size: 12, weight: .medium)).foregroundStyle(Color.secondary)
+                .frame(width: 24, height: 24).background(RoundedRectangle(cornerRadius: 6).fill(Theme.card)).accessibilityHidden(true)
+            Text(m.displayName(device)).font(.system(size: 13)).lineLimit(1)
+            Spacer(minLength: 4)
+            StepButton(icon: "arrow.up.to.line", help: L("移到顶部", "Move to top"), enabled: m.canMove(device, in: section, .top)) { m.move(device, in: section, .top) }
+            StepButton(icon: "chevron.up", help: L("上移", "Move up"), enabled: m.canMove(device, in: section, .up)) { m.move(device, in: section, .up) }
+            StepButton(icon: "chevron.down", help: L("下移", "Move down"), enabled: m.canMove(device, in: section, .down)) { m.move(device, in: section, .down) }
+        }
+        .padding(.horizontal, 6).frame(height: 38)
+        .background(RoundedRectangle(cornerRadius: 9).fill(Theme.card.opacity(0.6)))
+        .opacity(device.isOnline ? 1 : 0.6)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .contain)
     }
 }

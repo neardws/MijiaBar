@@ -4,7 +4,7 @@ import MijiaCore
 
 enum Page: Equatable { case list, detail(String), settings }
 struct Toast: Equatable { let id = UUID(); let text: String; let isError: Bool }
-struct DeviceSection: Identifiable { let id: String; let title: String; let devices: [Device] }
+struct DeviceSection: Identifiable { let id: String; let key: String; let title: String; let devices: [Device] }
 
 @MainActor
 final class AppModel: ObservableObject {
@@ -68,16 +68,71 @@ final class AppModel: ObservableObject {
 
     var sections: [DeviceSection] {
         let list = devices.filter { matches($0) && (showHidden || !isHidden($0)) }
+        let hid = currentHomeId ?? ""
         var out: [DeviceSection] = []
-        let favs = list.filter(isFavorite)
-        if !favs.isEmpty { out.append(.init(id: "fav", title: L("收藏", "Favorites"), devices: favs)) }
-        let groups = Dictionary(grouping: list.filter { !isFavorite($0) }) { $0.roomName ?? L("未分配房间", "No room") }
-        for k in groups.keys.sorted() {
-            out.append(.init(id: "room-" + k, title: k, devices: groups[k]!.sorted {
-                ($0.isOnline ? 0 : 1, displayName($0)) < ($1.isOnline ? 0 : 1, displayName($1)) }))
+        let favs = prefs.orderedDevices(home: hid, key: Prefs.favoritesKey, list.filter(isFavorite))
+        if !favs.isEmpty { out.append(.init(id: "fav", key: Prefs.favoritesKey, title: L("收藏", "Favorites"), devices: favs)) }
+        let groups = Dictionary(grouping: list.filter { !isFavorite($0) }) { $0.roomName ?? "" }
+        for k in prefs.orderedRooms(home: hid, roomKeys(groups.keys)) {
+            out.append(.init(id: "room-" + k, key: k, title: roomTitle(k), devices: prefs.orderedDevices(home: hid, key: k, groups[k]!)))
         }
         return out
     }
+    func roomTitle(_ k: String) -> String { k.isEmpty ? L("未分配房间", "No room") : k }
+    /// 房间的默认顺序：按名称，「未分配房间」放最后（和 CLI 一致）
+    func roomKeys<S: Sequence>(_ ks: S) -> [String] where S.Element == String {
+        ks.sorted { ($0.isEmpty ? "~" : $0).localizedStandardCompare($1.isEmpty ? "~" : $1) == .orderedAscending }
+    }
+
+    // MARK: 排序（房间上下移动、房间内设备排序；顺序按家庭存在 prefs.json）
+    @Published var editingOrder = false
+    /// 当前家庭里该分区的完整设备顺序（含隐藏、被搜索过滤掉的设备）
+    private func fullOrder(_ key: String) -> [String] {
+        let hid = currentHomeId ?? ""
+        let inHome = devices.filter { (currentHomeId == nil || $0.homeId == currentHomeId) }
+        let ds = key == Prefs.favoritesKey ? inHome.filter(isFavorite) : inHome.filter { !isFavorite($0) && ($0.roomName ?? "") == key }
+        return prefs.orderedDevices(home: hid, key: key, ds).map(\.did)
+    }
+    private func fullRoomOrder() -> [String] {
+        let inHome = devices.filter { (currentHomeId == nil || $0.homeId == currentHomeId) && !isFavorite($0) }
+        return prefs.orderedRooms(home: currentHomeId ?? "", roomKeys(Set(inHome.map { $0.roomName ?? "" })))
+    }
+    private func section(_ key: String) -> DeviceSection? { sections.first { $0.key == key } }
+    func canMove(_ d: Device, in key: String, _ mv: Ordering.Move) -> Bool {
+        guard let ids = section(key)?.devices.map(\.did), let i = ids.firstIndex(of: d.did) else { return false }
+        return mv == .down ? i < ids.count - 1 : i > 0
+    }
+    func canMoveRoom(_ key: String, _ mv: Ordering.Move) -> Bool {
+        let ks = sections.filter { $0.id != "fav" }.map(\.key)
+        guard let i = ks.firstIndex(of: key) else { return false }
+        return mv == .down ? i < ks.count - 1 : i > 0
+    }
+    private func applyDevices(_ key: String, _ visible: [String]) {
+        let full = Ordering.mergeVisible(full: fullOrder(key), visible: visible)
+        withAnimation(Motion.smooth) { prefs.setOrder(home: currentHomeId ?? "", key: key, full) }
+    }
+    private func applyRooms(_ visible: [String]) {
+        let full = Ordering.mergeVisible(full: fullRoomOrder(), visible: visible)
+        withAnimation(Motion.smooth) { prefs.setOrder(home: currentHomeId ?? "", key: nil, full) }
+    }
+    func move(_ d: Device, in key: String, _ mv: Ordering.Move) {
+        guard let ids = section(key)?.devices.map(\.did) else { return }
+        applyDevices(key, Ordering.moved(ids, d.did, mv))
+    }
+    func drop(_ did: String, onto target: Device, in key: String) {
+        guard let ids = section(key)?.devices.map(\.did), ids.contains(did) else { return }
+        applyDevices(key, Ordering.dropped(ids, did, onto: target.did))
+    }
+    func moveRoom(_ key: String, _ mv: Ordering.Move) {
+        applyRooms(Ordering.moved(sections.filter { $0.id != "fav" }.map(\.key), key, mv))
+    }
+    func dropRoom(_ key: String, onto target: String) {
+        applyRooms(Ordering.dropped(sections.filter { $0.id != "fav" }.map(\.key), key, onto: target))
+    }
+    /// 恢复当前家庭的默认顺序
+    func resetOrder() { withAnimation(Motion.smooth) { prefs.order?[currentHomeId ?? ""] = nil } }
+    var hasCustomOrder: Bool { prefs.order?[currentHomeId ?? ""] != nil }
+
     struct Summary { var on = 0; var offline = 0; var acs: [(String, Int, Bool)] = []; var env: String? }
     var summary: Summary {
         var s = Summary()
