@@ -23,10 +23,10 @@ LANGS = [
     ('zh-Hans', 'zh-CN', 'zh-CN', 'zh-Hans', 'zh_CN', 'zhHans', '简体中文'),
 ]
 # 设备阵列：(插画文件名, 文案键)
-LINEUP = [('ac', 'd_ac'), ('fan', 'd_fan'), ('bulb', 'd_light'), ('plug', 'd_plug'), ('camera', 'd_camera'), ('tv', 'd_tv'),
-          ('speaker', 'd_speaker'), ('air-purifier', 'd_air'), ('purifier', 'd_water'), ('heater', 'd_heater'),
+LINEUP = [('ac', 'd_ac'), ('fan', 'd_fan'), ('bulb', 'd_light'), ('plug', 'd_plug'), ('camera', 'd_camera'), ('doorbell', 'd_doorbell'),
+          ('tv', 'd_tv'), ('speaker', 'd_speaker'), ('air-purifier', 'd_air'), ('purifier', 'd_water'), ('heater', 'd_heater'),
           ('dehumidifier', 'd_dehum'), ('cooker', 'd_kitchen'), ('printer', 'd_printer'), ('thermo', 'd_thermo'),
-          ('motion', 'd_motion'), ('generic', 'd_more')]
+          ('motion', 'd_motion'), ('contact', 'd_contact'), ('leak', 'd_leak')]
 FAQ = 8
 
 
@@ -74,7 +74,7 @@ def render(tpl, s, lang, prompts, ver):
     v['lang_menu'] = lang_links(code, 10)
     v['lang_footer'] = lang_links(code, 8)
     v['lang_names'] = ' '.join(f'<span lang="{l[2]}">{l[6]}</span>' for l in LANGS)
-    v['lineup'] = '\n'.join(lineup_item(a, s[k], k == 'd_more') for a, k in LINEUP)
+    v['lineup'] = '\n'.join(lineup_item(a, s[k]) for a, k in LINEUP)
     v['faq'] = '\n'.join(
         f'        <details><summary>{s[f"q{i}"]}<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.5v11M1.5 7h11"/></svg></summary><p>{s[f"a{i}"]}</p></details>'
         for i in range(1, FAQ + 1))
@@ -100,9 +100,9 @@ def lang_links(code, indent):
                      f'{cur if l[1] == code else ""}>{l[6]}</a></li>' for l in LANGS)
 
 
-def lineup_item(art, label, more):
-    cls, w = (' class="more-li"' if more else ''), (300 if art == 'ac' else 240)
-    return (f'        <li{cls}><span class="art"><picture><source srcset="assets/art/{art}-dark.webp" media="(prefers-color-scheme: dark)">'
+def lineup_item(art, label):
+    w = 300 if art == 'ac' else 240
+    return (f'        <li><span class="art"><picture><source srcset="assets/art/{art}-dark.webp" media="(prefers-color-scheme: dark)">'
             f'<img src="assets/art/{art}-light.webp" alt="" width="{w}" height="136" loading="lazy" decoding="async"></picture></span>'
             f'<span>{label}</span></li>')
 
