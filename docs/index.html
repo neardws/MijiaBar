@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MijiaBar — Mi Home in your Mac menu bar</title>
+<meta name="description" content="Control Xiaomi Mi Home devices from the macOS menu bar. Notarized, open source, with an Agent/MCP interface.">
+<link rel="icon" href="screenshots/app-icon-proposal.png">
+<style>
+  :root { color-scheme: dark; --bg:#0b0d10; --card:#14181f; --text:#e8eaed; --muted:#9aa0a6; --accent:#4da3ff; --line:#222831; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); }
+  a { color:var(--accent); text-decoration:none; } a:hover { text-decoration:underline; }
+  .wrap { max-width:880px; margin:0 auto; padding:48px 20px 80px; }
+  header { display:flex; gap:16px; align-items:center; margin-bottom:28px; }
+  header img.icon { width:72px; height:72px; border-radius:16px; }
+  h1 { font-size:1.85rem; margin:0 0 4px; letter-spacing:-0.02em; }
+  .tag { color:var(--muted); margin:0; }
+  .langs { margin-left:auto; font-size:0.9rem; color:var(--muted); }
+  .badges { display:flex; flex-wrap:wrap; gap:8px; margin:20px 0 28px; }
+  .badges img { height:20px; }
+  .hero { display:grid; gap:16px; grid-template-columns:1fr; }
+  @media (min-width:720px){ .hero { grid-template-columns:1.1fr 0.9fr; align-items:center; } }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:20px; }
+  .btn { display:inline-block; background:var(--accent); color:#041018; font-weight:600; padding:12px 18px; border-radius:10px; }
+  .btn:hover { filter:brightness(1.08); text-decoration:none; }
+  .btn.secondary { background:transparent; color:var(--text); border:1px solid var(--line); }
+  .shot { width:100%; border-radius:12px; border:1px solid var(--line); background:#000; }
+  ul.feats { margin:12px 0 0; padding-left:1.1em; color:var(--muted); }
+  ul.feats li { margin:6px 0; }
+  h2 { font-size:1.15rem; margin:36px 0 12px; }
+  footer { margin-top:48px; color:var(--muted); font-size:0.85rem; border-top:1px solid var(--line); padding-top:16px; }
+  code { font-size:0.9em; background:#0f1318; padding:1px 6px; border-radius:4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img class="icon" src="screenshots/app-icon-proposal.png" alt="MijiaBar icon">
+    <div>
+      <h1>MijiaBar</h1>
+      <p class="tag">Xiaomi Mi Home devices in the macOS menu bar</p>
+    </div>
+    <div class="langs"><a href="zh-CN.html">简体中文</a> · EN</div>
+  </header>
+
+  <div class="badges">
+    <a href="https://github.com/neardws/MijiaBar/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/neardws/MijiaBar?label=version"></a>
+    <a href="https://github.com/neardws/MijiaBar/releases"><img alt="downloads" src="https://img.shields.io/github/downloads/neardws/MijiaBar/total"></a>
+    <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-blue">
+    <img alt="notarized" src="https://img.shields.io/badge/Gatekeeper-notarized-success">
+    <a href="https://github.com/neardws/MijiaBar/blob/main/LICENSE"><img alt="MIT" src="https://img.shields.io/github/license/neardws/MijiaBar"></a>
+    <a href="https://github.com/neardws/MijiaBar/actions"><img alt="build" src="https://img.shields.io/github/actions/workflow/status/neardws/MijiaBar/build.yml?branch=main"></a>
+  </div>
+
+  <div class="hero">
+    <div class="card">
+      <p>Control air conditioners, lights, plugs, fans, TVs, cameras and more — without opening the Mi Home app. Signed with Developer ID and notarized by Apple.</p>
+      <p style="margin:18px 0;">
+        <a class="btn" id="dl" href="https://github.com/neardws/MijiaBar/releases/latest">Download latest DMG</a>
+        &nbsp;
+        <a class="btn secondary" href="https://github.com/neardws/MijiaBar">GitHub</a>
+      </p>
+      <ul class="feats">
+        <li>QR sign-in · China region by default · room grouping, search, favorites</li>
+        <li>LAN first, cloud fallback · away-from-home detection</li>
+        <li>Inline camera live view (bundled go2rtc) · Agent CLI / MCP</li>
+        <li>9 languages · in-app Sparkle updates (from this build onward)</li>
+      </ul>
+    </div>
+    <div>
+      <img class="shot" src="screenshots/list-dark.png" alt="Device list">
+    </div>
+  </div>
+
+  <h2>Screenshots</h2>
+  <div class="hero">
+    <img class="shot" src="screenshots/ac-cool-dark.png" alt="Air conditioner">
+    <img class="shot" src="screenshots/camera-live-light.png" alt="Camera live view" onerror="this.src='screenshots/login-dark.png'">
+  </div>
+
+  <h2>Agent / MCP</h2>
+  <div class="card">
+    <p>Paste the short setup blurb from <strong>Settings → Agent interface</strong> into Claude Code, Codex or Cursor. Full steps:</p>
+    <p>
+      <a href="AGENT_SETUP.md">English</a> ·
+      <a href="AGENT_SETUP.zh-CN.md">简体中文</a> ·
+      <a href="AGENT_SETUP.zh-TW.md">繁體中文</a> ·
+      <a href="AGENT_SETUP.de.md">Deutsch</a> ·
+      <a href="AGENT_SETUP.fr.md">Français</a> ·
+      <a href="AGENT_SETUP.ru.md">Русский</a>
+    </p>
+  </div>
+
+  <h2>Privacy — live video</h2>
+  <div class="card">
+    <ul class="feats">
+      <li>go2rtc runs only while you watch, listens on <code>127.0.0.1</code> only</li>
+      <li>Credentials stay in the Keychain; nothing is recorded</li>
+      <li>Agents / MCP cannot access camera video</li>
+    </ul>
+  </div>
+
+  <h2>Docs</h2>
+  <p>
+    <a href="https://github.com/neardws/MijiaBar/blob/main/README.md">README</a> ·
+    <a href="https://github.com/neardws/MijiaBar/blob/main/README.zh-CN.md">README 简中</a> ·
+    <a href="UPDATING.md">Sparkle / publishing</a> ·
+    <a href="DESIGN.md">Design guide</a> ·
+    <a href="appcast.xml">appcast.xml</a>
+  </p>
+
+  <footer>
+    MIT © neardws · Built for macOS menu bar ·
+    Update feed: <code>https://neardws.github.io/MijiaBar/appcast.xml</code>
+  </footer>
+</div>
+<script>
+fetch('https://api.github.com/repos/neardws/MijiaBar/releases/latest')
+  .then(r => r.ok ? r.json() : null)
+  .then(j => {
+    if (!j) return;
+    const asset = (j.assets || []).find(a => /MijiaBar-.*\.dmg$/.test(a.name) && !/-unsigned/.test(a.name));
+    if (asset) {
+      const a = document.getElementById('dl');
+      a.href = asset.browser_download_url;
+      a.textContent = 'Download ' + j.tag_name;
+    }
+  }).catch(() => {});
+</script>
+</body>
+</html>

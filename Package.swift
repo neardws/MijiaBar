@@ -12,8 +12,14 @@ let package = Package(
         .executable(name: "mijiabar", targets: ["mijiabar"]),
     ],
     targets: [
+        // Sparkle 2.10 XCFramework：由 scripts/fetch-sparkle.sh / package.sh 下载到 .build/sparkle/spm/（不进仓库）
+        .binaryTarget(name: "Sparkle", path: ".build/sparkle/spm/Sparkle.xcframework"),
         .target(name: "MijiaCore", swiftSettings: strict),
-        .executableTarget(name: "MijiaBarApp", dependencies: ["MijiaCore"], swiftSettings: strict),
+        .executableTarget(
+            name: "MijiaBarApp",
+            dependencies: ["MijiaCore", "Sparkle"],
+            swiftSettings: strict
+        ),
         .executableTarget(name: "mijiabar", dependencies: ["MijiaCore"], swiftSettings: strict),
         .testTarget(name: "MijiaCoreTests", dependencies: ["MijiaCore"], swiftSettings: strict),
     ]

@@ -26,7 +26,11 @@ enum Entry {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    func applicationDidFinishLaunching(_ n: Notification) { NSApp.setActivationPolicy(.accessory); LiveManager.killStale() }
+    func applicationDidFinishLaunching(_ n: Notification) {
+        NSApp.setActivationPolicy(.accessory)
+        LiveManager.killStale()
+        _ = Updater.shared  // 启动 Sparkle（自动检查按 Info.plist / 用户偏好）
+    }
     func applicationWillTerminate(_ n: Notification) { MainActor.assumeIsolated { LiveManager.shared.stopNow() } }
 }
 

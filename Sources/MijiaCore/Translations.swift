@@ -288,6 +288,11 @@ public let uiTable: [String: [String]] = [
     "Couldn't read state": ["Status konnte nicht gelesen werden", "Impossible de lire l'état", "No se pudo leer el estado", "Impossibile leggere lo stato", "Не удалось получить состояние", "状態を読み取れませんでした"],
     "Check the device's power and network connection": ["Prüfe Stromversorgung und Netzwerkverbindung des Geräts", "Vérifiez l'alimentation et la connexion réseau de l'appareil", "Comprueba la alimentación y la conexión de red del dispositivo", "Controlla l'alimentazione e la connessione di rete del dispositivo", "Проверьте питание и подключение устройства к сети", "デバイスの電源とネットワーク接続を確認してください"],
     "Air purifier": ["Luftreiniger", "Purificateur d'air", "Purificador de aire", "Purificatore d'aria", "Очиститель воздуха", "空気清浄機"],
+    "Updates": ["Updates", "Mises à jour", "Actualizaciones", "Aggiornamenti", "Обновления", "アップデート"],
+    "Check for updates automatically": ["Automatisch nach Updates suchen", "Rechercher les mises à jour automatiquement", "Buscar actualizaciones automáticamente", "Controlla automaticamente gli aggiornamenti", "Автоматически проверять обновления", "アップデートを自動的に確認"],
+    "Check for Updates…": ["Nach Updates suchen …", "Rechercher les mises à jour…", "Buscar actualizaciones…", "Controlla aggiornamenti…", "Проверить обновления…", "アップデートを確認…"],
+    "Updates come from the GitHub Pages appcast. Packages are notarized by Apple and signed with EdDSA.": ["Updates kommen über den GitHub-Pages-Appcast. Pakete sind von Apple notarisiert und mit EdDSA signiert.", "Les mises à jour passent par l’appcast GitHub Pages. Les paquets sont notariés par Apple et signés avec EdDSA.", "Las actualizaciones llegan por el appcast de GitHub Pages. Los paquetes están notarizados por Apple y firmados con EdDSA.", "Gli aggiornamenti arrivano dall’appcast di GitHub Pages. I pacchetti sono notarizzati da Apple e firmati con EdDSA.", "Обновления приходят через appcast на GitHub Pages. Пакеты нотаризованы Apple и подписаны EdDSA.", "アップデートは GitHub Pages の appcast 経由。パッケージは Apple 公証済みで EdDSA 署名されています。"],
+    "Download site": ["Download-Seite", "Page de téléchargement", "Sitio de descarga", "Pagina di download", "Страница загрузок", "ダウンロードページ"],
 ]
 
 /// 设备状态取值（键为小写英文）
@@ -797,4 +802,9 @@ public let hantTable: [String: String] = [
     "空气质量指数": "空氣品質指數",
     "空气质量": "空氣品質",
     "滤芯": "濾心",
+    "软件更新": "軟體更新",
+    "自动检查更新": "自動檢查更新",
+    "检查更新…": "檢查更新…",
+    "更新通过 GitHub Pages 的 appcast 分发，安装包经苹果公证并用 EdDSA 签名。": "更新透過 GitHub Pages 的 appcast 發佈，安裝包經蘋果公證並以 EdDSA 簽名。",
+    "下载页": "下載頁",
 ]

@@ -1,0 +1,21 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>MijiaBar</title>
+        <item>
+            <title>0.1.9-rc1</title>
+            <pubDate>Wed, 14 Oct 2026 16:05:21 +0800</pubDate>
+            <link>https://neardws.github.io/MijiaBar/</link>
+            <sparkle:version>0.1.9-rc1</sparkle:version>
+            <sparkle:shortVersionString>0.1.9-rc1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[## 0.1.9-rc1
+
+- Sparkle 应用内自动更新（首次需手动安装本版）
+- GitHub Pages 下载页与 appcast
+- 合并此前未发版的 UI / 无障碍 / 图标更新
+]]></description>
+            <enclosure url="https://github.com/neardws/MijiaBar/releases/download/v0.1.9-rc1/MijiaBar-0.1.9-rc1.dmg" length="23349785" type="application/octet-stream" sparkle:edSignature="hz0hIbuui7c+PFR6kiUjewSICvu33Zx7RR++bUitq/ZPzEhYhzVyLCm/0EqUahsc7u3DCQwwenyonCwyiVL4Aw=="/>
+        </item>
+    </channel>
+</rss>
