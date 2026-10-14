@@ -174,9 +174,21 @@ struct SettingsView: View {
                             .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     }
                     AgentSettingsSection()
+                    group(L("软件更新", "Updates")) {
+                        SwitchRow(title: L("自动检查更新", "Check for updates automatically"),
+                                  isOn: Binding(get: { Updater.shared.automaticallyChecksForUpdates },
+                                                set: { Updater.shared.automaticallyChecksForUpdates = $0 }))
+                        ActionRow(title: L("检查更新…", "Check for Updates…"), icon: "arrow.triangle.2.circlepath") {
+                            Updater.shared.checkForUpdates()
+                        }
+                        Text(L("更新通过 GitHub Pages 的 appcast 分发，安装包经苹果公证并用 EdDSA 签名。",
+                               "Updates come from the GitHub Pages appcast. Packages are notarized by Apple and signed with EdDSA."))
+                            .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
                     group(L("关于", "About")) {
                         row("MijiaBar") { Text(appVersion).foregroundStyle(.secondary) }
                         Link("github.com/neardws/MijiaBar", destination: URL(string: "https://github.com/neardws/MijiaBar")!)
+                        Link(L("下载页", "Download site"), destination: URL(string: "https://www.neardws.com/MijiaBar/")!)
                     }
                     // 退出放在最后，和「退出登录」同一种危险操作行
                     SettingsGroup {

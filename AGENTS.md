@@ -15,6 +15,10 @@ MijiaBar is a macOS menu bar app (SwiftUI, macOS 14+) that controls Xiaomi Mi Ho
   - `LiveVideo.swift` is the camera/doorbell live view (inline player, pop-out window, go2rtc process).
 - `Sources/mijiabar` — the CLI and MCP server. Writes are gated by `AgentPolicy` (Settings → Agent interface).
 
+## Sparkle updates
+
+In-app updates use Sparkle 2 (`SUFeedURL` → GitHub Pages `docs/appcast.xml`). The EdDSA **private** key lives only at `~/mijiabar-private/sparkle/eddsa_priv.key` on the maintainer Mac — never commit it. See [`docs/UPDATING.md`](docs/UPDATING.md).
+
 ## Build and check
 
 ```bash
