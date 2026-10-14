@@ -136,7 +136,7 @@ struct TVDetail: View {
         TypeShell(device: d, tint: tint, isOn: on, title: on ? (dc.text(playP) ?? L("已开机", "On")) : L("已关机", "Off"),
                   subtitle: joined([L("电视", "TV"), dc.text(input).map { L("信号源 ", "Input ") + $0 }]),
                   powerOn: on, onPower: dc.a("turn-off", in: "television").map { a in { m.runAction(d, a) } }) {
-            TVArt(on: on, input: dc.text(input), playing: playing, tint: tint)
+            TVArt(on: on, playing: playing, tint: tint)
         } content: {
             if let vol {
                 VolumeControl(value: dc.num(vol), range: propRange(vol).0, tint: tint, enabled: on) { v in m.write(d, vol.key, PropValue.double(v).coerced(to: vol.format)) }
@@ -341,11 +341,7 @@ struct MotionSensorDetail: View {
         let d = dc.device, tint = Color.mint
         let lux = dc.num(dc.p("illumination"))
         TypeShell(device: d, tint: tint, isOn: d.isOnline, title: d.isOnline ? L("在线", "Online") : L("离线", "Offline"), subtitle: L("传感器", "Sensor")) {
-            ZStack {
-                ForEach(0..<3, id: \.self) { i in Circle().stroke(tint.opacity(0.35 - Double(i) * 0.1), lineWidth: 2).frame(width: CGFloat(70 + i * 30), height: CGFloat(70 + i * 30)) }
-                Circle().fill(LinearGradient(colors: [Color(white: 0.98), Color(white: 0.82)], startPoint: .top, endPoint: .bottom)).frame(width: 64, height: 64).shadow(radius: 3)
-                Image(systemName: "figure.walk.motion").font(.system(size: 24)).foregroundStyle(tint)
-            }
+            MotionSensorArt(on: d.isOnline, tint: tint)
         } content: {
             BigValue(value: lux.map { "\(Int($0))" }, unit: "lux", caption: L("光照", "Illuminance"))
             ReadoutRow(items: [("battery.75percent", dc.num(dc.p("battery-level")).map { L("电量 ", "Battery ") + "\(Int($0))%" })], tint: tint)

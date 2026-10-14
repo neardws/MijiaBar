@@ -183,7 +183,7 @@ struct DeviceCardView: View {
                             Text(zhName(p.name, fallback: p.description)).font(.system(size: 11)).foregroundStyle(.secondary)
                         }
                         .opacity(isOn ? 1 : 0.45)
-                        .animation(.snappy, value: drag ?? primaryValue ?? 0)
+                        .animation(drag == nil ? Motion.snappy : nil, value: drag ?? primaryValue ?? 0)   // 拖动时 1:1 跟手，不加动画
                     }
 
                     if let s = c.slider {
@@ -218,7 +218,7 @@ struct DeviceCardView: View {
                 .background(RoundedRectangle(cornerRadius: 26)
                     .fill(LinearGradient(colors: [tint.opacity(isOn ? 0.24 : 0.07), tint.opacity(0.02)], startPoint: .top, endPoint: .bottom)))
                 .overlay(RoundedRectangle(cornerRadius: 26).stroke(Theme.stroke))
-                .animation(.easeInOut(duration: 0.35), value: isOn)
+                .animation(Motion.smooth, value: isOn)
 
                 if !c.rest.isEmpty || !c.actions.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {

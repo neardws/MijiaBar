@@ -59,6 +59,41 @@ extension AppModel {
     }
 }
 
+/// 所有插画的开/关对照（自检用，不进 README）：没有演示设备的类型也能检查画风是否统一
+struct ArtGallery: View {
+    static let size = CGSize(width: 480, height: 1794)
+    var body: some View {
+        let rows: [(String, AnyView, AnyView)] = [
+            ("fan", AnyView(FanArt(on: true, level: 0.5, swing: false, tint: .teal)), AnyView(FanArt(on: false, level: 0.5, swing: false, tint: .teal))),
+            ("bulb", AnyView(BulbArt(on: true, brightness: 0.7, kelvin: 3800)), AnyView(BulbArt(on: false, brightness: 0.7, kelvin: 3800))),
+            ("plug", AnyView(PlugArt(on: true, watts: 36, tint: .green)), AnyView(PlugArt(on: false, watts: 36, tint: .green))),
+            ("camera", AnyView(CameraArt(on: true, tint: .purple)), AnyView(CameraArt(on: false, tint: .purple))),
+            ("tv", AnyView(TVArt(on: true, playing: true, tint: .indigo)), AnyView(TVArt(on: false, playing: false, tint: .indigo))),
+            ("speaker", AnyView(SpeakerArt(playing: true, volume: 0.6, tint: .pink)), AnyView(SpeakerArt(playing: false, volume: 0.6, tint: .pink))),
+            ("printer", AnyView(PrinterArt(busy: true, error: false, tint: .blue)), AnyView(PrinterArt(busy: false, error: false, tint: .blue))),
+            ("cooker", AnyView(CookerArt(cooking: true, tint: .orange)), AnyView(CookerArt(cooking: false, tint: .orange))),
+            ("purifier", AnyView(PurifierArt(on: true, filter: 72, tint: .blue)), AnyView(PurifierArt(on: false, filter: 72, tint: .blue))),
+            ("heater", AnyView(ApplianceArt(kind: .heater, on: true, level: 0.6, tint: Theme.heat)), AnyView(ApplianceArt(kind: .heater, on: false, level: 0.6, tint: Theme.heat))),
+            ("dehumidifier", AnyView(ApplianceArt(kind: .dehumidifier, on: true, level: 0.4, tint: .cyan)), AnyView(ApplianceArt(kind: .dehumidifier, on: false, level: 0.4, tint: .cyan))),
+            ("thermo", AnyView(ThermoArt(temp: 25.6, tint: .mint)), AnyView(ThermoArt(temp: nil, tint: .mint))),
+            ("motion", AnyView(MotionSensorArt(on: true, tint: .mint)), AnyView(MotionSensorArt(on: false, tint: .mint))),
+        ]
+        VStack(spacing: 0) {
+            ForEach(rows, id: \.0) { r in
+                HStack(spacing: 0) {
+                    ForEach([r.1, r.2].indices, id: \.self) { i in
+                        ZStack(alignment: .topLeading) {
+                            [r.1, r.2][i].frame(width: 240, height: 136)
+                            Text("\(r.0) · \(i == 0 ? "on" : "off")").font(.system(size: 9, design: .monospaced)).foregroundStyle(.tertiary).padding(4)
+                        }.frame(width: 240, height: 138).clipped()
+                    }
+                }
+            }
+        }
+        .background(Theme.bg)
+    }
+}
+
 @MainActor
 enum Snapshot {
     static var appearance = NSAppearance(named: .darkAqua)
@@ -136,6 +171,7 @@ enum Snapshot {
             LiveControls.snapshotWatching = true
             render(root, f("camera-live")); m.page = .detail("d11"); render(root, f("doorbell-live"))
             LiveControls.snapshotWatching = false
+            render(ArtGallery(), f("art-gallery"), size: ArtGallery.size)
             m.page = .settings; render(root, f("settings")); render(AgentSettingsSection().padding(12).frame(maxHeight: .infinity, alignment: .top).background(Theme.bg).environmentObject(m), f("agent"), size: CGSize(width: 360, height: 420))
             m.page = .list; m.showHidden = true; render(root, f("list-hidden")); m.showHidden = false
             m.session = nil; m.qrImage = qr("https://github.com/neardws/MijiaBar"); m.loginStatus = L("打开米家 App 扫一扫，并在手机上确认登录", "Scan with the Mi Home app")

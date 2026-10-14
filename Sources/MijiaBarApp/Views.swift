@@ -264,7 +264,8 @@ struct SummaryBar: View {
         HStack(spacing: 6) {
             Chip(icon: "power", text: LF("%@ 台开启", "%@ on", "\(s.on)"), color: s.on > 0 ? .green : .secondary)
             ForEach(s.acs, id: \.0) { name, t, heat in
-                Chip(icon: heat ? "sun.max.fill" : "snowflake", text: "\(name) \(t)°", color: heat ? Theme.heat : Theme.cool)
+                // 温度是关键信息，必须完整；空调名称放进提示和 VoiceOver
+                Chip(icon: heat ? "sun.max.fill" : "snowflake", text: "\(t)°", color: heat ? Theme.heat : Theme.cool, help: name)
             }
             if let env = s.env { Chip(icon: "thermometer.medium", text: env, color: .mint) }
             if s.offline > 0 { Chip(icon: "wifi.slash", text: LF("%@ 离线", "%@ offline", "\(s.offline)"), color: .secondary) }
@@ -274,13 +275,18 @@ struct SummaryBar: View {
     }
     struct Chip: View {
         let icon: String, text: String, color: Color
+        var help: String? = nil
         var body: some View {
             HStack(spacing: 4) {
                 Image(systemName: icon).font(.system(size: 9, weight: .bold)).foregroundStyle(color)
                 Text(text).font(.system(size: 11, weight: .medium)).foregroundStyle(.primary.opacity(0.85)).lineLimit(1).contentTransition(.numericText())
             }
+            .fixedSize()
             .padding(.horizontal, 8).padding(.vertical, 4)
             .background(Capsule().fill(color.opacity(0.12)))
+            .help(help ?? "")
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(help.map { "\($0) \(text)" } ?? text)
         }
     }
 }
@@ -527,7 +533,7 @@ struct DetailView: View {
             } else if let e = m.stateErrors[device.did] {
                 Spacer()
                 VStack(spacing: 10) {
-                    Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(.orange).symbolEffect(.bounce, value: e)
+                    Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(.orange)
                     Text(e).font(.system(size: 12)).foregroundStyle(.secondary).multilineTextAlignment(.center)
                     Button(L("重试", "Retry")) { m.stateErrors[device.did] = nil; Task { await m.loadState(device) } }
                 }

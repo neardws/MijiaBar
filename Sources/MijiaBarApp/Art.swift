@@ -3,8 +3,10 @@ import MijiaCore
 
 // MARK: - 拟物插画（全部用 SwiftUI 绘制，浅色/深色自适应）
 
-private let metal = LinearGradient(colors: [Color(white: 0.92), Color(white: 0.72)], startPoint: .top, endPoint: .bottom)
-private let darkBody = LinearGradient(colors: [Color(white: 0.30), Color(white: 0.12)], startPoint: .top, endPoint: .bottom)
+/// 磨砂铝（支架、底座、龙头）
+let aluminum = LinearGradient(colors: [Color(white: 0.86), Color(white: 0.64)], startPoint: .top, endPoint: .bottom)
+/// 黑色玻璃（屏幕、前脸、触控面）
+let darkGlass = LinearGradient(colors: [Color(white: 0.20), Color(white: 0.05)], startPoint: .top, endPoint: .bottom)
 
 /// 柔和光晕：直径 diameter 的圆向外羽化 softness，效果接近 `.blur(radius: softness)`。
 /// 用径向渐变而不是 `.blur`：截图（cacheDisplay）画不出模糊，且在 TimelineView 里每帧模糊开销很大。
@@ -38,6 +40,15 @@ extension Shape {
 /// 设备身后的环境光（椭圆渐变），强度随开机程度 k
 func Ambient(_ tint: Color, _ k: Double, width: CGFloat, height: CGFloat) -> some View {
     Rectangle().fill(EllipticalGradient(colors: [tint.opacity(0.55), tint.opacity(0)])).frame(width: width, height: height).opacity(k)
+}
+
+/// 设备色能量粒子：一层柔光 + 白色亮芯（和空调气流、插座电流同一种画法）
+func particles(_ ctx: inout GraphicsContext, _ dots: [(CGPoint, Double)], tint: Color, radius r: CGFloat = 2.2) {
+    ctx.drawLayer { l in
+        l.addFilter(.blur(radius: 3))
+        for (c, a) in dots { l.fill(Path(ellipseIn: CGRect(x: c.x - 2.3 * r, y: c.y - 2.3 * r, width: 4.6 * r, height: 4.6 * r)), with: .color(tint.opacity(a * 0.8))) }
+    }
+    for (c, a) in dots { ctx.fill(Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r)), with: .color(Color.white.opacity(a))) }
 }
 
 /// 和空调插画一致的开关过渡：开机约 0.9 秒渐入、关机约 0.6 秒渐隐。
@@ -302,73 +313,98 @@ struct PlugArt: View {
             let u = (t * rate + Double(i) / Double(n)).truncatingRemainder(dividingBy: 1)
             dots.append((Self.point(u), k * (0.55 + 0.45 * load) * sin(u * .pi)))
         }
-        ctx.drawLayer { l in
-            l.addFilter(.blur(radius: 3))
-            for (c, a) in dots { l.fill(Path(ellipseIn: CGRect(x: c.x - 5, y: c.y - 5, width: 10, height: 10)), with: .color(tint.opacity(a * 0.8))) }
-        }
-        for (c, a) in dots { ctx.fill(Path(ellipseIn: CGRect(x: c.x - 2.2, y: c.y - 2.2, width: 4.4, height: 4.4)), with: .color(Color.white.opacity(a))) }
+        particles(&ctx, dots, tint: tint)
     }
 }
 
-/// 电视：开机时屏幕显示输入源
+/// 电视：细铝边 + 黑色玻璃屏幕，立在铝质支架上。
+/// 开机时屏幕亮起设备色画面、身后带环境光；播放中底部有一条进度条。输入源已在副标题里，画面上不重复。
 struct TVArt: View {
-    let on: Bool, input: String?, playing: Bool, tint: Color
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let on: Bool, playing: Bool, tint: Color
+    static let screen = CGPoint(x: 110, y: 60)
     var body: some View {
-        TimelineView(.animation(paused: reduceMotion || !on)) { tl in
-            let t = tl.date.timeIntervalSinceReferenceDate
-            VStack(spacing: 0) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8).fill(Color(white: 0.1)).frame(width: 196, height: 114)
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(on ? AnyShapeStyle(LinearGradient(colors: [tint, Color(hue: (0.7 + 0.05 * sin(t * 0.5)).truncatingRemainder(dividingBy: 1), saturation: 0.6, brightness: 0.8)],
-                                                                startPoint: .topLeading, endPoint: .bottomTrailing))
-                                 : AnyShapeStyle(LinearGradient(colors: [Color(white: 0.16), Color(white: 0.04)], startPoint: .topLeading, endPoint: .bottomTrailing)))
-                        .frame(width: 184, height: 102)
-                    if on {
-                        VStack(spacing: 4) {
-                            Image(systemName: playing ? "play.fill" : "tv").font(.system(size: 22, weight: .semibold))
-                            if let input { Text(input).font(.system(size: 12, weight: .semibold)) }
-                        }.foregroundStyle(.white.opacity(0.92))
-                    } else {
-                        Rectangle().fill(LinearGradient(colors: [Color.white.opacity(0.08), .clear], startPoint: .topLeading, endPoint: .center)).frame(width: 184, height: 102)
-                    }
-                    Circle().fill(on ? Color.white.opacity(0.6) : Color.red.opacity(0.8)).frame(width: 3, height: 3).offset(y: 54)
-                }
-                .shadow(color: on ? tint.opacity(0.45) : .black.opacity(0.2), radius: on ? 14 : 4, y: 3)
-                Rectangle().fill(metal).frame(width: 8, height: 10)
-                Capsule().fill(metal).frame(width: 90, height: 6)
+        PowerTimeline(on: on) { _, k in
+            ZStack {
+                Ambient(tint, k * 0.8, width: 220, height: 120).position(x: 110, y: 58)
+                RoundedRectangle(cornerRadius: 2, style: .continuous).fill(aluminum).frame(width: 14, height: 18).position(x: 110, y: 118)
+                Capsule().appliance(tint, 0).frame(width: 96, height: 8).position(x: 110, y: 128)
+                RoundedRectangle(cornerRadius: 9, style: .continuous).fill(aluminum).frame(width: 204, height: 118)
+                    .shadow(color: k > 0.01 ? tint.opacity(0.45 * k) : .black.opacity(0.22), radius: 5 + 9 * k, y: 4)
+                    .position(Self.screen)
+                RoundedRectangle(cornerRadius: 7, style: .continuous).fill(darkGlass).frame(width: 199, height: 113).position(Self.screen)
+                picture.opacity(k).frame(width: 191, height: 105)
+                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous)).position(Self.screen)
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(LinearGradient(colors: [.white.opacity(0.12), .white.opacity(0)], startPoint: .topLeading, endPoint: UnitPoint(x: 0.55, y: 0.55)))
+                    .frame(width: 199, height: 113).position(Self.screen)
+            }
+            .frame(width: 220, height: 136)
+        }
+        .animation(Motion.smooth, value: playing)
+    }
+
+    /// 画面：设备色渐变 + 左上角一团柔光，像一张安静的壁纸
+    var picture: some View {
+        ZStack(alignment: .bottom) {
+            LinearGradient(colors: [tint.opacity(0.95), tint.opacity(0.45), Color(white: 0.05)], startPoint: .topLeading, endPoint: .bottomTrailing)
+            RadialGradient(colors: [.white.opacity(0.35), .white.opacity(0)], center: UnitPoint(x: 0.28, y: 0.22), startRadius: 0, endRadius: 90)
+            if playing {
+                Capsule().fill(.white.opacity(0.25)).frame(width: 150, height: 3)
+                    .overlay(alignment: .leading) { Capsule().fill(.white.opacity(0.9)).frame(width: 58, height: 3) }
+                    .padding(.bottom, 12).transition(.opacity)
             }
         }
     }
 }
 
-/// 音箱：播放时声波扩散
+/// 智能音箱：白色织物机身（一条连续的圆角轮廓），顶部是黑色玻璃触控面。
+/// 播放时顶部亮起缓缓旋转的设备色光，亮度跟随音量；不用声波圈。
 struct SpeakerArt: View {
     let playing: Bool, volume: Double, tint: Color
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    static let box = CGRect(x: 38, y: 10, width: 84, height: 116)
     var body: some View {
-        TimelineView(.animation(paused: reduceMotion || !playing)) { tl in
-            let t = tl.date.timeIntervalSinceReferenceDate
+        PowerTimeline(on: playing, running: true) { t, k in
+            let b = Self.box
             ZStack {
-                if playing {
-                    ForEach(0..<3, id: \.self) { i in
-                        let ph = (t * 0.7 + Double(i) / 3).truncatingRemainder(dividingBy: 1)
-                        Circle().stroke(tint.opacity((1 - ph) * (0.3 + 0.5 * volume)), lineWidth: 2)
-                            .frame(width: 70 + 90 * ph, height: 70 + 90 * ph)
+                Ambient(tint, k * (0.45 + 0.4 * volume), width: 170, height: 120).position(x: 80, y: 62)
+                RoundedRectangle(cornerRadius: 38, style: .continuous).appliance(tint, k).frame(width: b.width, height: b.height).position(x: b.midX, y: b.midY)
+                // 织物网眼
+                Canvas { ctx, size in
+                    var row = 0
+                    for y in stride(from: 26.0, to: size.height - 6, by: 4.2) {
+                        let dx = row % 2 == 0 ? 0 : 2.1
+                        for x in stride(from: 5.0 + dx, to: size.width - 4, by: 4.2) {
+                            ctx.fill(Path(ellipseIn: CGRect(x: x - 0.7, y: y - 0.7, width: 1.4, height: 1.4)), with: .color(.black.opacity(0.07)))
+                        }
+                        row += 1
                     }
                 }
-                RoundedRectangle(cornerRadius: 30).fill(darkBody).frame(width: 66, height: 118)
-                    .overlay(
-                        VStack(spacing: 5) {
-                            ForEach(0..<7, id: \.self) { _ in
-                                HStack(spacing: 5) { ForEach(0..<5, id: \.self) { _ in Circle().fill(Color.white.opacity(0.18)).frame(width: 4, height: 4) } }
-                            }
-                        }.padding(.top, 10), alignment: .top)
-                    .overlay(Capsule().fill(playing ? tint : Color.white.opacity(0.2)).frame(width: 26, height: 4).padding(.bottom, 12), alignment: .bottom)
-                    .shadow(color: .black.opacity(0.25), radius: 6, y: 3)
+                .frame(width: b.width, height: b.height).clipShape(RoundedRectangle(cornerRadius: 38, style: .continuous)).position(x: b.midX, y: b.midY)
+                top(t: t, k: k).position(x: b.midX, y: b.minY + 13)
             }
+            .frame(width: 160, height: 136)
         }
+    }
+
+    func top(t: Double, k: Double) -> some View {
+        let shape = Ellipse()
+        return ZStack {
+            shape.fill(darkGlass)
+            Canvas { ctx, size in
+                guard k > 0.01 else { return }
+                let c = CGPoint(x: size.width / 2, y: size.height / 2)
+                let a = k * (0.55 + 0.45 * volume)
+                ctx.drawLayer { l in
+                    l.addFilter(.blur(radius: 4))
+                    for (i, w) in [(0.0, 1.0), (2.1, 0.7), (4.2, 0.5)] {
+                        let p = CGPoint(x: c.x + CGFloat(cos(t * 0.9 + i)) * 16, y: c.y + CGFloat(sin(t * 0.9 + i)) * 2.5)
+                        l.fill(Path(ellipseIn: CGRect(x: p.x - 13, y: p.y - 5, width: 26, height: 10)), with: .color(tint.opacity(a * w)))
+                    }
+                }
+            }
+            shape.stroke(.white.opacity(0.18), lineWidth: 0.5)
+        }
+        .frame(width: 58, height: 14).clipShape(shape)
     }
 }
 
@@ -433,155 +469,275 @@ struct CameraArt: View {
     }
 }
 
-/// 打印机：打印中纸张缓缓送出
+/// 打印机：白色亮面机身，后面立着一叠纸，前面出纸口。
+/// 打印中纸从出纸口缓缓送出、状态灯亮设备色；出错时状态灯变橙色；空闲时灯不亮。
 struct PrinterArt: View {
     let busy: Bool, error: Bool, tint: Color
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
-        TimelineView(.animation(paused: reduceMotion || !busy)) { tl in
-            let t = tl.date.timeIntervalSinceReferenceDate
-            let feed = busy ? CGFloat((t * 0.4).truncatingRemainder(dividingBy: 1)) * 30 : 6
+        PowerTimeline(on: busy, running: true) { t, k in
+            let u = busy ? (t * 0.35).truncatingRemainder(dividingBy: 1) : 0
+            let feed = busy ? 6 + CGFloat(u) * 28 : 6
             ZStack {
-                RoundedRectangle(cornerRadius: 3).fill(Color.white).frame(width: 90, height: 40)
-                    .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.black.opacity(0.1))).offset(y: -44)
-                RoundedRectangle(cornerRadius: 16).fill(metal).frame(width: 170, height: 70)
-                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.black.opacity(0.08)))
-                    .shadow(color: .black.opacity(0.15), radius: 5, y: 3)
-                RoundedRectangle(cornerRadius: 2).fill(Color.black.opacity(0.55)).frame(width: 120, height: 5).offset(y: 18)
-                RoundedRectangle(cornerRadius: 2).fill(Color.white).frame(width: 96, height: feed)
-                    .overlay(VStack(spacing: 3) { ForEach(0..<3, id: \.self) { _ in Rectangle().fill(Color.gray.opacity(0.4)).frame(width: 70, height: 1.5) } }.clipped())
-                    .offset(y: 20 + feed / 2)
-                Circle().fill(error ? Color.red : (busy ? tint : Color.green.opacity(0.8))).frame(width: 7, height: 7).offset(x: 68, y: -18)
+                Ambient(tint, k * 0.6, width: 200, height: 110).position(x: 100, y: 66)
+                sheet(lines: false).frame(width: 84, height: 40).position(x: 100, y: 34)
+                RoundedRectangle(cornerRadius: 20, style: .continuous).appliance(tint, k).frame(width: 168, height: 64).position(x: 100, y: 72)
+                Capsule().fill(Color.black.opacity(0.06)).frame(width: 140, height: 1.5).position(x: 100, y: 52)
+                sheet(lines: true).frame(width: 100, height: feed).position(x: 100, y: 93 + feed / 2)
+                    .opacity(u < 0.85 ? 1 : (1 - u) / 0.15)
+                Capsule().fill(Color.black.opacity(0.45)).frame(width: 124, height: 4).position(x: 100, y: 92)
+                light(k).position(x: 166, y: 56)
             }
             .frame(width: 200, height: 136)
         }
     }
-}
-
-/// 锅具：烹饪时冒热气
-struct CookerArt: View {
-    let cooking: Bool, tint: Color
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    var body: some View {
-        TimelineView(.animation(paused: reduceMotion || !cooking)) { tl in
-            let t = tl.date.timeIntervalSinceReferenceDate
-            ZStack {
-                if cooking {
-                    Canvas { ctx, size in
-                        for i in 0..<4 {
-                            let ph = (t * 0.5 + Double(i) * 0.25).truncatingRemainder(dividingBy: 1)
-                            let x = size.width / 2 - 36 + CGFloat(i) * 24
-                            var p = Path()
-                            for k in 0...10 {
-                                let y = 46 - CGFloat(k) * 4 - CGFloat(ph) * 20
-                                let xx = x + CGFloat(4 * sin(Double(k) / 2 + t * 2 + Double(i)))
-                                if k == 0 { p.move(to: CGPoint(x: xx, y: y)) } else { p.addLine(to: CGPoint(x: xx, y: y)) }
-                            }
-                            ctx.stroke(p, with: .color(Color.secondary.opacity(0.5 * (1 - ph))), style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
-                        }
-                    }.frame(width: 160, height: 60).offset(y: -44)
-                }
-                Capsule().fill(metal).frame(width: 130, height: 12).offset(y: -10)
-                Capsule().fill(metal).frame(width: 24, height: 8).offset(y: -18)
-                RoundedRectangle(cornerRadius: 22).fill(LinearGradient(colors: [tint.opacity(0.85), tint.opacity(0.55)], startPoint: .top, endPoint: .bottom))
-                    .frame(width: 120, height: 62).offset(y: 30)
-                    .shadow(color: .black.opacity(0.18), radius: 5, y: 3)
-                Capsule().fill(Color.white.opacity(0.85)).frame(width: 34, height: 12).offset(y: 34)
-                Circle().fill(cooking ? Color.orange : Color.gray.opacity(0.5)).frame(width: 5, height: 5).offset(x: 26, y: 34)
+    func sheet(lines: Bool) -> some View {
+        RoundedRectangle(cornerRadius: 1.5).fill(Color(white: 0.99))
+            .overlay(RoundedRectangle(cornerRadius: 1.5).stroke(Color.black.opacity(0.08), lineWidth: 0.5))
+            .overlay(alignment: .bottom) {
+                if lines { VStack(spacing: 3) { ForEach(0..<3, id: \.self) { _ in Capsule().fill(Color.black.opacity(0.12)).frame(width: 64, height: 1.5) } }.padding(.bottom, 4) }
             }
-            .frame(width: 180, height: 136)
+            .clipped()
+            .shadow(color: .black.opacity(0.08), radius: 1.5, y: 1)
+    }
+    @ViewBuilder func light(_ k: Double) -> some View {
+        let c = error ? Color.orange : tint
+        ZStack {
+            Circle().fill(Color.black.opacity(0.12)).frame(width: 5, height: 5)
+            Glow(c, 0.9 * (error ? 1 : k), diameter: 5, softness: 3)
         }
     }
 }
 
-/// 净水器：出水时水滴下落，滤芯寿命条
-struct PurifierArt: View {
-    let on: Bool, filter: Double?, tint: Color
+/// 电饭煲 / 多功能锅：白色亮面锅身 + 浅灰锅盖，前面一块黑色玻璃面板。
+/// 烹饪时面板亮起设备色、蒸汽口飘出设备色的柔光粒子（不用波浪线）。
+struct CookerArt: View {
+    let cooking: Bool, tint: Color
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
-        TimelineView(.animation(paused: reduceMotion || !on)) { tl in
-            let t = tl.date.timeIntervalSinceReferenceDate
+        PowerTimeline(on: cooking, running: true) { t, k in
             ZStack {
-                RoundedRectangle(cornerRadius: 14).fill(metal).frame(width: 70, height: 110).offset(x: -40)
-                    .overlay(RoundedRectangle(cornerRadius: 3).fill(Color.primary.opacity(0.12)).frame(width: 12, height: 70).offset(x: -40, y: 6))
-                RoundedRectangle(cornerRadius: 3).fill(tint.opacity(0.85)).frame(width: 12, height: CGFloat(70 * (filter ?? 0.0) / 100)).offset(x: -40, y: 6 + 35 - CGFloat(35 * (filter ?? 0.0) / 100))
-                Path { p in p.move(to: CGPoint(x: 110, y: 30)); p.addLine(to: CGPoint(x: 150, y: 30)); p.addLine(to: CGPoint(x: 150, y: 48)) }
-                    .stroke(metal, style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round))
-                if on {
-                    ForEach(0..<3, id: \.self) { i in
-                        let ph = (t * 1.2 + Double(i) / 3).truncatingRemainder(dividingBy: 1)
-                        Image(systemName: "drop.fill").font(.system(size: 10)).foregroundStyle(tint.opacity(1 - ph))
-                            .offset(x: 40, y: -10 + CGFloat(ph) * 60)
-                    }
+                Ambient(tint, k * 0.6, width: 180, height: 110).position(x: 90, y: 74)
+                Canvas { ctx, _ in steam(&ctx, t: t, k: k) }
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(LinearGradient(colors: [Color(white: 0.95), Color(white: 0.76)], startPoint: .top, endPoint: .bottom))
+                    .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(LinearGradient(colors: [.white, .white.opacity(0)], startPoint: .top, endPoint: .bottom), lineWidth: 1))
+                    .frame(width: 118, height: 30).position(x: 90, y: 64)
+                Capsule().fill(LinearGradient(colors: [Color(white: 0.86), Color(white: 0.68)], startPoint: .top, endPoint: .bottom))
+                    .frame(width: 18, height: 6).position(x: 90, y: 49)
+                RoundedRectangle(cornerRadius: 30, style: .continuous).appliance(tint, k).frame(width: 136, height: 72).position(x: 90, y: 96)
+                Capsule().fill(Color.black.opacity(0.07)).frame(width: 118, height: 1.5).position(x: 90, y: 66)
+                panel(k).position(x: 90, y: 100)
+            }
+            .frame(width: 180, height: 136)
+        }
+    }
+    func panel(_ k: Double) -> some View {
+        let shape = Capsule()
+        return ZStack {
+            shape.fill(darkGlass)
+            Capsule().fill(tint).frame(width: 18, height: 3).opacity(k).shadow(color: tint, radius: 3 * k)
+            shape.stroke(.white.opacity(0.18), lineWidth: 0.5)
+        }
+        .frame(width: 48, height: 16)
+    }
+    /// 蒸汽：从蒸汽口升起、向两侧轻轻散开并渐隐
+    func steam(_ ctx: inout GraphicsContext, t: Double, k: Double) {
+        guard k > 0.01 else { return }
+        let rate = reduceMotion ? 0 : 0.35
+        var dots: [(CGPoint, Double)] = []
+        for i in 0..<6 {
+            let u = (t * rate + Double(i) / 6).truncatingRemainder(dividingBy: 1)
+            let side = i % 2 == 0 ? -1.0 : 1.0
+            dots.append((CGPoint(x: 90 + CGFloat(side * u * 14 + sin(u * 6 + Double(i)) * 3), y: 44 - CGFloat(u) * 40), k * 0.8 * sin(u * .pi)))
+        }
+        particles(&ctx, dots, tint: tint)
+    }
+}
+
+/// 净水器：白色亮面主机 + 一块显示滤芯寿命的玻璃窗，旁边是铝质鹅颈龙头。
+/// 滤芯余量用设备色液位表示；不知道是否在出水，所以不画水流。
+struct PurifierArt: View {
+    let on: Bool, filter: Double?, tint: Color
+    var body: some View {
+        PowerTimeline(on: on) { _, k in
+            let f = max(0, min(1, (filter ?? 0) / 100))
+            ZStack {
+                Ambient(tint, k * 0.6, width: 200, height: 120).position(x: 90, y: 66)
+                faucet.position(x: 100, y: 68)
+                Capsule().appliance(tint, 0).frame(width: 24, height: 7).position(x: 136, y: 127)
+                RoundedRectangle(cornerRadius: 24, style: .continuous).appliance(tint, k).frame(width: 78, height: 120).position(x: 72, y: 68)
+                // 滤芯窗
+                ZStack(alignment: .bottom) {
+                    Capsule().fill(Color.black.opacity(0.08))
+                    Capsule().fill(LinearGradient(colors: [tint.opacity(0.65), tint], startPoint: .top, endPoint: .bottom))
+                        .frame(height: max(14, 72 * CGFloat(f))).opacity(filter == nil ? 0 : 0.35 + 0.65 * k)
+                        .shadow(color: tint.opacity(0.5 * k), radius: 4)
+                    Capsule().stroke(Color.black.opacity(0.08), lineWidth: 0.5)
                 }
+                .frame(width: 14, height: 72).position(x: 72, y: 76)
+                Circle().fill(Color.black.opacity(0.12)).frame(width: 5, height: 5).position(x: 72, y: 26)
+                Glow(tint, 0.9 * k, diameter: 5, softness: 3).position(x: 72, y: 26)
             }
             .frame(width: 200, height: 136)
             .animation(Motion.smooth, value: filter)
         }
     }
-}
-
-/// 取暖器 / 除湿机：机身 + 热浪或水箱水位
-struct ApplianceArt: View {
-    let kind: DeviceCategory, on: Bool, level: Double, tint: Color
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    var body: some View {
-        TimelineView(.animation(paused: reduceMotion || !on)) { tl in
-            let t = tl.date.timeIntervalSinceReferenceDate
-            ZStack {
-                if kind == .heater {
-                    HStack(spacing: 6) {
-                        ForEach(0..<6, id: \.self) { _ in
-                            RoundedRectangle(cornerRadius: 6).fill(LinearGradient(colors: [on ? tint.opacity(0.9) : Color(white: 0.8), on ? tint.opacity(0.5) : Color(white: 0.65)], startPoint: .top, endPoint: .bottom))
-                                .frame(width: 16, height: 86)
-                        }
-                    }
-                    .shadow(color: on ? tint.opacity(0.5) : .black.opacity(0.1), radius: on ? 14 : 4)
-                    if on {
-                        Canvas { ctx, size in
-                            for i in 0..<5 {
-                                let ph = (t * 0.5 + Double(i) * 0.2).truncatingRemainder(dividingBy: 1)
-                                let x = size.width / 2 - 48 + CGFloat(i) * 24
-                                var p = Path()
-                                for k in 0...8 {
-                                    let y = 30 - CGFloat(k) * 3 - CGFloat(ph) * 16
-                                    let xx = x + CGFloat(3 * sin(Double(k) / 2 + t * 3))
-                                    if k == 0 { p.move(to: CGPoint(x: xx, y: y)) } else { p.addLine(to: CGPoint(x: xx, y: y)) }
-                                }
-                                ctx.stroke(p, with: .color(tint.opacity(0.7 * (1 - ph))), style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                            }
-                        }.frame(width: 160, height: 34).offset(y: -62)
-                    }
-                } else {
-                    RoundedRectangle(cornerRadius: 18).fill(metal).frame(width: 96, height: 124)
-                        .shadow(color: .black.opacity(0.15), radius: 5, y: 3)
-                    VStack(spacing: 3) { ForEach(0..<4, id: \.self) { _ in Capsule().fill(Color.black.opacity(0.18)).frame(width: 60, height: 3) } }.offset(y: -40)
-                    ZStack(alignment: .bottom) {
-                        RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.08)).overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.primary.opacity(0.12))).frame(width: 64, height: 48)
-                        RoundedRectangle(cornerRadius: 8).fill(tint.opacity(0.7)).frame(width: 64, height: CGFloat(48 * level))
-                    }.offset(y: 26)
-                    Circle().fill(on ? tint : Color.gray.opacity(0.5)).frame(width: 6, height: 6).offset(y: -18)
-                }
-            }
-            .frame(width: 200, height: 136)
-            .animation(Motion.smooth, value: level)
+    var faucet: some View {
+        let p = Path { p in
+            p.move(to: CGPoint(x: 136, y: 124)); p.addLine(to: CGPoint(x: 136, y: 46))
+            p.addCurve(to: CGPoint(x: 166, y: 46), control1: CGPoint(x: 136, y: 24), control2: CGPoint(x: 166, y: 24))
+            p.addLine(to: CGPoint(x: 166, y: 56))
         }
+        return ZStack {
+            p.stroke(aluminum, style: StrokeStyle(lineWidth: 7, lineCap: .round, lineJoin: .round))
+            p.stroke(.white.opacity(0.55), style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round)).offset(x: -1.5, y: -1)
+        }
+        .frame(width: 200, height: 136).shadow(color: .black.opacity(0.15), radius: 2, y: 2)
     }
 }
 
-/// 温度计：水银高度跟随温度
+/// 取暖器 / 除湿机
+struct ApplianceArt: View {
+    let kind: DeviceCategory, on: Bool, level: Double, tint: Color
+    var body: some View {
+        if kind == .heater { HeaterArt(on: on, level: level, tint: tint) } else { DehumidifierArt(on: on, level: level, tint: tint) }
+    }
+}
+
+/// 油汀取暖器：一排白色亮面散热片。开机后散热片从底部透出设备色的热，强度跟随目标温度；热量用上升的柔光粒子表达（不用波浪线）。
+struct HeaterArt: View {
+    let on: Bool, level: Double, tint: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var body: some View {
+        PowerTimeline(on: on, running: true) { t, k in
+            let heat = k * (0.4 + 0.6 * level)
+            ZStack {
+                Ambient(tint, heat, width: 200, height: 120).position(x: 100, y: 70)
+                Canvas { ctx, _ in rise(&ctx, t: t, k: k) }
+                HStack(spacing: 4) {
+                    ForEach(0..<7, id: \.self) { _ in
+                        let fin = RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        fin.fill(shellFill)
+                            .overlay(fin.fill(LinearGradient(colors: [tint.opacity(0), tint.opacity(0.8)], startPoint: .top, endPoint: .bottom)).opacity(heat))
+                            .overlay(fin.stroke(LinearGradient(colors: [.white, .white.opacity(0)], startPoint: .top, endPoint: .bottom), lineWidth: 1))
+                            .frame(width: 18, height: 90)
+                    }
+                }
+                .shadow(color: k > 0.01 ? tint.opacity(0.45 * heat) : .black.opacity(0.22), radius: 5 + 9 * heat, y: 4)
+                .position(x: 100, y: 72)
+                ForEach([62.0, 138.0], id: \.self) { x in
+                    Capsule().fill(aluminum).frame(width: 24, height: 6).position(x: x, y: 124)
+                }
+            }
+            .frame(width: 200, height: 136)
+        }
+        .animation(Motion.smooth, value: level)
+    }
+    func rise(_ ctx: inout GraphicsContext, t: Double, k: Double) {
+        guard k > 0.01 else { return }
+        let rate = reduceMotion ? 0 : 0.25 + 0.3 * level
+        var dots: [(CGPoint, Double)] = []
+        for i in 0..<7 {
+            let u = (t * rate + Double(i) * 0.37).truncatingRemainder(dividingBy: 1)
+            dots.append((CGPoint(x: 49 + CGFloat(i) * 17 + CGFloat(sin(u * 5 + Double(i))) * 2, y: 24 - CGFloat(u) * 22), k * (0.5 + 0.5 * level) * sin(u * .pi)))
+        }
+        particles(&ctx, dots, tint: tint)
+    }
+}
+
+/// 除湿机：白色亮面立式机身，顶部出风格栅，正面一个透明水箱。
+/// 水位用设备色表示；运行时干燥空气以柔光粒子从顶部升起。
+struct DehumidifierArt: View {
+    let on: Bool, level: Double, tint: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var body: some View {
+        PowerTimeline(on: on, running: true) { t, k in
+            ZStack {
+                Ambient(tint, k * 0.6, width: 200, height: 120).position(x: 100, y: 70)
+                Canvas { ctx, _ in rise(&ctx, t: t, k: k) }
+                RoundedRectangle(cornerRadius: 26, style: .continuous).appliance(tint, k).frame(width: 100, height: 112).position(x: 100, y: 76)
+                VStack(spacing: 4) { ForEach(0..<4, id: \.self) { _ in Capsule().fill(Color.black.opacity(0.10)).frame(width: 60, height: 2) } }
+                    .position(x: 100, y: 40)
+                Circle().fill(Color.black.opacity(0.12)).frame(width: 5, height: 5).position(x: 100, y: 62)
+                Glow(tint, 0.9 * k, diameter: 5, softness: 3).position(x: 100, y: 62)
+                tank.position(x: 100, y: 100)
+            }
+            .frame(width: 200, height: 136)
+        }
+        .animation(Motion.smooth, value: level)
+    }
+    var tank: some View {
+        let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+        return ZStack(alignment: .bottom) {
+            shape.fill(Color.black.opacity(0.06))
+            Rectangle().fill(LinearGradient(colors: [tint.opacity(0.55), tint.opacity(0.85)], startPoint: .top, endPoint: .bottom))
+                .frame(height: 40 * CGFloat(max(0, min(1, level))))
+                .overlay(alignment: .top) { Rectangle().fill(.white.opacity(0.5)).frame(height: 1) }
+            shape.stroke(Color.black.opacity(0.08), lineWidth: 0.5)
+        }
+        .frame(width: 70, height: 40).clipShape(shape)
+    }
+    func rise(_ ctx: inout GraphicsContext, t: Double, k: Double) {
+        guard k > 0.01 else { return }
+        let rate = reduceMotion ? 0 : 0.4
+        var dots: [(CGPoint, Double)] = []
+        for i in 0..<5 {
+            let u = (t * rate + Double(i) * 0.41).truncatingRemainder(dividingBy: 1)
+            dots.append((CGPoint(x: 76 + CGFloat(i) * 12, y: 20 - CGFloat(u) * 20), k * 0.8 * sin(u * .pi)))
+        }
+        particles(&ctx, dots, tint: tint)
+    }
+}
+
+/// 温度计：磨砂玻璃管 + 液柱，液柱颜色沿温度色带取色（和空调一致），高度跟随温度。没有读数时液柱收回、玻璃泡变灰。
 struct ThermoArt: View {
     let temp: Double?, tint: Color
     var body: some View {
-        let f = max(0.05, min(1, ((temp ?? 0) + 10) / 50))
-        ZStack(alignment: .bottom) {
-            Capsule().fill(Color.primary.opacity(0.08)).frame(width: 26, height: 112)
-                .overlay(Capsule().stroke(Color.primary.opacity(0.15)))
-            Capsule().fill(LinearGradient(colors: [Theme.heat, Theme.cool], startPoint: .top, endPoint: .bottom))
-                .frame(width: 12, height: CGFloat(96 * (temp == nil ? 0.05 : f))).padding(.bottom, 14)
-            Circle().fill(Theme.cool).frame(width: 34, height: 34).offset(y: 12)
+        let f = max(0.06, min(1, ((temp ?? 0) + 10) / 50))
+        let c = temp.map { Theme.warm(max(0, min(1, ($0 - 10) / 25))) } ?? Color(white: 0.7)
+        ZStack {
+            if temp != nil { Glow(c, 0.35, diameter: 40, softness: 24).position(x: 60, y: 112) }
+            // 玻璃管和玻璃泡是一条连续轮廓
+            Path { p in
+                p.addRoundedRect(in: CGRect(x: 45, y: 6, width: 30, height: 104), cornerSize: CGSize(width: 15, height: 15))
+                p.addEllipse(in: CGRect(x: 40, y: 92, width: 40, height: 40))
+            }
+            .fill(shellFill).shadow(color: .black.opacity(0.18), radius: 4, y: 3)
+            Capsule().fill(LinearGradient(colors: [.white.opacity(0.9), .white.opacity(0)], startPoint: .top, endPoint: .bottom)).frame(width: 3, height: 70).position(x: 51, y: 50)
+            ForEach(0..<5, id: \.self) { i in
+                Capsule().fill(Color.black.opacity(0.12)).frame(width: 6, height: 1).position(x: 70, y: 22 + CGFloat(i) * 16)
+            }
+            Capsule().fill(c).frame(width: 10, height: 8 + 84 * CGFloat(temp == nil ? 0 : f))
+                .frame(height: 100, alignment: .bottom).position(x: 60, y: 62)
+            Circle().fill(RadialGradient(colors: [c.opacity(0.75), c], center: UnitPoint(x: 0.35, y: 0.3), startRadius: 0, endRadius: 14))
+                .frame(width: 26, height: 26).position(x: 60, y: 112)
+            Circle().trim(from: 0.56, to: 0.71).stroke(.white.opacity(0.7), style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
+                .frame(width: 16, height: 16).position(x: 60, y: 112)
         }
-        .frame(height: 136)
+        .frame(width: 120, height: 136)
         .animation(Motion.smooth, value: temp)
+    }
+}
+
+/// 人体传感器：白色亮面圆形机身 + 磨砂菲涅尔透镜，立在小底座上。在线时透镜里透出设备色、身后带环境光；静止画面不加动画。
+struct MotionSensorArt: View {
+    let on: Bool, tint: Color
+    var body: some View {
+        PowerTimeline(on: on) { _, k in
+            ZStack {
+                Ambient(tint, k * 0.6, width: 180, height: 120).position(x: 80, y: 60)
+                RoundedRectangle(cornerRadius: 5, style: .continuous).appliance(tint, 0).frame(width: 18, height: 24).position(x: 80, y: 110)
+                Capsule().appliance(tint, 0).frame(width: 60, height: 10).position(x: 80, y: 124)
+                Circle().appliance(tint, k).frame(width: 92, height: 92).position(x: 80, y: 58)
+                ZStack {
+                    Circle().fill(RadialGradient(colors: [Color(white: 0.99), Color(white: 0.86)], center: UnitPoint(x: 0.4, y: 0.35), startRadius: 0, endRadius: 30))
+                    Circle().fill(RadialGradient(colors: [tint.opacity(0.55), tint.opacity(0)], center: .center, startRadius: 0, endRadius: 26)).opacity(k)
+                    ForEach(1..<5, id: \.self) { i in Circle().stroke(Color.black.opacity(0.05), lineWidth: 0.75).frame(width: CGFloat(i) * 12, height: CGFloat(i) * 12) }
+                    Circle().stroke(Color.black.opacity(0.08), lineWidth: 0.5)
+                }
+                .frame(width: 56, height: 56).position(x: 80, y: 58)
+            }
+            .frame(width: 160, height: 136)
+        }
     }
 }
