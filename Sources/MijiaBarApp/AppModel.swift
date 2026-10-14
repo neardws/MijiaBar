@@ -38,6 +38,7 @@ final class AppModel: ObservableObject {
         self.mock = mock
         prefs = mock ? Prefs() : Prefs.load()
         agent = mock ? AgentPolicy() : AgentPolicy.load()
+        Notifier.shared.mock = mock
         GlanceStore.shared.mock = mock
         Recorder.shared.mock = mock
         if mock { loadMock(); return }
@@ -48,6 +49,7 @@ final class AppModel: ObservableObject {
         updateHome()
         if session != nil { Task { await refresh() } }
         Task { await menuLoop() }
+        Notifier.shared.start(self)
         GlanceStore.shared.start(self)
         Recorder.shared.start(self)
     }
@@ -216,6 +218,7 @@ final class AppModel: ObservableObject {
         do {
             let s = try await controller.readState(d)
             if !busy.contains(d.did) { states[d.did] = s }
+            Notifier.shared.observe(d, self)
             Recorder.shared.ingest(d, s)
             if let t = Transport.from(s.source, device: d) { transports[d.did] = t }
             stateErrors[d.did] = nil
@@ -282,16 +285,16 @@ final class AppModel: ObservableObject {
         if let a { withAnimation(a) { page = p } } else { withoutAnimation { page = p } }
     }
 
-    func refresh() async {
+    func refresh(quiet: Bool = false) async {
         guard !mock, let cloud = controller.cloud else { return }
-        refreshing = true; defer { refreshing = false }
+        if !quiet { refreshing = true }; defer { if !quiet { refreshing = false } }
         do {
             let hs = try await cloud.homes(); var all: [Device] = []
             for h in hs { for d in try await cloud.devices(in: h) where !all.contains(where: { $0.did == d.did }) { all.append(d) } }
             homes = hs; devices = all; updateHome()
             DeviceCache(homes: hs, devices: all, updated: Date()).save()
         } catch {
-            showToast(L("刷新失败：", "Refresh failed: ") + error.localizedDescription, error: true); handleAuth(error)
+            if !quiet { showToast(L("刷新失败：", "Refresh failed: ") + error.localizedDescription, error: true) }; handleAuth(error)
         }
     }
 

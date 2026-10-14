@@ -355,3 +355,37 @@ func acSpec() throws -> DeviceSpec {
         #expect(SensorEvents.changes([]).isEmpty)
     }
 }
+
+@Suite struct NotifyTests {
+    @Test func detectsTransitionsButNotFirstSight() {
+        let closed = NotifySnapshot(online: true, contactClosed: true, leak: false)
+        #expect(NotifyRules.events(old: nil, new: closed).isEmpty)
+        #expect(NotifyRules.events(old: closed, new: .init(online: true, contactClosed: false, leak: false)) == [.contactOpened])
+        #expect(NotifyRules.events(old: closed, new: .init(online: true, contactClosed: true, leak: true)) == [.leakDetected])
+        #expect(NotifyRules.events(old: closed, new: .init(online: false)) == [.wentOffline])
+        #expect(NotifyRules.events(old: .init(online: false), new: closed) == [.cameOnline])
+        #expect(NotifyRules.events(old: .init(online: true, noMotionSeconds: 600), new: .init(online: true, noMotionSeconds: 0)) == [.motion])
+        #expect(NotifyRules.events(old: .init(online: true, powerOn: false), new: .init(online: true, powerOn: true)) == [.powered(true)])
+        #expect(NotifyRules.events(old: closed, new: closed).isEmpty)
+    }
+    @Test func debouncesAndConfirmsOffline() {
+        var d = NotifyDebouncer(window: 300, offlineConfirmations: 2)
+        let t = Date()
+        do { let r = d.shouldFire("a", .contactOpened, now: t); #expect(r) }
+        do { let r = d.shouldFire("a", .contactOpened, now: t.addingTimeInterval(100)); #expect(!r) }
+        do { let r = d.shouldFire("b", .contactOpened, now: t.addingTimeInterval(100)); #expect(r) }
+        do { let r = d.shouldFire("a", .contactOpened, now: t.addingTimeInterval(301)); #expect(r) }
+        do { let r = d.confirmOffline("a", online: false); #expect(!r) }
+        do { let r = d.confirmOffline("a", online: false); #expect(r) }
+        do { let r = d.confirmOffline("a", online: true); #expect(!r) }
+        do { let r = d.confirmOffline("a", online: false); #expect(!r) }
+    }
+    @Test func settingsDefaultsAndPersistence() {
+        var s = NotifySettings()
+        #expect(s.isOn(.contactOpened) && s.isOn(.leak) && !s.isOn(.motion) && !s.isOn(.offline))
+        s.kinds[.motion] = true; s.muted.insert("x")
+        #expect(!s.allows("x", .motion) && s.allows("y", .motion))
+        let d = UserDefaults(suiteName: "NotifyTest-\(UUID().uuidString)")!
+        s.save(d); #expect(NotifySettings.load(d) == s)
+    }
+}

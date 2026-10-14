@@ -211,6 +211,7 @@ enum Snapshot {
             m.page = .settings; render(root, f("settings")); render(AgentSettingsSection().padding(12).frame(maxHeight: .infinity, alignment: .top).background(Theme.bg).environmentObject(m), f("agent"), size: CGSize(width: 360, height: 420))
             m.page = .list; m.showHidden = true; render(root, f("list-hidden")); m.showHidden = false
             m.editingOrder = true; render(root, f("list-reorder")); m.editingOrder = false
+            render(NotifySettingsSection().padding(12).frame(maxHeight: .infinity, alignment: .top).background(Theme.bg).environmentObject(m), f("notify-settings"), size: CGSize(width: 360, height: 470))
             GlanceStore.shared.items = [GlanceItem(did: "d6", kind: .temperature), GlanceItem(did: "d6", kind: .humidity), GlanceItem(did: "d5", kind: .power)]
             render(GlanceSettingsSection().padding(12).frame(maxHeight: .infinity, alignment: .top).background(Theme.bg).environmentObject(m), f("glance-settings"), size: CGSize(width: 360, height: 300))
             render(MenuLabel(model: m).padding(.horizontal, 10).frame(height: 24).background(.bar).font(.system(size: 13)), f("glance-menubar"), size: CGSize(width: 200, height: 24))
