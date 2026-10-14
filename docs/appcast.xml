@@ -3,19 +3,19 @@
     <channel>
         <title>MijiaBar</title>
         <item>
-            <title>0.1.9-rc1</title>
-            <pubDate>Wed, 14 Oct 2026 16:23:50 +0800</pubDate>
+            <title>0.1.9</title>
+            <pubDate>Wed, 14 Oct 2026 16:27:48 +0800</pubDate>
             <link>https://www.neardws.com/MijiaBar/</link>
-            <sparkle:version>0.1.9-rc1</sparkle:version>
-            <sparkle:shortVersionString>0.1.9-rc1</sparkle:shortVersionString>
+            <sparkle:version>0.1.9</sparkle:version>
+            <sparkle:shortVersionString>0.1.9</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description sparkle:format="markdown"><![CDATA[## 0.1.9-rc1
+            <description sparkle:format="markdown"><![CDATA[## 0.1.9
 
-- Sparkle 应用内自动更新（首次需手动安装本版）
-- GitHub Pages 下载页与 appcast
-- 合并此前未发版的 UI / 无障碍 / 图标更新
+- Sparkle 应用内自动更新 / In-app updates via Sparkle
+- 下载页 / Download site: https://www.neardws.com/MijiaBar/
+- UI、无障碍、新图标（感谢 @skyswordw）/ UI, accessibility and new icon (thanks @skyswordw)
 ]]></description>
-            <enclosure url="https://github.com/neardws/MijiaBar/releases/download/v0.1.9-rc1/MijiaBar-0.1.9-rc1.dmg" length="23351822" type="application/octet-stream" sparkle:edSignature="CUbqTv9AotgWVBTkkFyuihEjW5HEr+h7snOd2b3rpHX6wokl+cjStWWAGNlGCTDk2QWWQr1ejtHDWb1ZYX7nAw=="/>
+            <enclosure url="https://github.com/neardws/MijiaBar/releases/download/v0.1.9/MijiaBar-0.1.9.dmg" length="23351794" type="application/octet-stream" sparkle:edSignature="Y3eg8SJftpIV7ewpnBVM1u6ROYtmO3kwxqkhQ5LDccuVhDD0W8zSgKjxyiWsj98a02oacd+W657r8qfPTsOfAw=="/>
         </item>
     </channel>
 </rss>
