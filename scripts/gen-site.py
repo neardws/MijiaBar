@@ -13,6 +13,8 @@ import html, json, os, re, sys
 
 os.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
+APP_LANGS = [('en', 'English'), ('zh-Hans', '简体中文'), ('zh-Hant', '繁體中文'), ('de', 'Deutsch'), ('fr', 'Français'),
+             ('es', 'Español'), ('it', 'Italiano'), ('ru', 'Русский'), ('ja', '日本語')]
 SITE = 'https://www.neardws.com/MijiaBar/'
 # 截图、插画、分享图放在 R2（neardws-files 桶 mijiabar/site/），不进仓库；上传见 docs/assets/README.md
 CDN = 'https://files.neardws.com/mijiabar/site'
@@ -76,7 +78,8 @@ def render(tpl, s, lang, prompts, ver):
     v['redirect'] = redirect_script() if code == 'en' else ''
     v['lang_menu'] = lang_links(code, 10)
     v['lang_footer'] = lang_links(code, 8)
-    v['lang_names'] = ' '.join(f'<span lang="{l[2]}">{l[6]}</span>' for l in LANGS)
+    # App 支持的 9 种界面语言（不是网站语言），用本语言名称
+    v['lang_names'] = ' '.join(f'<span lang="{c}">{n}</span>' for c, n in APP_LANGS)
     v['lineup'] = '\n'.join(lineup_item(a, s[k]) for a, k in LINEUP)
     v['faq'] = '\n'.join(
         f'        <details><summary>{s[f"q{i}"]}<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.5v11M1.5 7h11"/></svg></summary><p>{s[f"a{i}"]}</p></details>'
