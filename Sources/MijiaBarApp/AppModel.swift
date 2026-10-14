@@ -39,6 +39,7 @@ final class AppModel: ObservableObject {
         prefs = mock ? Prefs() : Prefs.load()
         agent = mock ? AgentPolicy() : AgentPolicy.load()
         GlanceStore.shared.mock = mock
+        Recorder.shared.mock = mock
         if mock { loadMock(); return }
         session = Session.load()
         if let s = session { controller.cloud = XiaomiCloud(session: s) }
@@ -48,6 +49,7 @@ final class AppModel: ObservableObject {
         if session != nil { Task { await refresh() } }
         Task { await menuLoop() }
         GlanceStore.shared.start(self)
+        Recorder.shared.start(self)
     }
 
     // MARK: 查询
@@ -214,6 +216,7 @@ final class AppModel: ObservableObject {
         do {
             let s = try await controller.readState(d)
             if !busy.contains(d.did) { states[d.did] = s }
+            Recorder.shared.ingest(d, s)
             if let t = Transport.from(s.source, device: d) { transports[d.did] = t }
             stateErrors[d.did] = nil
         } catch {
