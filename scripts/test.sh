@@ -3,8 +3,10 @@
 # 用法: scripts/test.sh [swift test 的参数，例如 --filter LANHealth]
 # 装了 Xcode 时直接 swift test；只有 Command Line Tools 时，需要手动指定 Testing.framework 的位置，
 # 并改用 26.x SDK（27 SDK 缺少 SwiftUI 宏插件，App 目标编译不过）。
+# Sparkle 是 Package.swift 的本地 binaryTarget，不进仓库；swift test 解析整包时也要有 xcframework。
 set -euo pipefail
 cd "$(dirname "$0")/.."
+scripts/fetch-sparkle.sh
 CLT=/Library/Developer/CommandLineTools
 if [[ "$(xcode-select -p)" == "$CLT"* ]]; then
   F="$CLT/Library/Developer/Frameworks"
