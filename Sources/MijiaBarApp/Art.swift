@@ -742,6 +742,115 @@ struct MotionSensorArt: View {
     }
 }
 
+/// 可视门铃：竖长的白色亮面机身，上部黑色玻璃后面是镜头（和摄像机同一种镜头），下部是磨砂圆形按键和一圈指示灯环。
+/// 在线时灯环常亮设备色、镜头透出设备色，身后带环境光；和摄像机一样静止画面不加动画。
+struct DoorbellArt: View {
+    let on: Bool, tint: Color
+    var body: some View {
+        PowerTimeline(on: on) { _, k in
+            ZStack {
+                Ambient(tint, k * 0.6, width: 170, height: 130).position(x: 80, y: 66)
+                RoundedRectangle(cornerRadius: 27, style: .continuous).appliance(tint, k).frame(width: 54, height: 116).position(x: 80, y: 68)
+                window(k).position(x: 80, y: 39)
+                // 麦克风孔
+                HStack(spacing: 3.5) { ForEach(0..<4, id: \.self) { _ in Circle().fill(Color.black.opacity(0.14)).frame(width: 2, height: 2) } }
+                    .position(x: 80, y: 71)
+                // 按键：灰色底环上亮起设备色灯环（常亮），中间是磨砂圆面
+                Circle().stroke(Color.black.opacity(0.08), lineWidth: 3).frame(width: 32, height: 32).position(x: 80, y: 99)
+                Circle().stroke(tint, lineWidth: 3).frame(width: 32, height: 32).opacity(k).shadow(color: tint, radius: 6 * k).position(x: 80, y: 99)
+                Circle().fill(RadialGradient(colors: [Color(white: 0.99), Color(white: 0.86)], center: UnitPoint(x: 0.4, y: 0.3), startRadius: 0, endRadius: 14))
+                    .overlay(Circle().stroke(Color.black.opacity(0.08), lineWidth: 0.5))
+                    .frame(width: 24, height: 24).position(x: 80, y: 99)
+            }
+            .frame(width: 160, height: 136)
+        }
+    }
+
+    /// 黑色玻璃窗：圆角和机身同心（27 − 6），镜头在玻璃后面，上半部斜向反光 + 顶缘细高光
+    func window(_ k: Double) -> some View {
+        let glass = RoundedRectangle(cornerRadius: 21, style: .continuous)
+        return ZStack {
+            glass.fill(darkGlass)
+            CameraArt(on: on, tint: tint).lens(k).scaleEffect(0.82)
+            glass.fill(LinearGradient(colors: [.white.opacity(0.10), .white.opacity(0)], startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.5)))
+            glass.stroke(LinearGradient(colors: [.white.opacity(0.28), .white.opacity(0.04)], startPoint: .top, endPoint: .bottom), lineWidth: 0.75)
+        }
+        .frame(width: 42, height: 46)
+        .clipShape(glass)
+    }
+}
+
+/// 门窗传感器：主机和磁铁两块白色亮面长条并排。门窗打开时两块分开、缝隙里透出设备色的光；关上时贴在一起。
+/// 主机的状态灯在线时常亮；开合变化时用 Motion.smooth 移动，静止画面不加动画。open 为 nil 表示还不知道（按关着画）。
+struct ContactSensorArt: View {
+    let on: Bool, open: Bool?, tint: Color
+    var body: some View {
+        PowerTimeline(on: on) { _, k in
+            let isOpen = open == true
+            let gap: CGFloat = isOpen ? 26 : 5
+            let mainW: CGFloat = 38, magW: CGFloat = 20
+            let x0 = 80 - (mainW + gap + magW) / 2
+            let mx = x0 + mainW / 2
+            ZStack {
+                Ambient(tint, k * 0.5, width: 170, height: 120).position(x: 80, y: 68)
+                // 缝隙里的光：只在打开时出现
+                Capsule().fill(LinearGradient(colors: [tint.opacity(0), tint.opacity(0.9), tint.opacity(0)], startPoint: .top, endPoint: .bottom))
+                    .frame(width: 6, height: 84).shadow(color: tint, radius: 8)
+                    .position(x: x0 + mainW + gap / 2, y: 68).opacity(isOpen ? k : 0)
+                RoundedRectangle(cornerRadius: 11, style: .continuous).appliance(tint, k).frame(width: mainW, height: 100).position(x: mx, y: 68)
+                // 状态灯和电池盖接缝
+                Circle().fill(Color.black.opacity(0.10)).frame(width: 4, height: 4).position(x: mx, y: 30)
+                Glow(tint, 0.9 * k, diameter: 4, softness: 3).position(x: mx, y: 30)
+                Capsule().fill(Color.black.opacity(0.06)).frame(width: 22, height: 1).position(x: mx, y: 100)
+                RoundedRectangle(cornerRadius: 8, style: .continuous).appliance(tint, 0).frame(width: magW, height: 70).position(x: x0 + mainW + gap + magW / 2, y: 68)
+            }
+            .frame(width: 160, height: 136)
+            .animation(Motion.smooth, value: open)
+        }
+    }
+}
+
+/// 水浸传感器：小而薄的白色亮面圆饼（顶面 + 侧面表现厚度，比例不要像扫地机器人），底部露出两枚金属探针。
+/// 检测到浸水时身下出现一摊水（两圈静止的波纹）、状态灯变成橙色警示；平时状态灯在线常亮设备色。静止画面不加动画。
+struct LeakSensorArt: View {
+    let on: Bool, wet: Bool?, tint: Color
+    static let water = Color(red: 0.35, green: 0.68, blue: 1.0)
+    var body: some View {
+        PowerTimeline(on: on) { _, k in
+            let isWet = wet == true
+            ZStack {
+                Ambient(isWet ? Self.water : tint, k * 0.5, width: 170, height: 110).position(x: 80, y: 74)
+                // 一摊水
+                ZStack {
+                    Ellipse().fill(RadialGradient(colors: [Self.water.opacity(0.55), Self.water.opacity(0.16)], center: .center, startRadius: 0, endRadius: 74))
+                        .frame(width: 140, height: 32)
+                    Ellipse().stroke(Color.white.opacity(0.55), lineWidth: 0.75).frame(width: 110, height: 24)
+                    Ellipse().stroke(Color.white.opacity(0.35), lineWidth: 0.75).frame(width: 128, height: 29)
+                }
+                .position(x: 80, y: 103).opacity(isWet ? 1 : 0)
+                Ellipse().fill(RadialGradient(colors: [.black.opacity(0.22), .black.opacity(0)], center: .center, startRadius: 0, endRadius: 40))
+                    .frame(width: 90, height: 14).position(x: 80, y: 102).opacity(isWet ? 0.5 : 1)
+                ForEach([-16.0, 16.0], id: \.self) { dx in Capsule().fill(aluminum).frame(width: 4, height: 6).position(x: 80 + dx, y: 102) }
+                // 侧面：顶面椭圆向下延伸的厚度，比顶面暗
+                Path { p in
+                    p.addRect(CGRect(x: 38, y: 68, width: 84, height: 16))
+                    p.addEllipse(in: CGRect(x: 38, y: 67, width: 84, height: 34))
+                }
+                .fill(LinearGradient(colors: [Color(white: 0.86), Color(white: 0.70)], startPoint: .top, endPoint: .bottom))
+                .shadow(color: k > 0.01 && !isWet ? tint.opacity(0.35 * k) : .black.opacity(0.18), radius: 5, y: 3)
+                // 顶面：亮面 + 顶缘细高光
+                Ellipse().fill(LinearGradient(colors: [Color(white: 0.99), Color(white: 0.88)], startPoint: .top, endPoint: .bottom))
+                    .overlay(Ellipse().stroke(LinearGradient(colors: [.white, .white.opacity(0)], startPoint: .top, endPoint: .bottom), lineWidth: 1))
+                    .frame(width: 84, height: 34).position(x: 80, y: 68)
+                Circle().fill(Color.black.opacity(0.10)).frame(width: 4, height: 4).position(x: 80, y: 77)
+                Glow(isWet ? .orange : tint, 0.9 * k, diameter: 4, softness: 3).position(x: 80, y: 77)
+            }
+            .frame(width: 160, height: 136)
+            .animation(Motion.smooth, value: wet)
+        }
+    }
+}
+
 /// 通用智能设备（没有专门插画的类型）：白色亮面方形主机，正面一个磨砂圆形按键，下方一条指示灯带。
 /// 开机时灯带亮起设备色、身后带环境光；不画镜头之类会被误认成具体设备的部件，静止画面不加动画。
 struct GenericArt: View {

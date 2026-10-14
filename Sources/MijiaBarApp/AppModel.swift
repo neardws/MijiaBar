@@ -113,6 +113,9 @@ final class AppModel: ObservableObject {
         var out: [String] = []
         if let p = spec.prop(named: "temperature"), let v = s.values[p.key] { out.append("\(v)°C") }
         if let p = spec.prop(named: "relative-humidity"), let v = s.values[p.key] { out.append("\(v)%") }
+        // 门窗：true 表示贴合（关着）；水浸：true 表示检测到水
+        if let p = spec.prop(named: "contact-state"), let v = s.values[p.key]?.boolValue { out.append(v ? L("已关闭", "Closed") : L("已打开", "Open")) }
+        if let p = spec.prop(named: "submersion-state"), let v = s.values[p.key]?.boolValue { out.append(v ? L("检测到浸水", "Water detected") : L("无浸水", "No water")) }
         return out.isEmpty ? nil : out.joined(separator: " ")
     }
 

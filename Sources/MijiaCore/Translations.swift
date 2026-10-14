@@ -293,6 +293,16 @@ public let uiTable: [String: [String]] = [
     "Check for Updates…": ["Nach Updates suchen …", "Rechercher les mises à jour…", "Buscar actualizaciones…", "Controlla aggiornamenti…", "Проверить обновления…", "アップデートを確認…"],
     "Updates come from the GitHub Pages appcast. Packages are notarized by Apple and signed with EdDSA.": ["Updates kommen über den GitHub-Pages-Appcast. Pakete sind von Apple notarisiert und mit EdDSA signiert.", "Les mises à jour passent par l’appcast GitHub Pages. Les paquets sont notariés par Apple et signés avec EdDSA.", "Las actualizaciones llegan por el appcast de GitHub Pages. Los paquetes están notarizados por Apple y firmados con EdDSA.", "Gli aggiornamenti arrivano dall’appcast di GitHub Pages. I pacchetti sono notarizzati da Apple e firmati con EdDSA.", "Обновления приходят через appcast на GitHub Pages. Пакеты нотаризованы Apple и подписаны EdDSA.", "アップデートは GitHub Pages の appcast 経由。パッケージは Apple 公証済みで EdDSA 署名されています。"],
     "Download site": ["Download-Seite", "Page de téléchargement", "Sitio de descarga", "Pagina di download", "Страница загрузок", "ダウンロードページ"],
+    "Open": ["Offen", "Ouvert", "Abierto", "Aperto", "Открыто", "開いています"],
+    "Closed": ["Geschlossen", "Fermé", "Cerrado", "Chiuso", "Закрыто", "閉じています"],
+    "Door & window sensor": ["Tür-/Fenstersensor", "Capteur d’ouverture", "Sensor de puerta y ventana", "Sensore porta/finestra", "Датчик открытия", "ドア・窓センサー"],
+    "Water leak sensor": ["Wassermelder", "Détecteur de fuite d’eau", "Sensor de fugas de agua", "Sensore perdite d’acqua", "Датчик протечки", "水漏れセンサー"],
+    "Water detected": ["Wasser erkannt", "Fuite détectée", "Agua detectada", "Acqua rilevata", "Обнаружена протечка", "水漏れを検知"],
+    "No water": ["Kein Wasser", "Aucune fuite", "Sin agua", "Nessuna perdita", "Протечки нет", "水漏れなし"],
+    "Open and close history is shown in the Mi Home app": ["Der Öffnungsverlauf wird in der Mi-Home-App angezeigt", "L’historique d’ouverture s’affiche dans l’app Mi Home", "El historial de aperturas se muestra en la app Mi Home", "La cronologia di apertura è mostrata nell’app Mi Home", "История открытий отображается в приложении Mi Home", "開閉の履歴は Mi Home アプリで確認できます"],
+    "Leak alerts are shown in the Mi Home app": ["Wasseralarme werden in der Mi-Home-App angezeigt", "Les alertes de fuite s’affichent dans l’app Mi Home", "Las alertas de fugas se muestran en la app Mi Home", "Gli avvisi di perdita sono mostrati nell’app Mi Home", "Оповещения о протечках отображаются в приложении Mi Home", "水漏れの通知は Mi Home アプリで確認できます"],
+    "Balcony door": ["Balkontür", "Porte du balcon", "Puerta del balcón", "Porta del balcone", "Балконная дверь", "バルコニーのドア"],
+    "Kitchen leak sensor": ["Wassermelder Küche", "Détecteur de fuite de la cuisine", "Sensor de fugas de la cocina", "Sensore perdite cucina", "Датчик протечки на кухне", "キッチンの水漏れセンサー"],
 ]
 
 /// 设备状态取值（键为小写英文）
@@ -807,4 +817,14 @@ public let hantTable: [String: String] = [
     "检查更新…": "檢查更新…",
     "更新通过 GitHub Pages 的 appcast 分发，安装包经苹果公证并用 EdDSA 签名。": "更新透過 GitHub Pages 的 appcast 發佈，安裝包經蘋果公證並以 EdDSA 簽名。",
     "下载页": "下載頁",
+    "已打开": "已打開",
+    "门窗传感器": "門窗感測器",
+    "水浸传感器": "水浸感測器",
+    "检测到浸水": "偵測到浸水",
+    "无浸水": "無浸水",
+    "开合记录请在米家 App 中查看": "開合紀錄請在米家 App 中檢視",
+    "浸水报警请在米家 App 中查看": "浸水警報請在米家 App 中檢視",
+    "厨房": "廚房",
+    "厨房水浸": "廚房水浸",
+    "阳台门": "陽台門",
 ]
