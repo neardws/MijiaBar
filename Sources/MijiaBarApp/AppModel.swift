@@ -3,6 +3,7 @@ import AppKit
 import MijiaCore
 
 enum Page: Equatable { case list, detail(String), settings }
+struct Toast: Equatable { let id = UUID(); let text: String; let isError: Bool }
 struct DeviceSection: Identifiable { let id: String; let title: String; let devices: [Device] }
 
 @MainActor
@@ -16,7 +17,7 @@ final class AppModel: ObservableObject {
     @Published var stateErrors: [String: String] = [:]
     @Published var busy: Set<String> = []
     @Published var refreshing = false
-    @Published var toast: String?
+    @Published var toast: Toast?
     @Published var page: Page = .list
     @Published var search = ""
     @Published var showHidden = false
@@ -172,7 +173,7 @@ final class AppModel: ObservableObject {
             do { if let t = Transport.from(try await controller.set(d, key: key, value: value), device: d) { transports[d.did] = t } }
             catch {
                 states[d.did]?.values[key] = old
-                showToast(L("操作失败：", "Failed: ") + error.localizedDescription)
+                showToast(L("操作失败：", "Failed: ") + error.localizedDescription, error: true)
                 handleAuth(error)
             }
             busy.remove(d.did)
@@ -184,19 +185,21 @@ final class AppModel: ObservableObject {
         busy.insert(d.did)
         Task {
             do { _ = try await controller.action(d, key: a.key, inputs: []); showToast(L("已执行", "Done")) }
-            catch { showToast(L("操作失败：", "Failed: ") + error.localizedDescription) }
+            catch { showToast(L("操作失败：", "Failed: ") + error.localizedDescription, error: true) }
             busy.remove(d.did)
             await loadState(d)
         }
     }
 
-    func showToast(_ s: String) {
-        toast = s
-        AccessibilityNotification.Announcement(s).post()
-        Task { try? await Task.sleep(nanoseconds: 3_000_000_000); if toast == s { toast = nil } }
+    /// 错误停留更久，并通过 VoiceOver 播报；成功提示只显示，不打断朗读
+    func showToast(_ s: String, error: Bool = false) {
+        let t = Toast(text: s, isError: error)
+        toast = t
+        if error { AccessibilityNotification.Announcement(s).post() }
+        Task { try? await Task.sleep(nanoseconds: error ? 5_000_000_000 : 3_000_000_000); if toast == t { toast = nil } }
     }
     func handleAuth(_ e: Error) {
-        if case CloudError.authExpired = e { showToast(CloudError.authExpired.localizedDescription) }
+        if case CloudError.authExpired = e { showToast(CloudError.authExpired.localizedDescription, error: true) }
     }
 
     // MARK: 管理
@@ -225,7 +228,7 @@ final class AppModel: ObservableObject {
             homes = hs; devices = all; updateHome()
             DeviceCache(homes: hs, devices: all, updated: Date()).save()
         } catch {
-            showToast(L("刷新失败：", "Refresh failed: ") + error.localizedDescription); handleAuth(error)
+            showToast(L("刷新失败：", "Refresh failed: ") + error.localizedDescription, error: true); handleAuth(error)
         }
     }
 

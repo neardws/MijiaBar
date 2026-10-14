@@ -33,7 +33,11 @@ struct RootView: View {
         .animation(Motion.enter, value: m.renaming?.did)
         .overlay(alignment: .bottom) {
             if let t = m.toast {
-                Text(t).font(.system(size: 12, weight: .medium)).padding(.horizontal, 14).padding(.vertical, 8)
+                HStack(spacing: 6) {
+                    if t.isError { Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange).accessibilityHidden(true) }
+                    Text(t.text)
+                }
+                .font(.system(size: 12, weight: .medium)).padding(.horizontal, 14).padding(.vertical, 8)
                     .background(.regularMaterial, in: Capsule()).overlay(Capsule().stroke(Theme.stroke))
                     .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
                     .padding(.bottom, 14)

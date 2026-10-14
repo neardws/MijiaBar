@@ -465,7 +465,7 @@ struct LiveControls: View {
             } else {
             Button {
                 if watching { withAnimation(Motion.smooth) { watching = false }; return }
-                if !m.mock, m.session?.canLiveStream != true { m.showToast(LiveError.noAuth.localizedDescription); m.openSettings(); return }
+                if !m.mock, m.session?.canLiveStream != true { m.showToast(LiveError.noAuth.localizedDescription, error: true); m.openSettings(); return }
                 withAnimation(Motion.smooth) { watching = true }
             } label: {
                 Label(watching ? L("停止直播", "Stop live view") : L("看直播", "Watch live"), systemImage: watching ? "stop.fill" : "play.rectangle.fill")

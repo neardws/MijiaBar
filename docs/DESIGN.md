@@ -74,13 +74,12 @@ MijiaBar 一天会被打开几十次。用得越频繁，动画就越要少、�
 - 有状态的控件要给 `.accessibilityValue`（开/关、当前模式、温度）。`MiniSwitch` 传入设备名作为 `label`。
 - 滑条支持 VoiceOver 上下调节：`GradientSlider` 传 `a11yLabel`。
 - 菜单里的单选项用 `OptionPicker`（系统画勾选，VoiceOver 能读出选中项），不要手写「✓」。
-- 提示（toast）会通过 `AccessibilityNotification.Announcement` 播报。
+- 错误提示（`showToast(_:error: true)`）带橙色警示图标、停留 5 秒（成功提示 3 秒），并且只有它会通过 `AccessibilityNotification.Announcement` 播报；「已复制」「已执行」这类成功提示只显示，不打断 VoiceOver。
 - 纯装饰的图形（插画、列表图标）加 `.accessibilityHidden(true)`。
 
 ## 7. 待改进（欢迎 PR）
 
 - **概览条截断**：列表顶部的空调胶囊（「客厅空调 2…」）把最关键的温度截掉了。名字可以缩短或省略，温度要完整。
-- **提示区分类型**：错误和成功用不同图标/颜色，错误停留更久。
 - **圆角和字号做成 token**：现在圆角有 7/9/12/14/20/26 等多种、字号约 10 种散落各处。嵌套圆角应同心：内圆角 = 外圆角 − 内边距。
 - **键盘可达**：详情页的磁贴和电源按钮需要可见的焦点样式。
 
