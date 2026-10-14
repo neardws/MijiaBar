@@ -16,7 +16,7 @@
 
 > Inoffizielles Projekt ohne Verbindung zu Xiaomi. Es nutzt dieselbe Cloud-API wie die Mi-Home-App sowie das LAN-Protokoll miIO.
 
-<p align="center"><img src="docs/screenshots/demo.gif" width="300" alt="demo"></p>
+<p align="center"><img src="https://files.neardws.com/mijiabar/readme/demo.gif" width="300" alt="demo"></p>
 
 [Funktionen](#funktionen) · [Screenshots](#screenshots) · [Installation](#installation) · [Anmeldung](#anmeldung) · [Automatisch ausgeblendete Geräte](#automatisch-ausgeblendete-geräte) · [Live-Video (Kameras)](#live-video-kameras) · [Agents / MCP](#agents--mcp) · [Aus dem Quellcode bauen](#aus-dem-quellcode-bauen) · [Wo Daten gespeichert werden](#wo-daten-gespeichert-werden) · [Danksagung](#danksagung)
 
@@ -35,19 +35,19 @@
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/list-light.png" width="260" alt="">
-  <img src="docs/screenshots/ac-cool-light.png" width="260" alt="">
-  <img src="docs/screenshots/fan-light.png" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/list-light.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/ac-cool-light.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/fan-light.webp" width="260" alt="">
 </p>
 <p align="center"><b>Dunkelmodus</b><br>
-  <img src="docs/screenshots/list-dark.png" width="260" alt="">
-  <img src="docs/screenshots/ac-heat-dark.png" width="260" alt="">
-  <img src="docs/screenshots/light-dark.png" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/list-dark.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/ac-heat-dark.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/light-dark.webp" width="260" alt="">
 </p>
 <p align="center">
-  <img src="docs/screenshots/plug-light.png" width="260" alt="">
-  <img src="docs/screenshots/agent-light.png" width="260" alt="">
-  <img src="docs/screenshots/login-light.png" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/plug-light.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/agent-light.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/login-light.webp" width="260" alt="">
 </p>
 
 ## Installation
@@ -84,8 +84,8 @@ Ein Gerät wird standardmäßig ans Listenende eingeklappt, wenn eine Bedingung 
 - Erkennung „nicht zu Hause“: MijiaBar vergleicht die Subnetze des Mac mit den lokalen IPs der Geräte (bei jedem Netzwechsel neu, nichts gespeichert). Unterwegs wird LAN übersprungen und direkt die Cloud genutzt; Kamerakarten weisen darauf hin, dass Livebild nur zu Hause geht.
 
 <p align="center">
-  <img src="docs/screenshots/camera-live-light.png" width="260" alt="">
-  <img src="docs/screenshots/doorbell-live-dark.png" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/camera-live-light.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/doorbell-live-dark.webp" width="260" alt="">
 </p>
 
 ## Agents / MCP

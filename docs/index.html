@@ -5,8 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MijiaBar — Your Mi Home, one click away</title>
 <meta name="description" content="A native macOS menu bar app for Xiaomi Mi Home. Notarized, open source, LAN-first, Agent-ready.">
-<meta property="og:image" content="https://www.neardws.com/MijiaBar/assets/shots/en/list-dark.png">
-<link rel="icon" href="assets/icon.png">
+<meta property="og:image" content="https://files.neardws.com/mijiabar/shots/en/list-dark.webp" id="ogimg">
+<link rel="icon" href="https://files.neardws.com/mijiabar/icon.webp" type="image/webp">
+<link rel="alternate icon" href="assets/icon.png">
+<link rel="preload" as="image" type="image/webp" href="https://files.neardws.com/mijiabar/shots/en/list-dark.webp" id="heroPreload">
+<script>
+/* early lang — only preload active language hero, avoid double download */
+window.__MB_CDN='https://files.neardws.com/mijiabar';
+(function(){
+  var q=new URLSearchParams(location.search).get('lang');
+  var L;
+  try{L=q||localStorage.lang}catch(e){L=q}
+  if(!L) L=(navigator.language||'').toLowerCase().startsWith('zh')?'zh':'en';
+  L=L==='zh'?'zh':'en';
+  window.__MB_LANG=L;
+  var hero=window.__MB_CDN+'/shots/'+L+'/list-dark.webp';
+  var p=document.getElementById('heroPreload'); if(p) p.href=hero;
+  var o=document.getElementById('ogimg'); if(o) o.content=hero;
+})();
+</script>
 <style>
 :root{--bg:#f6f7fb;--bg2:#fff;--fg:#0b0d12;--mut:#5b6170;--line:rgba(10,14,25,.08);--glass:rgba(255,255,255,.62);--acc:#2f7bff;--acc2:#8b5cf6;--warm:#ff8a3d;--shadow:0 30px 80px -20px rgba(30,50,120,.25)}
 @media (prefers-color-scheme:dark){:root{--bg:#07080c;--bg2:#0e1016;--fg:#f2f4f8;--mut:#9097a6;--line:rgba(255,255,255,.08);--glass:rgba(22,25,34,.55);--shadow:0 40px 100px -20px rgba(0,0,0,.7)}}
@@ -125,7 +142,7 @@ footer a:hover{color:var(--fg)}
 </head>
 <body>
 <nav><div class="w">
-  <a class="brand" href="#"><img src="assets/icon.png" alt="">MijiaBar</a>
+  <a class="brand" href="#"><img src="https://files.neardws.com/mijiabar/icon.webp" width="28" height="28" alt="">MijiaBar</a>
   <div class="links">
     <a class="hide-m" href="#features" data-i="nav_f">Features</a>
     <a class="hide-m" href="#agent">Agent</a>
@@ -139,7 +156,7 @@ footer a:hover{color:var(--fg)}
   <div class="aurora"><i></i><i></i><i></i></div>
   <div class="w">
     <span class="pill"><span class="dot"></span><b class="ver">v0.1.9</b><span data-i="pill">In-app updates are here</span></span>
-    <img class="icon" src="assets/icon.png" alt="MijiaBar">
+    <img class="icon" src="https://files.neardws.com/mijiabar/icon.webp" width="112" height="112" alt="MijiaBar">
     <h1 data-i="h1">Your Mi Home,<br><span class="g">one click away.</span></h1>
     <p class="sub" data-i="sub">A native macOS menu bar app for Xiaomi Mi Home. Air conditioners, lights, fans, cameras — controlled in a glance, not an app switch.</p>
     <div class="cta">
@@ -150,12 +167,12 @@ footer a:hover{color:var(--fg)}
 
     <div class="stage rv">
       <div class="menubar"><b></b><span data-i="mb_app">Finder</span><span class="r"><span class="mb">🏠 26°</span><span>Wi‑Fi</span><span class="clock">9:41</span></span></div>
-      <div class="float-card fc1"><img src="assets/shots/en/fan-dark.png" data-shot="fan-dark" alt=""></div>
-      <div class="float-card fc2"><img src="assets/shots/en/light-light.png" data-shot="light-light" alt=""></div>
+      <div class="float-card fc1"><img data-shot="fan-dark" src="" loading="lazy" decoding="async" alt=""></div>
+      <div class="float-card fc2"><img data-shot="light-light" src="" loading="lazy" decoding="async" alt=""></div>
       <div class="pop" id="pop">
-        <img class="base" src="assets/shots/en/list-dark.png" data-shot="list-dark" alt="MijiaBar popover">
-        <img class="layer" src="assets/shots/en/ac-cool-dark.png" data-shot="ac-cool-dark" alt="">
-        <img class="layer" src="assets/shots/en/camera-live-light.png" data-shot="camera-live-light" alt="">
+        <img class="base" data-shot="list-dark" src="" loading="eager" decoding="async" alt="MijiaBar popover">
+        <img class="layer" data-shot="ac-cool-dark" src="" loading="lazy" decoding="async" alt="">
+        <img class="layer" data-shot="camera-live-light" src="" loading="lazy" decoding="async" alt="">
       </div>
     </div>
   </div>
@@ -167,11 +184,11 @@ footer a:hover{color:var(--fg)}
     <h2 data-i="h2a">Every device gets a page that feels like the real thing.</h2>
     <p class="lead" data-i="la">Skeuomorphic illustrations that breathe with state — airflow follows fan speed, bulbs glow at their color temperature, plugs show current. Light and dark follow your Mac.</p></div>
     <div class="gallery rv">
-      <figure><img src="assets/shots/en/ac-cool-light.png" data-shot="ac-cool-light" alt=""><figcaption data-i="g1">Air conditioner</figcaption></figure>
-      <figure><img src="assets/shots/en/fan-dark.png" data-shot="fan-dark" alt=""><figcaption data-i="g2">Fan</figcaption></figure>
-      <figure><img src="assets/shots/en/light-light.png" data-shot="light-light" alt=""><figcaption data-i="g3">Light</figcaption></figure>
-      <figure><img src="assets/shots/en/plug-dark.png" data-shot="plug-dark" alt=""><figcaption data-i="g4">Smart plug</figcaption></figure>
-      <figure><img src="assets/shots/en/ac-heat-dark.png" data-shot="ac-heat-dark" alt=""><figcaption data-i="g5">Heating</figcaption></figure>
+      <figure><img data-shot="ac-cool-light" src="" loading="lazy" decoding="async" alt=""><figcaption data-i="g1">Air conditioner</figcaption></figure>
+      <figure><img data-shot="fan-dark" src="" loading="lazy" decoding="async" alt=""><figcaption data-i="g2">Fan</figcaption></figure>
+      <figure><img data-shot="light-light" src="" loading="lazy" decoding="async" alt=""><figcaption data-i="g3">Light</figcaption></figure>
+      <figure><img data-shot="plug-dark" src="" loading="lazy" decoding="async" alt=""><figcaption data-i="g4">Smart plug</figcaption></figure>
+      <figure><img data-shot="ac-heat-dark" src="" loading="lazy" decoding="async" alt=""><figcaption data-i="g5">Heating</figcaption></figure>
     </div>
   </section>
 
@@ -187,7 +204,7 @@ footer a:hover{color:var(--fg)}
           <li data-i="b3">Agents can never see your cameras</li>
         </ul>
       </div>
-      <div class="shot" style="max-width:380px;justify-self:center"><img src="assets/shots/en/camera-live-light.png" data-shot="camera-live-light" alt=""></div>
+      <div class="shot" style="max-width:380px;justify-self:center"><img data-shot="camera-live-light" src="" loading="lazy" decoding="async" alt=""></div>
     </div>
   </section>
 
@@ -205,7 +222,7 @@ footer a:hover{color:var(--fg)}
 
   <section id="agent">
     <div class="split rev rv">
-      <div class="shot" style="max-width:420px;justify-self:center"><img src="assets/shots/en/agent-light.png" data-shot="agent-light" alt=""></div>
+      <div class="shot" style="max-width:420px;justify-self:center"><img data-shot="agent-light" src="" loading="lazy" decoding="async" alt=""></div>
       <div>
         <div class="eyebrow" data-i="e4">Agent-ready</div>
         <h2 data-i="h2d">Let Claude Code, Codex or Cursor run your home.</h2>
@@ -226,7 +243,7 @@ footer a:hover{color:var(--fg)}
   </section>
 
   <div class="final rv">
-    <img src="assets/icon.png" alt="">
+    <img src="https://files.neardws.com/mijiabar/icon.webp" width="84" height="84" alt="">
     <h2 data-i="h2f">Put your home in the menu bar.</h2>
     <div class="cta"><a class="btn p dl" href="https://github.com/neardws/MijiaBar/releases/latest"><span data-i="dl">Download for macOS</span></a></div>
     <div class="trust"><span class="ver2">v0.1.9</span><span data-i="t1">Notarized by Apple</span></div>
@@ -242,9 +259,32 @@ footer a:hover{color:var(--fg)}
 const T={zh:{nav_f:"功能",pill:"现已支持应用内更新",h1:'米家，<br><span class="g">一点即达。</span>',sub:"原生的 macOS 菜单栏米家应用。空调、灯、风扇、摄像头，看一眼就能控制，不用切换 App。",dl:"下载 macOS 版",star:"在 GitHub 查看",t1:"已通过苹果公证",t2:"免费开源",mb_app:"访达",e1:"每种设备单独设计",h2a:"每台设备，都有一张像实物的卡片。",la:"拟物插画随状态变化：气流跟着风速，灯泡按色温发光，插座显示电流。浅色、深色跟随你的 Mac。",g1:"空调",g2:"风扇",g3:"灯",g4:"智能插座",g5:"制热",e2:"实时画面",h2b:"不离开菜单栏，就能看摄像头。",lb:"直播画面直接在设备卡片里播放，需要细看时弹出成可调大小的窗口。",b1:"只在观看时运行，只监听本机 127.0.0.1",b2:"不录制；密钥只存在钥匙串",b3:"Agent 永远看不到摄像头画面",e3:"用心打造",h2c:"快速、私密、走到哪都能用。",k1:"优先局域网，需要时走云端。",k1p:"指令通过局域网直达设备。不在家时自动切到小米云，每张卡片都会标出走的是哪条通道。",lan:"局域网 · miIO",or:"或",k2:"种语言",k3:"扫码登录",k3p:"用米家 App 扫一下，不用输入密码。",k4:"键盘优先",k4p:"↑↓ 选择，空格开关，← → 微调，/ 搜索。",k5:"自动更新",k5p:"Sparkle 签名更新，经苹果公证。",e4:"为 Agent 准备",h2d:"让 Claude Code、Codex 或 Cursor 帮你管家。",ld:"内置 CLI 和 MCP 服务。粘贴一段话，Agent 自己完成安装。默认只读；写操作需要白名单，并在 Mac 上弹窗确认。",copy:"复制",h2e:"常见问题",q1:"需要什么条件？",a1:"macOS 14 Sonoma 或更新版本（Apple 芯片或 Intel），以及绑定了米家设备的小米账号。",q2:"安装安全吗？",a2:"安全。每个版本都用 Developer ID 签名并经苹果公证，源码以 MIT 协议公开在 GitHub。",q3:"不在家能用吗？",a3:"控制会自动改走小米云；摄像头直播只能在家庭网络里看。",q4:"怎么更新？",a4:"从 0.1.9 起会自动检查更新。如果你还在用 0.1.8 或更早的版本，手动下载安装一次这个版本即可。",h2f:"把家放进菜单栏。",ft:"与小米公司无关。"}};
 const P={en:"Read https://raw.githubusercontent.com/neardws/MijiaBar/main/docs/AGENT_SETUP.md and follow it to set up MijiaBar as your MCP tool.\nCLI path: /Applications/MijiaBar.app/Contents/Resources/bin/mijiabar\nDon't change any device's state without my consent.",zh:"请阅读 https://raw.githubusercontent.com/neardws/MijiaBar/main/docs/AGENT_SETUP.zh-CN.md ，按其中的步骤把 MijiaBar 接入为你的 MCP 工具。\nCLI 路径：/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar\n未经我同意，不要改变任何设备的状态。"};
 const EN={};document.querySelectorAll('[data-i]').forEach(e=>EN[e.dataset.i]=e.innerHTML);
-function setLang(l){document.documentElement.lang=l==='zh'?'zh-CN':'en';document.querySelectorAll('[data-i]').forEach(e=>{const v=l==='zh'?T.zh[e.dataset.i]:EN[e.dataset.i];if(v)e.innerHTML=v});document.getElementById('pt').textContent=P[l];document.querySelectorAll('img[data-shot]').forEach(i=>i.src='assets/shots/'+(l==='zh'?'zh':'en')+'/'+i.dataset.shot+'.png');document.querySelectorAll('.lang button').forEach(b=>b.classList.toggle('on',b.dataset.l===l));document.title=l==='zh'?'MijiaBar — 菜单栏里的米家':'MijiaBar — Your Mi Home, one click away';try{localStorage.lang=l}catch(e){}}
+const CDN=window.__MB_CDN||'https://files.neardws.com/mijiabar';
+function shotUrl(lang,name,ext){return CDN+'/shots/'+lang+'/'+name+'.'+ext}
+function applyShots(lang){
+  document.querySelectorAll('img[data-shot]').forEach(img=>{
+    const name=img.dataset.shot;
+    const next=shotUrl(lang,name,'webp');
+    if(img.dataset.lang===lang && img.getAttribute('src')===next) return; // no reload
+    img.dataset.lang=lang;
+    img.onerror=function(){this.onerror=null;this.src=shotUrl(lang,name,'jpg')};
+    img.src=next;
+  });
+  const og=document.getElementById('ogimg'); if(og) og.content=shotUrl(lang,'list-dark','webp');
+}
+function setLang(l){
+  l=l==='zh'?'zh':'en';
+  window.__MB_LANG=l;
+  document.documentElement.lang=l==='zh'?'zh-CN':'en';
+  document.querySelectorAll('[data-i]').forEach(e=>{const v=l==='zh'?T.zh[e.dataset.i]:EN[e.dataset.i];if(v)e.innerHTML=v});
+  document.getElementById('pt').textContent=P[l];
+  applyShots(l);
+  document.querySelectorAll('.lang button').forEach(b=>b.classList.toggle('on',b.dataset.l===l));
+  document.title=l==='zh'?'MijiaBar — 菜单栏里的米家':'MijiaBar — Your Mi Home, one click away';
+  try{localStorage.lang=l}catch(e){}
+}
 document.querySelectorAll('.lang button').forEach(b=>b.onclick=()=>setLang(b.dataset.l));
-const q=new URLSearchParams(location.search).get('lang');let L=q||(()=>{try{return localStorage.lang}catch(e){}})()||(navigator.language.startsWith('zh')?'zh':'en');setLang(L==='zh'?'zh':'en');
+setLang(window.__MB_LANG||'en');
 document.getElementById('cp').onclick=e=>{navigator.clipboard.writeText(document.getElementById('pt').textContent);const b=e.target,o=b.textContent;b.textContent='✓';setTimeout(()=>b.textContent=o,1400)};
 const io=new IntersectionObserver(es=>es.forEach(x=>{if(x.isIntersecting){x.target.classList.add('in');io.unobserve(x.target)}}),{threshold:.12});document.querySelectorAll('.rv').forEach(e=>io.observe(e));
 if(!matchMedia('(prefers-reduced-motion: reduce)').matches){const ls=[...document.querySelectorAll('#pop .layer')];let i=-1;setInterval(()=>{ls.forEach(x=>x.classList.remove('on'));i=(i+1)%(ls.length+1);if(i<ls.length)ls[i].classList.add('on')},3200)}

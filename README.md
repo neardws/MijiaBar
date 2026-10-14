@@ -16,7 +16,7 @@
 
 > Unofficial project, not affiliated with Xiaomi. It uses the same cloud API as the Mi Home app plus the LAN miIO protocol.
 
-<p align="center"><img src="docs/screenshots/demo.gif" width="300" alt="demo"></p>
+<p align="center"><img src="https://files.neardws.com/mijiabar/readme/demo.gif" width="300" alt="demo"></p>
 
 [Features](#features) · [Screenshots](#screenshots) · [Install](#install) · [Sign in](#sign-in) · [Auto-hidden devices](#auto-hidden-devices) · [Live video (cameras)](#live-video-cameras) · [Agent / MCP](#agent--mcp) · [Build from source](#build-from-source) · [Where data is stored](#where-data-is-stored) · [Credits](#credits)
 
@@ -35,19 +35,19 @@
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/list-light.png" width="260" alt="">
-  <img src="docs/screenshots/ac-cool-light.png" width="260" alt="">
-  <img src="docs/screenshots/fan-light.png" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/list-light.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/ac-cool-light.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/fan-light.webp" width="260" alt="">
 </p>
 <p align="center"><b>Dark mode</b><br>
-  <img src="docs/screenshots/list-dark.png" width="260" alt="">
-  <img src="docs/screenshots/ac-heat-dark.png" width="260" alt="">
-  <img src="docs/screenshots/light-dark.png" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/list-dark.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/ac-heat-dark.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/light-dark.webp" width="260" alt="">
 </p>
 <p align="center">
-  <img src="docs/screenshots/plug-light.png" width="260" alt="">
-  <img src="docs/screenshots/agent-light.png" width="260" alt="">
-  <img src="docs/screenshots/login-light.png" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/plug-light.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/agent-light.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/login-light.webp" width="260" alt="">
 </p>
 
 ## Install
@@ -84,8 +84,8 @@ Click the eye button or **Show** to reveal them, or turn on **Settings → Devic
 - Away-from-home detection: MijiaBar compares the Mac's network subnets with the devices' local IPs (re-checked on every network change, nothing stored). When you're away it skips LAN attempts and goes straight to the cloud, and camera cards say live view is only available at home.
 
 <p align="center">
-  <img src="docs/screenshots/camera-live-light.png" width="260" alt="">
-  <img src="docs/screenshots/doorbell-live-dark.png" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/camera-live-light.webp" width="260" alt="">
+  <img src="https://files.neardws.com/mijiabar/readme/doorbell-live-dark.webp" width="260" alt="">
 </p>
 
 ## Agent / MCP
