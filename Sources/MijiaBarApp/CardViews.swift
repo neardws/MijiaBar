@@ -166,7 +166,7 @@ struct DeviceCardView: View {
                                     .frame(width: 40, height: 40)
                                     .background(Circle().fill(p.isOn ? tint : Theme.tile))
                                     .shadow(color: p.isOn ? tint.opacity(0.5) : .clear, radius: 10)
-                            }.buttonStyle(.plain).help(L("开关（空格）", "Power (Space)"))
+                            }.buttonStyle(.plain).help(L("开关（空格）", "Power (Space)")).powerAccessibility(p.isOn)
                         }
                     }
 
@@ -192,7 +192,8 @@ struct DeviceCardView: View {
                                        minLabel: displayValue(s, .double(r.lowerBound)) + (s.options == nil ? unitText(s) : ""),
                                        maxLabel: displayValue(s, .double(r.upperBound)) + (s.options == nil ? unitText(s) : ""),
                                        onChange: { drag = $0 },
-                                       onCommit: { v in drag = nil; if v != primaryValue { m.write(device, s.key, PropValue.double(v).coerced(to: s.format)) } })
+                                       onCommit: { v in drag = nil; if v != primaryValue { m.write(device, s.key, PropValue.double(v).coerced(to: s.format)) } },
+                                       a11yLabel: zhName(s.name, fallback: s.description))
                     }
 
                     if !c.readouts.isEmpty {
@@ -258,8 +259,8 @@ struct DeviceCardView: View {
             }
         } else if let ops = p.options, !ops.isEmpty {
             MenuTile(title: title, value: displayValue(p, v), icon: propIcon(p.name), active: isOn, tint: tint) {
-                ForEach(ops, id: \.value) { o in
-                    Button { m.write(device, p.key, .int(o.value)) } label: { Text((Int(v?.doubleValue ?? -999) == o.value ? "✓ " : "") + trValue(o.description)) }
+                OptionPicker(options: ops.map { (trValue($0.description), $0.value) }, selection: v?.doubleValue.map { Int($0) }) {
+                    m.write(device, p.key, .int($0))
                 }
             }
         } else if let r = p.range, r.count >= 2 {
@@ -367,6 +368,7 @@ struct GradientSlider: View {
     let minLabel: String, maxLabel: String
     let onChange: (Double) -> Void
     let onCommit: (Double) -> Void
+    var a11yLabel = ""
     /// 拖动中 1:1 跟手，松手后吸附到档位；跨档时触控板轻触反馈（与 PR #1 的 TempSlider 一致）
     @State private var dragFraction: Double?
     @State private var hovering = false
@@ -411,7 +413,15 @@ struct GradientSlider: View {
                         onCommit(s)
                     })
                 .allowsHitTesting(enabled)
-            }.frame(height: 24)
+            }
+            .frame(height: 24)
+            .accessibilityElement()
+            .accessibilityLabel(a11yLabel)
+            .accessibilityValue(PropValue.double(value).description)
+            .accessibilityAdjustableAction { dir in
+                guard enabled else { return }
+                onCommit(min(range.upperBound, max(range.lowerBound, value + (dir == .increment ? step : -step))))
+            }
             HStack { Text(minLabel); Spacer(); Text(maxLabel) }.font(.system(size: 10)).foregroundStyle(.secondary)
         }
     }

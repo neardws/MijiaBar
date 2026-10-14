@@ -74,14 +74,10 @@ struct ACCardView: View {
 
             HStack(spacing: 8) {
                 MenuTile(title: L("模式", "Mode"), value: ac.modeLabel, icon: modeIcon, active: ac.power, tint: tint) {
-                    ForEach(ac.modes, id: \.self) { o in
-                        Button { if let k = ac.modeKey { m.write(device, k, o.value) } } label: { Text((o.value == ac.mode ? "✓ " : "") + o.label) }
-                    }
+                    OptionPicker(options: ac.modes.map { ($0.label, $0.value) }, selection: ac.mode) { v in if let k = ac.modeKey { m.write(device, k, v) } }
                 }
                 MenuTile(title: L("风速", "Fan"), value: ac.fanLabel, icon: "wind", active: ac.power, tint: tint) {
-                    ForEach(ac.fans, id: \.self) { o in
-                        Button { if let k = ac.fanKey { m.write(device, k, o.value) } } label: { Text((o.value == ac.fan ? "✓ " : "") + o.label) }
-                    }
+                    OptionPicker(options: ac.fans.map { ($0.label, $0.value) }, selection: ac.fan) { v in if let k = ac.fanKey { m.write(device, k, v) } }
                 }
                 // 设备不支持的功能直接不显示，剩下的按钮平分宽度
                 if ac.sleepKey != nil {
@@ -132,6 +128,7 @@ struct PowerButton: View {
                 .ripple(on, color: on ? tint : .secondary)
         }
         .buttonStyle(.pressable(0.95)).hoverHighlight()
+        .powerAccessibility(on)
     }
 }
 
@@ -330,6 +327,13 @@ struct TempSlider: View {
                 .allowsHitTesting(enabled)
             }
             .frame(height: 24)
+            .accessibilityElement()
+            .accessibilityLabel(L("目标温度", "Target temperature"))
+            .accessibilityValue(PropValue.double(value).description + "°C")
+            .accessibilityAdjustableAction { dir in
+                guard enabled else { return }
+                onCommit(min(range.upperBound, max(range.lowerBound, value + (dir == .increment ? step : -step))))
+            }
             HStack {
                 Text(fmt1(range.lowerBound) + "°"); Spacer(); Text(fmt1(range.upperBound) + "°")
             }.font(.system(size: 10)).foregroundStyle(.secondary)
@@ -372,6 +376,7 @@ struct MenuTile<Content: View>: View {
     var body: some View {
         Menu { content() } label: { TileFace(title: title, value: value, icon: icon, active: active, tint: tint) }
             .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden)
+            .accessibilityLabel(title).accessibilityValue(value)
     }
 }
 
@@ -386,5 +391,7 @@ struct ToggleTile: View {
                      icon: icon, active: isOn == true, tint: tint)
         }
         .buttonStyle(.pressable).disabled(isOn == nil).opacity(isOn == nil ? 0.45 : 1)
+        .accessibilityLabel(title)
+        .accessibilityValue(isOn == nil ? L("不支持", "Not supported") : (isOn! ? L("开", "On") : L("关", "Off")))
     }
 }

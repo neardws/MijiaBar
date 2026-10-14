@@ -33,7 +33,11 @@ struct RootView: View {
         .animation(Motion.enter, value: m.renaming?.did)
         .overlay(alignment: .bottom) {
             if let t = m.toast {
-                Text(t).font(.system(size: 12, weight: .medium)).padding(.horizontal, 14).padding(.vertical, 8)
+                HStack(spacing: 6) {
+                    if t.isError { Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange).accessibilityHidden(true) }
+                    Text(t.text)
+                }
+                .font(.system(size: 12, weight: .medium)).padding(.horizontal, 14).padding(.vertical, 8)
                     .background(.regularMaterial, in: Capsule()).overlay(Capsule().stroke(Theme.stroke))
                     .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
                     .padding(.bottom, 14)
@@ -184,7 +188,10 @@ struct DeviceListView: View {
                             if !favACs.isEmpty {
                                 SectionTitle(L("收藏", "Favorites"))
                                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-                                    ForEach(favACs) { d in ACMiniCard(device: d).transition(.pop(0.97)).onTapGesture { m.open(d) } }
+                                    ForEach(favACs) { d in
+                                        ACMiniCard(device: d).transition(.pop(0.97)).onTapGesture { m.open(d) }
+                                            .accessibilityAddTraits(.isButton).accessibilityAction { m.open(d) }
+                                    }
                                 }.padding(.bottom, 4)
                             }
                             ForEach(m.sections) { sec in
@@ -195,6 +202,7 @@ struct DeviceListView: View {
                                             .transition(.pop(0.97, anchor: .top))
                                             .id(d.did)
                                             .onTapGesture { m.open(d) }
+                                            .accessibilityAddTraits(.isButton).accessibilityAction { m.open(d) }
                                     }
                                 }
                             }
@@ -301,13 +309,35 @@ struct IconButton: View {
                 .frame(width: 26, height: 26)
                 .background(RoundedRectangle(cornerRadius: 7).fill(hover ? Theme.hover : .clear))
                 .animation(Motion.snappy, value: icon)
-        }.buttonStyle(.pressable(0.95)).help(help).onHover { h in withAnimation(Motion.snappy) { hover = h } }
+        }.buttonStyle(.pressable(0.95)).help(help).accessibilityLabel(help).onHover { h in withAnimation(Motion.snappy) { hover = h } }
+    }
+}
+
+extension View {
+    /// 电源按钮的无障碍信息：读作「电源，已开启」
+    func powerAccessibility(_ on: Bool) -> some View {
+        accessibilityLabel(L("电源", "Power on/off")).accessibilityValue(on ? L("已开启", "On") : L("已关闭", "Off"))
+    }
+}
+
+/// 菜单里的单选项：用 Picker 让系统画勾选标记，VoiceOver 也能读出当前选中项
+struct OptionPicker<V: Hashable>: View {
+    let options: [(label: String, value: V)]
+    let selection: V?
+    let onSelect: (V) -> Void
+    var body: some View {
+        Picker("", selection: Binding(get: { selection }, set: { if let v = $0 { onSelect(v) } })) {
+            ForEach(options.indices, id: \.self) { i in Text(options[i].label).tag(Optional(options[i].value)) }
+        }
+        .pickerStyle(.inline).labelsHidden()
     }
 }
 
 /// 自绘开关：开启时填充设备颜色，关闭时为中性灰，浅色/深色都清晰
 struct MiniSwitch: View {
-    let isOn: Bool; let tint: Color; let action: () -> Void
+    let isOn: Bool; let tint: Color
+    var label = ""
+    let action: () -> Void
     var body: some View {
         Button(action: action) {
             ZStack(alignment: isOn ? .trailing : .leading) {
@@ -315,7 +345,11 @@ struct MiniSwitch: View {
                 Circle().fill(Color.white).shadow(color: .black.opacity(0.2), radius: 1, y: 0.5).frame(width: 14, height: 14).padding(2)
             }
             .animation(Motion.snappy, value: isOn)
-        }.buttonStyle(.pressable(0.95)).accessibilityLabel(isOn ? L("已开启", "On") : L("已关闭", "Off"))
+        }
+        .buttonStyle(.pressable(0.95))
+        .accessibilityLabel(label.isEmpty ? L("开关", "Switch") : label)
+        .accessibilityValue(isOn ? L("已开启", "On") : L("已关闭", "Off"))
+        .accessibilityAddTraits(.isToggle)
     }
 }
 
@@ -338,7 +372,7 @@ struct DeviceRow: View {
         let on = power?.isOn ?? false
         let c = device.category.color
         HStack(spacing: 10) {
-            Image(systemName: device.category.icon).font(.system(size: 13, weight: .medium))
+            Image(systemName: device.category.icon).font(.system(size: 13, weight: .medium)).accessibilityHidden(true)
                 .foregroundStyle(on ? c : Color.secondary)
                 .frame(width: 26, height: 26)
                 .background(RoundedRectangle(cornerRadius: 7).fill(on ? c.opacity(0.16) : Theme.card))
@@ -356,7 +390,7 @@ struct DeviceRow: View {
             if !device.isOnline { StatusChip(text: L("离线", "Offline"), color: .secondary) }
             else if m.isHidden(device) { StatusChip(text: L("已隐藏", "Hidden"), color: .secondary) }
             if let power, device.isOnline {
-                MiniSwitch(isOn: power.isOn, tint: c) { m.toggle(device) }
+                MiniSwitch(isOn: power.isOn, tint: c, label: m.displayName(device)) { m.toggle(device) }
             } else if device.isOnline {
                 Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary)
             }
@@ -393,7 +427,7 @@ struct ACMiniCard: View {
                             .foregroundStyle(on ? Color.white : Color.secondary)
                             .frame(width: 22, height: 22).background(Circle().fill(on ? tint : Theme.tile))
                             .ripple(on, color: on ? tint : .secondary)
-                    }.buttonStyle(.pressable(0.92))
+                    }.buttonStyle(.pressable(0.92)).powerAccessibility(on)
                 } else if !device.isOnline { StatusChip(text: L("离线", "Offline"), color: .secondary) }
             }
             HStack(alignment: .firstTextBaseline, spacing: 1) {
@@ -483,6 +517,7 @@ struct DetailView: View {
                     m.toggleFavorite(device)
                 }
                 Menu { DeviceMenu(device: device) } label: { Image(systemName: "ellipsis").foregroundStyle(.secondary).frame(width: 26, height: 26) }
+                    .accessibilityLabel(L("更多", "More"))
                     .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().hoverHighlight()
             }
             .animation(Motion.snappy, value: m.busy.contains(device.did))
