@@ -96,22 +96,6 @@ struct ArtGallery: View {
     }
 }
 
-/// 应用图标的图形（`--icon` 生成 Resources/AppIcon.icns），按 size 等比缩放
-struct AppMark: View {
-    let size: CGFloat
-    var body: some View {
-        let u = size / 1024
-        let shape = RoundedRectangle(cornerRadius: 230 * u, style: .continuous)
-        ZStack {
-            shape.fill(LinearGradient(colors: [Color(red: 0.16, green: 0.42, blue: 1), Color(red: 1, green: 0.52, blue: 0.2)], startPoint: .topLeading, endPoint: .bottomTrailing))
-            shape.fill(Color.black.opacity(0.12))
-            Image(systemName: "house.fill").font(.system(size: 520 * u, weight: .semibold)).foregroundStyle(.white)
-            Image(systemName: "snowflake").font(.system(size: 210 * u, weight: .bold)).foregroundStyle(Color(red: 0.2, green: 0.45, blue: 1)).offset(y: 70 * u)
-        }
-        .frame(width: size, height: size)
-    }
-}
-
 @MainActor
 enum Snapshot {
     static var appearance = NSAppearance(named: .darkAqua)
@@ -279,7 +263,8 @@ enum Snapshot {
     }
 
     static func icon(to path: String) {
-        let v = AppMark(size: 1024)
+        // macOS 图标模板：1024 画布上 824 的圆角主体居中，留出投影的位置
+        let v = BrandMark(size: 824, shadow: false).shadow(color: .black.opacity(0.3), radius: 14, y: 12).frame(width: 1024, height: 1024)
         let r = ImageRenderer(content: v.frame(width: 1024, height: 1024)); r.scale = 1
         if let img = r.nsImage, let tiff = img.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff) {
             try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: path))
