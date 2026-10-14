@@ -175,6 +175,8 @@ struct SettingsView: View {
                             .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     }
                     NotifySettingsSection()
+                    GlanceSettingsSection()
+                    HistorySettingsSection()
                     AgentSettingsSection()
                     group(L("软件更新", "Updates")) {
                         SwitchRow(title: L("自动检查更新", "Check for updates automatically"),

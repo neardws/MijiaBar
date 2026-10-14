@@ -180,6 +180,7 @@ struct PlugDetail: View {
                 PresetTile(dc: dc, prop: dc.p("default-power-on-state"), title: L("来电状态", "Power-on"), icon: "arrow.clockwise.circle", tint: tint,
                            presets: [(L("断电", "Off"), 0), (L("通电", "On"), 1), (L("记忆", "Last"), 2)])
             }
+            PowerHistoryCard(device: d, tint: tint)
         }
     }
 }
@@ -392,6 +393,8 @@ struct SensorDetail: View {
                 if h != nil || dc.p("relative-humidity") != nil { BigValue(value: h.map { "\(Int($0))" }, unit: "%", caption: L("湿度", "Humidity")) }
             }
             ReadoutRow(items: [("battery.75percent", dc.num(dc.p("battery-level")).map { L("电量 ", "Battery ") + "\(Int($0))%" })], tint: tint)
+            if dc.p("temperature") != nil { SensorHistoryCard(device: d, metric: "temperature", title: L("温度记录", "Temperature history"), style: .line(unit: "°C"), tint: .orange) }
+            if dc.p("relative-humidity") != nil { SensorHistoryCard(device: d, metric: "humidity", title: L("湿度记录", "Humidity history"), style: .line(unit: "%"), tint: .blue) }
             if d.isBLE && t == nil {
                 Text(L("蓝牙设备的读数经网关同步，可能有延迟", "BLE readings sync via gateway and may be delayed")).font(.system(size: 10)).foregroundStyle(.tertiary)
             }
@@ -411,6 +414,7 @@ struct MotionSensorDetail: View {
         } content: {
             BigValue(value: lux.map { "\(Int($0))" }, unit: "lux", caption: L("光照", "Illuminance"))
             ReadoutRow(items: [("battery.75percent", dc.num(dc.p("battery-level")).map { L("电量 ", "Battery ") + "\(Int($0))%" })], tint: tint)
+            if dc.p("illumination") != nil { SensorHistoryCard(device: d, metric: "illumination", title: L("光照记录", "Illuminance history"), style: .line(unit: " lux"), tint: .yellow) }
             Text(L("人体移动事件请在米家 App 中查看", "Motion events are shown in the Mi Home app")).font(.system(size: 10)).foregroundStyle(.tertiary)
         }
     }
@@ -427,7 +431,7 @@ struct ContactSensorDetail: View {
             ContactSensorArt(on: d.isOnline, open: open, tint: tint)
         } content: {
             ReadoutRow(items: [("battery.75percent", dc.num(dc.p("battery-level")).map { L("电量 ", "Battery ") + "\(Int($0))%" })], tint: tint)
-            Text(L("开合记录请在米家 App 中查看", "Open and close history is shown in the Mi Home app")).font(.system(size: 10)).foregroundStyle(.tertiary)
+            SensorHistoryCard(device: d, metric: "contact", title: L("开合记录", "Open / close history"), style: .state(on: L("关闭", "Closed"), off: L("打开", "Opened")), tint: tint)
         }
     }
 }
@@ -444,7 +448,7 @@ struct LeakSensorDetail: View {
             LeakSensorArt(on: d.isOnline, wet: wet, tint: tint)
         } content: {
             ReadoutRow(items: [("battery.75percent", dc.num(dc.p("battery-level")).map { L("电量 ", "Battery ") + "\(Int($0))%" })], tint: tint)
-            Text(L("浸水报警请在米家 App 中查看", "Leak alerts are shown in the Mi Home app")).font(.system(size: 10)).foregroundStyle(.tertiary)
+            SensorHistoryCard(device: d, metric: "leak", title: L("浸水记录", "Leak history"), style: .state(on: L("检测到浸水", "Water detected"), off: L("恢复正常", "Dry again")), tint: .orange)
         }
     }
 }

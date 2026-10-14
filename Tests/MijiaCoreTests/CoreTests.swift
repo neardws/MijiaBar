@@ -287,6 +287,75 @@ func acSpec() throws -> DeviceSpec {
     }
 }
 
+@Suite struct GlanceTests {
+    @Test func formatsCompactly() {
+        #expect(Glance.text(.temperature, 25.64) == "25.6°")
+        #expect(Glance.text(.acTarget, 26) == "26°")
+        #expect(Glance.text(.humidity, 57.6) == "58%")
+        #expect(Glance.text(.pm25, 35.2) == "PM35")
+        #expect(Glance.text(.power, 36.5) == "37W")
+        #expect(Glance.text(.power, 1260) == "1.3kW")
+    }
+    @Test func persistsDedupedAndCapped() {
+        let d = UserDefaults(suiteName: "GlanceTest-\(UUID().uuidString)")!
+        let a = GlanceItem(did: "1", kind: .temperature)
+        Glance.save([a, a, .init(did: "1", kind: .humidity), .init(did: "2", kind: .power), .init(did: "3", kind: .pm25)], d)
+        #expect(Glance.load(d) == [a, .init(did: "1", kind: .humidity), .init(did: "2", kind: .power)])
+        #expect(Glance.load(UserDefaults(suiteName: "GlanceEmpty-\(UUID().uuidString)")!).isEmpty)
+    }
+}
+@Suite struct HistoryTests {
+    var cal: Calendar { var c = Calendar(identifier: .gregorian); c.timeZone = TimeZone(identifier: "Asia/Shanghai")!; return c }
+    func at(_ s: String) -> Date { ISO8601DateFormatter().date(from: s)! }
+
+    @Test func integratesEnergyAndSkipsGaps() {
+        var s = Series()
+        // 100 W 持续 1 小时（每 10 分钟一个读数）= 100 Wh
+        for i in 0...6 { History.record(&s, 100, at: at("2026-10-14T02:00:00Z").addingTimeInterval(Double(i) * 600), energy: true, cal: cal) }
+        #expect(abs((s.daily["2026-10-14"]?.wh ?? 0) - 100) < 0.001)
+        // 空档 2 小时：不积分
+        History.record(&s, 100, at: at("2026-10-14T05:00:00Z"), energy: true, cal: cal)
+        #expect(abs((s.daily["2026-10-14"]?.wh ?? 0) - 100) < 0.001)
+        #expect(s.daily["2026-10-14"]?.n == 8 && s.daily["2026-10-14"]?.max == 100)
+    }
+
+    @Test func ignoresTooFrequentSamplesAndBucketsByLocalDay() {
+        var s = Series()
+        #expect(History.record(&s, 20, at: at("2026-10-14T15:59:00Z"), cal: cal))       // 上海 23:59
+        #expect(!History.record(&s, 21, at: at("2026-10-14T16:00:30Z"), cal: cal))      // 不到 4 分钟，忽略
+        #expect(History.record(&s, 22, at: at("2026-10-14T16:05:00Z"), cal: cal))       // 上海次日 00:05
+        #expect(s.daily.keys.sorted() == ["2026-10-14", "2026-10-15"])
+    }
+
+    @Test func prunesOldData() {
+        var s = Series()
+        History.record(&s, 1, at: at("2025-01-01T00:00:00Z"), cal: cal)
+        History.record(&s, 2, at: at("2026-10-14T00:00:00Z"), cal: cal)
+        #expect(s.samples.count == 1 && s.daily.count == 1)
+    }
+
+    @Test func monthlyAndLastDays() {
+        let d = ["2026-09-30": 1.0, "2026-10-01": 2.0, "2026-10-02": 3.0]
+        #expect(History.monthly(d) == ["2026-09": 1, "2026-10": 5])
+        let days = History.lastDays(d, days: 3, now: at("2026-10-02T04:00:00Z"), cal: cal)
+        #expect(days.map(\.value) == [1, 2, 3])
+    }
+
+    @Test func parsesCloudSampleFormats() {
+        let r: [[String: Any]] = [["time": 1760400000, "value": "[1.5]"], ["time": "1760313600", "value": 2], ["time": 1, "value": "bad"]]
+        #expect(XiaomiCloud.parseSamples(r) == [Sample(t: 1760313600, v: 2), Sample(t: 1760400000, v: 1.5)])
+        #expect(XiaomiCloud.parseSamples(["result": [["time": 5, "value": "true"]]]) == [Sample(t: 5, v: 1)])
+    }
+}
+
+@Suite struct SensorEventTests {
+    @Test func keepsOnlyStateChanges() {
+        let s = [Sample(t: 1, v: 1), Sample(t: 2, v: 1), Sample(t: 3, v: 0), Sample(t: 4, v: 0), Sample(t: 5, v: 1)]
+        #expect(SensorEvents.changes(s).map(\.t) == [1, 3, 5])
+        #expect(SensorEvents.changes([]).isEmpty)
+    }
+}
+
 @Suite struct NotifyTests {
     @Test func detectsTransitionsButNotFirstSight() {
         let closed = NotifySnapshot(online: true, contactClosed: true, leak: false)
