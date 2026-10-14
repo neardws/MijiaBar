@@ -62,8 +62,8 @@ extension AppModel {
 /// 所有插画的开/关对照（自检用，不进 README）：没有演示设备的类型也能检查画风是否统一
 struct ArtGallery: View {
     static let size = CGSize(width: 480, height: 2070)
-    var body: some View {
-        let rows: [(String, AnyView, AnyView)] = [
+    /// (名字, 开, 关)；网站的设备阵列（--art）也用这份清单
+    static var rows: [(String, AnyView, AnyView)] { [
             ("fan", AnyView(FanArt(on: true, level: 0.5, swing: false, tint: .teal)), AnyView(FanArt(on: false, level: 0.5, swing: false, tint: .teal))),
             ("bulb", AnyView(BulbArt(on: true, brightness: 0.7, kelvin: 3800)), AnyView(BulbArt(on: false, brightness: 0.7, kelvin: 3800))),
             ("plug", AnyView(PlugArt(on: true, watts: 36, tint: .green)), AnyView(PlugArt(on: false, watts: 36, tint: .green))),
@@ -79,9 +79,10 @@ struct ArtGallery: View {
             ("motion", AnyView(MotionSensorArt(on: true, tint: .mint)), AnyView(MotionSensorArt(on: false, tint: .mint))),
             ("air purifier", AnyView(AirPurifierArt(on: true, level: 0.6, tint: .cyan)), AnyView(AirPurifierArt(on: false, level: 0.6, tint: .cyan))),
             ("generic", AnyView(GenericArt(on: true, tint: .indigo)), AnyView(GenericArt(on: false, tint: .indigo))),
-        ]
+    ] }
+    var body: some View {
         VStack(spacing: 0) {
-            ForEach(rows, id: \.0) { r in
+            ForEach(Self.rows, id: \.0) { r in
                 HStack(spacing: 0) {
                     ForEach([r.1, r.2].indices, id: \.self) { i in
                         ZStack(alignment: .topLeading) {
@@ -121,6 +122,19 @@ enum Snapshot {
         let f = CIFilter.qrCodeGenerator(); f.message = Data(s.utf8)
         let img = f.outputImage!.transformed(by: CGAffineTransform(scaleX: 10, y: 10))
         let rep = NSCIImageRep(ciImage: img); let n = NSImage(size: rep.size); n.addRepresentation(rep); return n
+    }
+
+    /// 网站设备阵列用：每张插画的开机状态单独导出（透明底，无标签），浅色 / 深色各一张
+    static func art(dir: String) {
+        NSApplication.shared.setActivationPolicy(.accessory)
+        let out = URL(fileURLWithPath: dir); try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
+        let ac = ("ac", AnyView(ACIllustration(on: true, tint: Theme.warm(0.12), mode: .cool, speed: 0.6)), CGSize(width: 300, height: 136))
+        let items = [ac] + ArtGallery.rows.map { ($0.0, $0.1, CGSize(width: 240, height: 136)) }
+        for (suffix, name) in [("light", NSAppearance.Name.aqua), ("dark", NSAppearance.Name.darkAqua)] {
+            appearance = NSAppearance(named: name)
+            for (n, v, size) in items { render(v, out.appendingPathComponent("\(n.replacingOccurrences(of: " ", with: "-"))-\(suffix).png"), size: size) }
+        }
+        exit(0)
     }
 
     static func run(dir: String, liveQR: Bool) {
