@@ -41,7 +41,7 @@ struct PowerHistoryCard: View {
                 .font(.system(size: 10)).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true)
         }
         .padding(12)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Theme.card))
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.tile))
         .task(id: device.did) { cloudDaily = await rec.cloudDailyEnergy(device, state: m.states[device.did], model: m) }
         .animation(Motion.smooth, value: monthly)
     }
@@ -75,25 +75,25 @@ func kwhText(_ v: Double) -> String { (v < 10 ? String(format: "%.2f", v) : Stri
 
 /// 设置 → 历史记录
 struct HistorySettingsSection: View {
+    @EnvironmentObject var m: AppModel
     @AppStorage(Recorder.enabledKey) private var enabled = true
     @AppStorage(Recorder.intervalKey) private var interval = 5
     @State private var confirmClear = false
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Toggle(L("在本机记录功率等读数", "Record readings on this Mac"), isOn: $enabled).toggleStyle(.switch).controlSize(.small)
+        SettingsGroup(title: L("历史记录", "History")) {
+            SwitchRow(title: L("在本机记录功率等读数", "Record readings on this Mac"), isOn: $enabled)
             HStack {
-                Text(L("记录间隔", "Interval")).font(.system(size: 12))
-                Spacer()
+                Text(L("记录间隔", "Interval")); Spacer()
                 Picker("", selection: $interval) {
                     ForEach([5, 10, 15, 30], id: \.self) { Text(LF("%@ 分钟", "%@ min", "\($0)")).tag($0) }
                 }.labelsHidden().fixedSize().disabled(!enabled)
             }
             Text(L("只保存在本机（~/Library/Application Support/MijiaBar/history），原始读数保留 31 天、每日汇总保留 400 天。间隔越短，用电估算越准，但请求更多。",
                    "Stored only on this Mac (~/Library/Application Support/MijiaBar/history): raw readings for 31 days, daily totals for 400 days. Shorter intervals give better estimates but make more requests."))
-                .font(.system(size: 10)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            Button(L("清除历史记录…", "Clear history…")) { confirmClear = true }.controlSize(.small)
+                .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            ActionRow(title: L("清除历史记录…", "Clear history…"), icon: "trash", destructive: true) { confirmClear = true }
                 .confirmationDialog(L("清除所有本机历史记录？", "Clear all local history?"), isPresented: $confirmClear) {
-                    Button(L("清除", "Clear"), role: .destructive) { Recorder.shared.clearAll() }
+                    Button(L("清除", "Clear"), role: .destructive) { Recorder.shared.clearAll(); m.showToast(L("已清除历史记录", "History cleared")) }
                 }
         }
     }
