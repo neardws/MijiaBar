@@ -188,7 +188,7 @@ struct SettingsView: View {
                     group(L("关于", "About")) {
                         row("MijiaBar") { Text(appVersion).foregroundStyle(.secondary) }
                         Link("github.com/neardws/MijiaBar", destination: URL(string: "https://github.com/neardws/MijiaBar")!)
-                        Link(L("下载页", "Download site"), destination: URL(string: "https://neardws.github.io/MijiaBar/")!)
+                        Link(L("下载页", "Download site"), destination: URL(string: "https://www.neardws.com/MijiaBar/")!)
                     }
                     // 退出放在最后，和「退出登录」同一种危险操作行
                     SettingsGroup {

@@ -6,7 +6,7 @@
 
 | 键 | 值 |
 | --- | --- |
-| `SUFeedURL` | `https://neardws.github.io/MijiaBar/appcast.xml` |
+| `SUFeedURL` | `https://www.neardws.com/MijiaBar/appcast.xml` |
 | `SUPublicEDKey` | `CCM7RPQimyjvvf3oCtszbmQ1hQArwEl1FwPQTVLolb4=`（公钥，可提交） |
 
 **私钥**只在维护者机器上：
@@ -49,4 +49,4 @@ gh api repos/neardws/MijiaBar/pages -X POST \
   -F 'source[path]=/docs'
 ```
 
-公开地址：<https://neardws.github.io/MijiaBar/>
+公开地址：<https://www.neardws.com/MijiaBar/>

@@ -34,7 +34,7 @@ if [ -f "$NOTES" ]; then cp "$NOTES" "$STAGE/MijiaBar-$VERSION.md"; fi
 "$SP/bin/generate_appcast" \
   --ed-key-file "$KEY" \
   --download-url-prefix "https://github.com/neardws/MijiaBar/releases/download/v${VERSION}/" \
-  --link "https://neardws.github.io/MijiaBar/" \
+  --link "https://www.neardws.com/MijiaBar/" \
   --embed-release-notes \
   -o "$STAGE/appcast.xml" \
   "$STAGE"
