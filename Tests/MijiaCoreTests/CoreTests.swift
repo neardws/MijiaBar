@@ -389,3 +389,29 @@ func acSpec() throws -> DeviceSpec {
         s.save(d); #expect(NotifySettings.load(d) == s)
     }
 }
+
+@Suite struct HouseLayoutTests {
+    func dev(_ id: String, _ model: String) -> Device { Device(did: id, name: id, model: model, roomName: "客厅") }
+
+    @Test func mapsRoomNames() {
+        #expect(HouseModule.from(roomName: "客厅") == .living)
+        #expect(HouseModule.from(roomName: "客廳") == .living)
+        #expect(HouseModule.from(roomName: "Living room") == .living)
+        #expect(HouseModule.from(roomName: "主卧") == .bedroom)
+        #expect(HouseModule.from(roomName: "次臥") == .bedroom)
+        #expect(HouseModule.from(roomName: "办公室") == .study)
+        #expect(HouseModule.from(roomName: "書房") == .study)
+        #expect(HouseModule.from(roomName: "阳台") == .generic)
+        #expect(HouseModule.from(roomName: nil) == .generic)
+    }
+
+    @Test func assignsSlotsInOrderWithOverflow() {
+        let ds = [dev("l1", "yeelink.light.a"), dev("a1", "lumi.acpartner.x"), dev("l2", "yeelink.light.b"),
+                  dev("l3", "yeelink.light.c"), dev("p", "cuco.plug.v3"), dev("t", "xiaomi.tv.v1")]
+        let r = HouseLayout.assign(ds, in: .living)
+        #expect(r.placed.map { "\($0.0.did):\($0.1.kind.rawValue)\($0.1.index)" } == ["l1:light0", "a1:ac0", "l2:light1", "t:tv0"])
+        #expect(r.overflow.map(\.did) == ["l3", "p"])
+        #expect(HouseLayout.assign(ds, in: .study).placed.contains { $0.1.kind == .tv } == false)
+        #expect(HouseLayout.cell(3) == (1, 1))
+    }
+}
