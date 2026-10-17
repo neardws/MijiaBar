@@ -43,7 +43,8 @@ let houseUsage = """
 
 @MainActor func houseResolved(home: String) async throws -> ResolvedHouse {
     let ds = try await devices().filter { $0.homeId == home }
-    return HouseResolver.resolve(devices: ds, config: HouseStore.load().homes[home], isHidden: prefs.isHidden, name: prefs.name)
+    let cfg = HouseStore.load().homes[home]
+    return HouseResolver.resolve(devices: ds, config: cfg, isHidden: prefs.isHidden, name: prefs.name, layout: cfg?.layout)
 }
 
 func spotString(_ s: HouseSpot?) -> Any {

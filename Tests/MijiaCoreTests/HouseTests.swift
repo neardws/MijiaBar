@@ -21,6 +21,32 @@ private func resolve(_ ds: [Device], _ cfg: HomeHouse? = nil, hidden: Set<String
         dev("d11", "智能门铃", "madv.cateye.demo", room: "门口", roomId: "r4"),
     ]
 
+    @Test func customLayoutResolvesOneRoomPerCell() {
+        let layout: [HouseLayoutCell] = [
+            .init(room: "r2", module: "bedroom", col: 0, row: 0),
+            .init(room: "name:厨房", module: "kitchen", col: 1, row: 0),
+            .init(room: "r1", module: "living", col: 0, row: 1),
+        ]
+        let h = HouseResolver.resolve(devices: demo, config: nil, isHidden: { _ in false }, name: { $0.name }, layout: layout)
+        // 按 (row, col) 排：主卧、厨房（没有米家设备，标题取 name: 后缀）、客厅
+        #expect(h.rooms.map(\.key) == ["r2", "name:厨房", "r1"])
+        #expect(h.rooms.map(\.module) == [.bedroom, .kitchen, .living])
+        #expect(h.rooms[1].title == "厨房")
+        #expect(h.rooms[1].devices.isEmpty)
+        // 客厅设备照旧落到灯具位上
+        let living = h.rooms[2]
+        #expect(living.devices.first { $0.did == "d3" }?.spot == .fixture("floor_lamp"))
+        // 书房、门口不在布局里
+        #expect(Set(h.excluded.filter { $0.reason == .notInLayout }.map(\.key)) == ["r3", "r4"])
+    }
+
+    @Test func classicGeometryLayoutUsesClassicResolver() {
+        let classic = HouseLayoutSolver.classicFour
+        let a = HouseResolver.resolve(devices: demo, config: nil, isHidden: { _ in false }, name: { $0.name }, layout: classic)
+        let b = resolve(demo)
+        #expect(a.rooms.map(\.key) == b.rooms.map(\.key))
+    }
+
     @Test func matchesMoreRoomNames() {
         #expect(HouseModule.from(roomName: "儿童房") == .bedroom)
         #expect(HouseModule.from(roomName: "次臥") == .bedroom)

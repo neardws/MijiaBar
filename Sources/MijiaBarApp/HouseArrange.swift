@@ -235,7 +235,12 @@ enum HouseModuleAssets {
         return FileManager.default.fileExists(atPath: dev.path) ? dev : nil
     }
 
-    static func compose(layout: [HouseLayoutCell], phase: HousePhase) -> (image: NSImage, ms: Double)? {
+    @MainActor private static var inputs: [HousePhase: (HouseModuleCatalog, [String: HouseModuleImages])] = [:]
+    @MainActor private static var scenes: [String: HouseSceneSource] = [:]
+
+    /// 目录 + 某个时段的全部模块图（读一次缓存）
+    @MainActor static func load(phase: HousePhase) -> (HouseModuleCatalog, [String: HouseModuleImages])? {
+        if let c = inputs[phase] { return c }
         guard let url = resourceURL("catalog", "json") else {
             fputs("HouseModuleAssets: catalog.json not found\n", stderr); return nil
         }
@@ -256,6 +261,30 @@ enum HouseModuleAssets {
             images[id] = HouseModuleImages(unlit: ui, lit: li, unlitCut: load(v, "\(tag)-unlit-cut"), litCut: load(v, "\(tag)-lit-cut"))
         }
         guard !images.isEmpty else { fputs("HouseModuleAssets: no images\n", stderr); return nil }
+        inputs[phase] = (cat, images)
+        return (cat, images)
+    }
+
+    /// 自定义布局的整屋场景：合成 unlit / lit + 场景 JSON（按布局 + 时段缓存，布局不变不重算）
+    @MainActor static func composedScene(layout: [HouseLayoutCell], phase: HousePhase) -> HouseSceneSource? {
+        let key = "\(phase.assetName)|" + layout.map { "\($0.room)=\($0.module)@\($0.col),\($0.row)" }.joined(separator: ";")
+        if let s = scenes[key] { return s }
+        guard let (cat, images) = load(phase: phase) else { return nil }
+        let r = HouseComposer.compose(.init(layout: layout, catalog: cat, images: images, night: phase == .night))
+        guard let u = r.unlit, let l = r.lit else { return nil }
+        let scene: HouseCutawaySceneFile
+        do { scene = try JSONDecoder().decode(HouseCutawaySceneFile.self, from: r.sceneJSON) }
+        catch { fputs("HouseModuleAssets: scene decode \(error)\n", stderr); return nil }
+        let src = HouseSceneSource(unlit: NSImage(cgImage: u, size: NSSize(width: u.width, height: u.height)),
+                                   lit: NSImage(cgImage: l, size: NSSize(width: l.width, height: l.height)),
+                                   scene: scene, byRoom: true)
+        if scenes.count > 16 { scenes.removeAll() }
+        scenes[key] = src
+        return src
+    }
+
+    @MainActor static func compose(layout: [HouseLayoutCell], phase: HousePhase) -> (image: NSImage, ms: Double)? {
+        guard let (cat, images) = load(phase: phase) else { return nil }
         let r = HouseComposer.compose(.init(layout: layout, catalog: cat, images: images, night: phase == .night))
         // 预览：白天看关灯底图，夜间看开灯（暖光）版
         guard let img = phase == .day ? r.unlit : r.lit else { fputs("HouseModuleAssets: compose produced nil\n", stderr); return nil }
