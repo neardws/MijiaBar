@@ -109,14 +109,16 @@ public struct Device: Codable, Hashable, Identifiable, Sendable {
     public var homeId: String
     public var homeName: String
     public var roomName: String?
+    /// 米家房间 id（小屋配置用它当 key，房间改名后不丢）
+    public var roomId: String?
     public var lastOnline: Date?
     public var id: String { did }
     public var category: DeviceCategory { DeviceCategory.guess(model) }
     public var isBLE: Bool { did.hasPrefix("blt.") }
     public init(did: String, name: String, model: String, ip: String? = nil, token: String? = nil, isOnline: Bool = true,
-                homeId: String = "", homeName: String = "", roomName: String? = nil, lastOnline: Date? = nil) {
+                homeId: String = "", homeName: String = "", roomName: String? = nil, roomId: String? = nil, lastOnline: Date? = nil) {
         self.did = did; self.name = name; self.model = model; self.ip = ip; self.token = token; self.isOnline = isOnline
-        self.homeId = homeId; self.homeName = homeName; self.roomName = roomName; self.lastOnline = lastOnline
+        self.homeId = homeId; self.homeName = homeName; self.roomName = roomName; self.roomId = roomId; self.lastOnline = lastOnline
     }
 }
 

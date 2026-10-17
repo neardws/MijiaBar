@@ -167,7 +167,7 @@ extension AppModel {
         let groups = Dictionary(grouping: inHome) { $0.roomName ?? "" }
         return prefs.orderedRooms(home: hid, Array(groups.keys)).compactMap { k in
             let mod = HouseModule.from(roomName: k)
-            if mod == .generic, !HouseModule.isEntryFoyer(roomName: k) { return nil }
+            if !mod.hasArt || (mod == .generic && !HouseModule.isEntryFoyer(roomName: k)) { return nil }
             let list = prefs.orderedDevices(home: hid, key: k, groups[k] ?? [])
             let r = HouseLayout.assign(list, in: mod)
             let ds = r.placed.map { d, s in
