@@ -88,20 +88,30 @@ def detect_corners(img: np.ndarray, slab_frac=0.028) -> dict:
     m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))
     cs, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     c = max(cs, key=cv2.contourArea)
-    hull = cv2.convexHull(c)
-    peri = cv2.arcLength(hull, True)
-    for eps in np.linspace(0.005, 0.06, 60):
-        ap = cv2.approxPolyDP(hull, eps * peri, True)[:, 0, :]
-        if len(ap) <= 6: break
-    pts = ap.astype(np.float32)
-    top = pts[np.argmin(pts[:, 1])]
+    pts = c[:, 0, :].astype(np.float32)
+    # 左右两条竖边：最靠边的一列像素里取最高 / 最低点（比多边形近似稳）
+    xmin, xmax = pts[:, 0].min(), pts[:, 0].max()
+    lp = pts[pts[:, 0] <= xmin + 8]; rp = pts[pts[:, 0] >= xmax - 8]
+    lt = lp[np.argmin(lp[:, 1])]; lb = lp[np.argmax(lp[:, 1])]
+    rt = rp[np.argmin(rp[:, 1])]; rb = rp[np.argmax(rp[:, 1])]
     bottom = pts[np.argmax(pts[:, 1])]
-    left = pts[pts[:, 0] < top[0]]
-    right = pts[pts[:, 0] > top[0]]
-    lt = left[np.argmin(left[:, 1])]; lb = left[np.argmax(left[:, 1])]
-    rt = right[np.argmin(right[:, 1])]; rb = right[np.argmax(right[:, 1])]
-    if np.allclose(lb, bottom): lb = left[np.argmin(left[:, 0])]
-    if np.allclose(rb, bottom): rb = right[np.argmax(right[:, 0])]
+    top = pts[np.argmin(pts[:, 1])]
+    # 后墙角顶点：用上沿轮廓拟合左右两条墙顶线再求交（吊灯线、挂件不干扰）
+    mo = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((7, 7), np.uint8))
+    cols = np.arange(mo.shape[1])
+    has = mo.max(0) > 0
+    topy = np.where(has, np.argmax(mo > 0, axis=0), -1)
+    def fit(x0, x1):
+        xs = cols[int(x0):int(x1)]; ys = topy[int(x0):int(x1)]
+        ok = ys >= 0
+        a, b = np.polyfit(xs[ok], ys[ok], 1)
+        return a, b
+    span = rt[0] - lt[0]
+    mid = top[0]
+    a1, b1 = fit(lt[0] + 0.08 * span, mid - 0.12 * span)
+    a2, b2 = fit(mid + 0.12 * span, rt[0] - 0.08 * span)
+    tx = (b2 - b1) / (a1 - a2)
+    top = np.array([tx, a1 * tx + b1], dtype=np.float32)
     H = img.shape[0]
     # 地台厚度：从前角往上扫，地台（暗）→ 地板（亮）的最大亮度跳变
     bx, by = int(bottom[0]), int(bottom[1])
@@ -154,22 +164,101 @@ def silhouette_mask(g, s=2, cut=False):
     m = Image.new('L', (w, h), 0); D.Draw(m).polygon([(x * s, y * s) for x, y in pts], fill=255)
     return np.asarray(m) > 0
 
-def warp_to_canonical(img: np.ndarray, corners: dict, g, cut=False, s=2) -> Image.Image:
+def _inv_map(Hm, w, h):
+    """目标像素 → 源坐标（单应逆变换）。"""
+    Hi = np.linalg.inv(Hm)
+    ys, xs = np.mgrid[0:h, 0:w].astype(np.float32)
+    v = Hi @ np.stack([xs.ravel(), ys.ravel(), np.ones(w * h, np.float32)])
+    return (v[0] / v[2]).reshape(h, w).astype(np.float32), (v[1] / v[2]).reshape(h, w).astype(np.float32)
+
+CUT_BG_LUM = 9  # 剖面版：墙区里和外部连通、比这更暗的像素算背景
+BLEND = 36  # 墙区靠近地板后沿的一条带里，坐标场从“地面”平滑过渡到“墙面”，挡在墙前的家具不会在后沿处折断
+
+def warp_to_canonical(img: np.ndarray, corners: dict, g, cut=False, s=2, border=cv2.BORDER_REPLICATE, full_rgb=None) -> Image.Image:
     src = planes_src(corners); dst = planes_dst(g, s); masks = region_masks(g, s)
     w, h = g['size'][0] * s, g['size'][1] * s
-    out = np.zeros((h, w, 3), np.float32)
-    for k in ('floor', 'nw', 'ne', 'sw', 'se'):
-        Hm = cv2.getPerspectiveTransform(np.float32(src[k]), np.float32(dst[k]))
-        wk = cv2.warpPerspective(img.astype(np.float32), Hm, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
-        out[masks[k]] = wk[masks[k]]
-    alpha = silhouette_mask(g, s, cut=False)
-    if cut:
-        # 切墙版：墙区里接近黑色的像素 = 背景（被切掉的墙上方）
-        lum = out.mean(-1)
-        wallzone = masks['nw'] | masks['ne']
-        alpha = alpha & ~(wallzone & (lum < 14))
+    maps = {k: _inv_map(cv2.getPerspectiveTransform(np.float32(src[k]), np.float32(dst[k])), w, h) for k in src}
+    mx = np.zeros((h, w), np.float32); my = np.zeros((h, w), np.float32)
+    T, R, L = [np.array(p, np.float32) * s for p in (g['T'], g['R'], g['L'])]
+    ys, xs = np.mgrid[0:h, 0:w].astype(np.float32)
+    for k in ('floor', 'sw', 'se'):
+        mx[masks[k]] = maps[k][0][masks[k]]; my[masks[k]] = maps[k][1][masks[k]]
+    for k, a, b in (('nw', L, T), ('ne', T, R)):
+        # 当前像素在地板后沿线上方多少
+        t = np.clip((xs - a[0]) / (b[0] - a[0]), 0, 1)
+        edge_y = a[1] + (b[1] - a[1]) * t
+        wgt = np.clip((edge_y - ys) / (BLEND * s), 0, 1)
+        fx, fy = maps['floor']; wx, wy = maps[k]
+        mk = masks[k]
+        mx[mk] = ((1 - wgt) * fx + wgt * wx)[mk]; my[mk] = ((1 - wgt) * fy + wgt * wy)[mk]
+    out = cv2.remap(img.astype(np.float32), mx, my, interpolation=cv2.INTER_CUBIC, borderMode=border)
+    alpha = cut_alpha(out, g, s, full_rgb) if cut else silhouette_mask(g, s, cut=False)
     rgba = np.dstack([np.clip(out, 0, 255).astype(np.uint8), (alpha * 255).astype(np.uint8)])
     return Image.fromarray(rgba, 'RGBA')
+
+def cut_alpha(rgb: np.ndarray, g, s=2, full_rgb=None) -> np.ndarray:
+    """剖面版的 alpha：墙区里和画布外连通的“背景”去掉。
+    背景 = 很暗（< CUT_BG_LUM）；或者（有原图时）矮墙顶以上、原图那里是亮墙纸、剖面版却发暗的灰雾。"""
+    sil = silhouette_mask(g, s, cut=False)
+    masks = region_masks(g, s)
+    lum = rgb.astype(np.float32).mean(-1)
+    wallzone = masks['nw'] | masks['ne']
+    bg = wallzone & (lum < CUT_BG_LUM)
+    if full_rgb is not None:
+        h, w = lum.shape
+        ys, xs = np.mgrid[0:h, 0:w].astype(np.float32)
+        T, R, L = [np.array(p, np.float32) * s for p in (g['T'], g['R'], g['L'])]
+        edge = np.where(xs < T[0], T[1] + (xs - T[0]) * (L[1] - T[1]) / (L[0] - T[0]),
+                        T[1] + (xs - T[0]) * (R[1] - T[1]) / (R[0] - T[0]))
+        above = (edge - ys) > (CUT_H + 3) * s
+        flum = full_rgb.astype(np.float32).mean(-1)
+        # 有原图时：只在矮墙顶以上判背景——原图那里明显更亮（墙纸）而剖面版发暗，才算被切掉的墙；
+        # 原图里也暗的（书架侧板、家具阴影）保留
+        bg = wallzone & above & (((lum < 60) & (flum - lum > 30)) | (lum < 4))
+    n, lab = cv2.connectedComponents((bg | ~sil).astype(np.uint8))
+    keep = set(np.unique(lab[0, :])) - {0}
+    return sil & ~(np.isin(lab, list(keep)) & bg)
+
+def align_to(ref: np.ndarray, img: np.ndarray, region: np.ndarray | None = None) -> np.ndarray:
+    """生成器的编辑版和原图可能有几像素漂移：ECC 求仿射，返回 2x3 矩阵（img → ref）。"""
+    a = cv2.cvtColor(ref, cv2.COLOR_RGB2GRAY).astype(np.float32) / 255
+    b = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY).astype(np.float32) / 255
+    warp = np.eye(2, 3, dtype=np.float32)
+    # 初值：两张图剪影的左右边界 + 底部对齐（编辑版偶尔会整体缩放/平移）
+    def box(im):
+        m = im.astype(np.float32).mean(-1) > 16
+        m = cv2.morphologyEx(m.astype(np.uint8), cv2.MORPH_OPEN, np.ones((5, 5), np.uint8)) > 0
+        ys, xs = np.nonzero(m)
+        return xs.min(), xs.max(), ys.max()
+    try:
+        ax0, ax1, ay1 = box(ref); bx0, bx1, by1 = box(img)
+        k = (bx1 - bx0) / max(ax1 - ax0, 1)
+        if 0.7 < k < 1.4:
+            warp = np.float32([[k, 0, bx0 - k * ax0], [0, k, by1 - k * ay1]])
+    except ValueError:
+        pass
+    mask = None if region is None else region.astype(np.uint8)
+    try:
+        _, warp = cv2.findTransformECC(a, b, warp, cv2.MOTION_AFFINE,
+                                       (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 200, 1e-6), mask, 5)
+    except cv2.error:
+        pass
+    return warp
+
+def floor_region_mask(img: np.ndarray, corners: dict) -> np.ndarray:
+    import PIL.ImageDraw as D
+    m = Image.new('L', (img.shape[1], img.shape[0]), 0)
+    D.Draw(m).polygon([tuple(p) for p in (corners['B'], corners['R'], corners['F'], corners['L'])], fill=255)
+    return np.asarray(m) > 0
+
+def map_corners(corners: dict, warp: np.ndarray) -> dict:
+    """warp 是 ref→img 的仿射（ECC 的约定：img(x') = ref 坐标经 warp）。"""
+    out = dict(corners)
+    for k, v in corners.items():
+        if isinstance(v, list) and len(v) == 2:
+            p = warp @ np.array([v[0], v[1], 1.0])
+            out[k] = p.tolist()
+    return out
 
 # ---------- bake ----------
 def bake_module(base_rgb: np.ndarray, phase: str, mod: dict, cut: bool, bodies: bool = True) -> tuple[np.ndarray, np.ndarray]:
@@ -198,3 +287,28 @@ def bake_module(base_rgb: np.ndarray, phase: str, mod: dict, cut: bool, bodies: 
         if light['kind'] == 'screen': bakelib.paint_screen(lit, light['screen'], phase, light.get('style', 'tv'))
         if light['kind'] == 'ac': bakelib.paint_ac(lit, light, phase)
     return unlit, lit
+
+def measure_low_wall(cut_img: np.ndarray, cc: dict, g) -> float:
+    """剖面版的矮墙在规范图里有多高（中位数；家具冒出来的列会被中位数压掉）。"""
+    a = np.asarray(warp_to_canonical(cut_img, cc, g, cut=True, s=1))[..., 3]
+    T, R, L = g['T'], g['R'], g['L']
+    hs = []
+    for p, q in ((L, T), (T, R)):
+        for t in np.linspace(0.08, 0.92, 12 * (1 if p is L else g['fw'])):
+            x = int(p[0] + (q[0] - p[0]) * t); y = p[1] + (q[1] - p[1]) * t
+            ys = np.where(a[:int(y) + 1, x] > 0)[0]
+            if len(ys): hs.append(y - ys[0])
+    return float(np.median(hs)) if hs else float(CUT_H)
+
+def cut_corners(full: np.ndarray, cut_img: np.ndarray, c: dict, g) -> dict:
+    """剖面版：ECC 对齐到原图 → 量矮墙高度 → 把墙面映射纵向缩放，让矮墙顶正好落在 CUT_H。"""
+    cc = map_corners(c, align_to(full, cut_img, floor_region_mask(full, c)))
+    low = measure_low_wall(cut_img, cc, g)
+    f = low / CUT_H
+    if abs(f - 1) > 0.03 and 0.6 < f < 1.6:
+        cc = dict(cc)
+        for top, base in (('top', 'B'), ('lt', 'L'), ('rt', 'R')):
+            t, b = np.array(cc[top]), np.array(cc[base])
+            cc[top] = (b + (t - b) * f).tolist()
+    cc['_low'] = low
+    return cc

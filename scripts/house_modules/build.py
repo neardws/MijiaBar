@@ -18,6 +18,9 @@ from shell import render_shell
 TINTS = dict(living=(204, 170, 122), bedroom=(196, 172, 140), study=(186, 166, 128), generic=(196, 164, 118),
              kitchen=(214, 196, 150), bathroom=(170, 186, 190), balcony=(190, 180, 150))
 
+# 生成图的整体曝光不一致：书房 / 门厅源图偏暗，按模块补一点（目视对齐卧室、客厅的亮度）
+EXPOSURE = dict(study=1.32, generic=1.2)
+
 def to_np(im): return np.asarray(im.convert('RGB'), dtype=np.float32) / 255
 def from_np(a, alpha):
     rgb = Image.fromarray((np.clip(a, 0, 1) * 255 + 0.5).astype(np.uint8), 'RGB').convert('RGBA')
@@ -30,7 +33,7 @@ def region_local(g, fw):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('out'); ap.add_argument('--raw'); ap.add_argument('--classic', default=str(Path(__file__).resolve().parents[2] / 'assets/house'))
+    ap.add_argument('out'); ap.add_argument('--raw'); ap.add_argument('--classic', required=True)
     a = ap.parse_args()
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
     lut = pl.night_lut(Path(a.classic) / 'house-cutaway-day-base.png', Path(a.classic) / 'house-cutaway-night-base.png')
@@ -44,11 +47,23 @@ def main():
         if raw and (raw / f'{mid}-day-full.jpg').exists():
             styles.add('generated')
             imgs = {}
+            full = np.asarray(Image.open(raw / f'{mid}-day-full.jpg').convert('RGB'))
+            corners = pl.detect_corners(full)
+            cj = raw / f'{mid}-corners.json'
+            if cj.exists(): corners.update(json.loads(cj.read_text()))
+            full_canon = None
             for cut in (False, True):
-                src = np.asarray(Image.open(raw / f'{mid}-day-{"cut" if cut else "full"}.jpg').convert('RGB'))
-                cj = raw / f'{mid}-corners.json'
-                corners = json.loads(cj.read_text()) if cj.exists() else pl.detect_corners(np.asarray(Image.open(raw / f'{mid}-day-full.jpg').convert('RGB')))
-                imgs[cut] = pl.pixelize_rgba(pl.warp_to_canonical(src, corners, g, cut=cut))
+                v = 'cut' if cut else 'full'
+                canon = raw / f'{mid}-day-{v}-canon.png'
+                if canon.exists():
+                    # 预先拼好的规范图（2x1 客厅：两张 1x1 源图拼接，见 extend.py）
+                    imgs[cut] = pl.pixelize_rgba(Image.open(canon).convert('RGBA'))
+                    continue
+                src = np.asarray(Image.open(raw / f'{mid}-day-{v}.jpg').convert('RGB'))
+                cc = pl.cut_corners(full, src, corners, g) if cut else corners
+                w2 = pl.warp_to_canonical(src, cc, g, cut=cut, full_rgb=full_canon)
+                if not cut: full_canon = np.asarray(w2)[..., :3]
+                imgs[cut] = pl.pixelize_rgba(w2)
         else:
             styles.add('shell-standin'); shell = True
             imgs = {cut: pl.pixelize_rgba(render_shell(fw, TINTS[mid], cut=cut).resize((g['size'][0] * 2, g['size'][1] * 2), Image.NEAREST))
@@ -56,6 +71,8 @@ def main():
         mod = dict(region=region_local(g, fw), **sp)
         for cut in (False, True):
             im = imgs[cut]; alpha = im.getchannel('A'); day = to_np(im)
+            if not shell and mid in EXPOSURE:
+                day = np.clip(day * EXPOSURE[mid], 0, 1)
             night = pl.apply_night(day, lut)
             for phase, base in (('day', day), ('night', night)):
                 unlit, lit = pl.bake_module(base, phase, mod, cut, bodies=not shell)

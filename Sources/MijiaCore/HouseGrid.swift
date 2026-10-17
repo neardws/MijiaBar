@@ -67,6 +67,10 @@ public struct HouseModuleLight: Codable, Equatable, Sendable {
     public var core: [[Double]]?
     /// 灯具装在哪面墙上（"nw"/"ne"）；那面墙被切时灯具本体不可见
     public var wall: String?
+    /// 墙挂灯具本体所在点（模块 PNG 内）：用来判断它落在哪一段墙上
+    public var anchor: [Double]?
+    /// 本体被切掉时的替代位置（地面点）：App 在这里画一个设备徽章（空调）
+    public var alt: [Double]?
 }
 
 public enum HouseModuleReveal: Codable, Equatable, Sendable {

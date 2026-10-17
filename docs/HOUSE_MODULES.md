@@ -25,7 +25,9 @@ Every module contains only **its own floor + its two back walls (NW, NE) + front
   `-cut` variant (walls at `CUT_H`); outer back walls use the full variant. Living's NE wall is planned per cell.
 * **Painter's order** is `(row, col)` ascending = back to front.
 * The composer draws the wall **caps**, **exposed end faces** (where a wall is taller than the one continuing it),
-  **pilasters** over module seams, and an **outer outline**. The canvas is transparent.
+  **pilasters** at module corners, and an **outer outline**. The canvas is transparent. Caps / end faces / pilasters
+  sit *behind* the wall plane, so they are drawn **before** the module image: tall furniture standing against a
+  wall (bookshelf, floor lamp, fridge) occludes them instead of being crossed by a cap bar.
 * Scene JSON gives each module its `region` and a `visible` multi-polygon (region minus everything drawn later),
   so light masks never bleed through a front room's wall.
 
@@ -41,23 +43,46 @@ catalog.json                                  footprint, size, tip, region, labe
 
 Pipeline (`scripts/house_modules/build.py`), same treatment as `gen-house-cutaway-art.py` + `gen-house-baked-lighting.py`:
 
-1. **Source**: one single-room cutaway per module from the image generator, with the classic cutaway as style
-   reference: `<id>-day-full.jpg` plus an aligned edit `<id>-day-cut.jpg` (back walls cut to wainscot height,
-   wall-mounted items removed). Optional `<id>-corners.json` overrides auto-detected corners.
-2. **Fit**: auto-detect the room silhouette corners, then warp floor / NW wall / NE wall / slabs with one
-   homography each onto the canonical geometry.
+1. **Source** (`assets/house/modules/src/`, committed so the build is reproducible): one single-room cutaway per
+   module from the image generator (canonical-geometry template + the classic cutaway as style reference):
+   `<id>-day-full.jpg` plus a generator *edit* of that image, `<id>-day-cut.jpg` (both back walls cut to wainscot
+   height, wall-mounted items removed, floor furniture unchanged). Optional `<id>-corners.json` overrides corners.
+   * **Living (2×1)**: the generator will not paint a 2:1 room (it always comes out ≈1.5:1; stretching it shears
+     the furniture). `extend.py pair living living2` stitches two 1×1 sources instead — `living` (sofa, floor lamp,
+     window, sconce) for the left cell and `living2` (an edit of the same room with only the TV stand and a plant)
+     for the right cell, with a soft seam, brightness matching and a re-drawn front slab →
+     `src/living-day-{full,cut}-canon.png`, which `build.py` uses directly.
+   * The kitchen pendant was edited out of the source: a pendant hanging in mid-air would be sliced in half by a
+     cut-wall strip, so the kitchen light is an invisible ceiling light with its pool on the table.
+2. **Fit**: auto-detect the room silhouette (outer edges, wall-top lines fitted by least squares so hanging items
+   don't move the back corner, slab from the strongest brightness step), then warp floor / NW wall / NE wall /
+   slabs with one homography each onto the canonical geometry; the wall map blends into the floor map over 36 px
+   above the floor's back edge so furniture standing against a wall doesn't kink. The `-cut` edit is ECC-aligned to
+   the full image; its low wall height is measured and the wall mapping rescaled so the wall top lands exactly on
+   `CUT_H`. Cut alpha removes only what was wall in the full image (bright wallpaper there, dark in the edit), so
+   dark furniture sides survive.
 3. **Pixelize**: half-resolution LANCZOS + brightness/contrast + NEAREST ×2 + sharpen (classic parameters).
 4. **Night**: 3D LUT learned from the aligned classic `day-base → night-base` pair (pixel-aligned by construction),
    window glass replaced with night sky.
 5. **Bake**: the classic light functions (`light_field`, `band`, `paint_shade`, `paint_screen`, `paint_ac`).
-   Wall-mounted lights (`"wall": "nw"|"ne"`) are skipped in the `-cut` bake; the composer marks them `hidden`
-   when their wall is cut.
+   Wall-mounted lights (`"wall": "nw"|"ne"`, with an `anchor` point) are skipped in the `-cut` bake.
+
+**Hidden wall fixtures.** The composer finds the wall segment under a fixture's `anchor`; if that segment is cut,
+the fixture's body went with the wall: the scene marks it `"hidden": true` and drops its `shade`/`screen`/`core`
+polygons (nothing paints a body that isn't there; the tap target falls back to the reveal ellipse). Lamps keep
+their light — the floor pool comes from the full-wall lit image, which is what's under the strip. The bedroom AC
+has no pool, so it carries an `alt` floor point where the app shows an AC badge instead. Only the segment that
+actually holds the fixture matters (living's sconce is on NE segment 0; a room behind segment 1 doesn't hide it).
 
 Fixture ids: living `floor_lamp`/`sconce`/`tv`, bedroom `bedside`/`ac`, study `ceiling`/`monitor`,
 generic `entry_light` (Phase 1 ids), kitchen `pendant`, bathroom `ceiling`, balcony `wall_lamp`.
 
-Without generator sources, `build.py` falls back to **geometry shells** (empty rooms) and marks
-`catalog.style = "shell-standin"`. Those are for geometry review only, not final art.
+All seven modules now have generated art (`catalog.style = "generated"`). Without sources, `build.py` falls
+back to **geometry shells** (empty rooms) marked `shell-standin` — geometry review only, not final art.
+
+Regenerate: `python3 scripts/house_modules/extend.py pair living living2 && python3 scripts/house_modules/build.py
+assets/house/modules --raw assets/house/modules/src --classic <dir with house-cutaway-{day,night}-base.png> &&
+scripts/sync-house-modules.sh`. `fitcheck.py <id> <fw>` writes a corner overlay + full/cut fit preview to /tmp.
 
 ## Timing
 

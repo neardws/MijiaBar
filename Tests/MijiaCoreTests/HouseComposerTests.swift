@@ -104,6 +104,36 @@ import CoreGraphics
         }
     }
 
+    /// 墙挂灯具只在“它所在的那一段墙”被切时才算隐藏；隐藏后不给本体多边形，空调给 alt 徽章位
+    @Test func wallFixturesHideOnlyWithTheirSegment() throws {
+        let (cat, images) = try Self.load()
+        func lights(_ layout: [HouseLayoutCell], _ room: String) throws -> [[String: Any]] {
+            let r = HouseComposer.compose(.init(layout: layout, catalog: cat, images: images))
+            let j = try JSONSerialization.jsonObject(with: r.sceneJSON) as! [String: Any]
+            let mods = j["modules"] as! [String: Any]
+            return (mods[room] as! [String: Any])["lights"] as! [[String: Any]]
+        }
+        // 卧室的空调挂在 NW 墙；左边有房间 → NW 墙被切 → 空调隐藏、给 alt
+        let ac = try lights([.init(room: "g", module: "generic", col: 0, row: 0),
+                             .init(room: "b", module: "bedroom", col: 1, row: 0)], "b").first { $0["id"] as? String == "ac" }!
+        #expect(ac["hidden"] as? Bool == true)
+        #expect(ac["core"] == nil)
+        #expect((ac["alt"] as? [Double])?.count == 2)
+        // 左边没房间 → 空调可见
+        let ac2 = try lights([.init(room: "b", module: "bedroom", col: 0, row: 0)], "b").first { $0["id"] as? String == "ac" }!
+        #expect(ac2["hidden"] == nil)
+        #expect(ac2["core"] != nil)
+        // 客厅壁灯在 NE 第 0 段；只有第 1 段后面有房间 → 壁灯不隐藏
+        let sc = try lights([.init(room: "s", module: "study", col: 1, row: 0),
+                             .init(room: "l", module: "living", col: 0, row: 1)], "l").first { $0["id"] as? String == "sconce" }!
+        #expect(sc["hidden"] == nil)
+        // 第 0 段后面也有房间 → 隐藏
+        let sc2 = try lights([.init(room: "a", module: "bedroom", col: 0, row: 0), .init(room: "s", module: "study", col: 1, row: 0),
+                              .init(room: "l", module: "living", col: 0, row: 1)], "l").first { $0["id"] as? String == "sconce" }!
+        #expect(sc2["hidden"] as? Bool == true)
+        #expect(sc2["shade"] == nil)
+    }
+
     @Test func gridTipMovesRightAndForward() {
         let a = HouseGrid.tip(col: 0, row: 0)
         let b = HouseGrid.tip(col: 1, row: 0)
