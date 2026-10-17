@@ -196,7 +196,9 @@ private struct HouseTapChip: View {
 
 enum HouseAssets {
     static let baseImage: NSImage? = {
-        guard let url = Bundle.module.url(forResource: "living-room-base", withExtension: "png", subdirectory: "House") else { return nil }
+        let url = Bundle.module.url(forResource: "living-room-base", withExtension: "png", subdirectory: "House")
+            ?? Bundle.module.url(forResource: "living-room-base", withExtension: "png")
+        guard let url else { return nil }
         return NSImage(contentsOf: url)
     }()
 }
