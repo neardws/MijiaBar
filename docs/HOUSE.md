@@ -103,3 +103,16 @@ touch the keychain.
 
 `get_house`, `get_house_slots`, `set_house_device` (`device`, `visible`: true/false/"auto", `place`), `set_house_room` (`room`, `module`),
 `reset_house` (`home` | `device` | `room`). Results use the same JSON as the CLI.
+
+## Edit mode (HouseWindow)
+
+Open the house window (**Enlarge**) and click **Edit**. The window widens:
+
+- Dashed frames mark every fixture spot (round) and badge spot (square) in the cutaway. Click one to choose which device in that room goes there, or click "Empty this spot".
+- The right panel lists the devices of each house room. The **eye** button shows or hides a device *in the house only* (`visible`), and the menu sets its spot (`automatic / <fixture> / badge / button row only`, plus a per-device reset). A pin marks devices with an override.
+- **Rooms** maps Mijia rooms to house modules (`automatic / Living room / Bedroom / Study / Entry / Not in house`).
+- **Reset to automatic** removes every override for the current home.
+
+Edits are written to `house.json` right away. There is no draft or undo. Changes from the CLI, agents or other Macs show up live through the file watcher.
+
+Screenshots with demo data: `MijiaBar --house-window-snapshot <dir>` (set `MIJIABAR_LANG=en|zh-Hans` and `MIJIABAR_HOUSE_PHASE=day|night`).

@@ -202,6 +202,8 @@ struct HouseCutawaySceneView: View {
     var fitWidth: CGFloat?
     /// 点剖面里的灯具切换设备；快照 CLI 传 nil
     var onToggle: ((String) -> Void)? = nil
+    /// 编辑模式（HouseWindow）：画出灯具位 / 徽章位，点击选中位置，不切换设备
+    var edit: HouseEditContext? = nil
 
     private var cut: HouseCutawaySceneFile? { HouseAssets.cutawayScene() }
     private var artSize: CGSize { cut?.artSize ?? CGSize(width: 960, height: 540) }
@@ -218,13 +220,20 @@ struct HouseCutawaySceneView: View {
                     ForEach(rooms) { room in
                         if let m = cut?.modules[room.module.rawValue] {
                             HouseRoomLightLayer(module: m, devices: room.devices, lighting: room.lighting,
-                                                lit: lit, unlit: unlit, artSize: artSize, onToggle: onToggle)
+                                                lit: lit, unlit: unlit, artSize: artSize, onToggle: edit == nil ? onToggle : nil)
                         }
                     }
                 }
                 ForEach(rooms) { room in
                     if let m = cut?.modules[room.module.rawValue] {
-                        HouseBadgeLayer(module: m, room: room, phase: phase, artSize: artSize, onToggle: onToggle)
+                        HouseBadgeLayer(module: m, room: room, phase: phase, artSize: artSize, onToggle: edit == nil ? onToggle : nil)
+                    }
+                }
+                if let edit {
+                    ForEach(rooms) { room in
+                        if let m = cut?.modules[room.module.rawValue] {
+                            HouseEditSlots(module: m, room: room, artSize: artSize, edit: edit)
+                        }
                     }
                 }
             } else {
@@ -434,6 +443,9 @@ struct HouseFullView: View {
     var phase: HousePhase = .from()
     var showChrome = true
     var onToggle: ((String) -> Void)? = nil
+    var edit: HouseEditContext? = nil
+    /// 标题栏右侧的按钮（「编辑」/「恢复自动」「完成」）
+    var accessory: AnyView? = nil
 
     private let sceneWidth: CGFloat = 660
 
@@ -445,11 +457,11 @@ struct HouseFullView: View {
                     .font(.system(size: 12)).foregroundStyle(.secondary).frame(width: sceneWidth, height: 200)
             } else {
                 HouseCutawaySceneView(rooms: rooms, phase: phase, showLabels: true, fitWidth: showChrome ? sceneWidth : nil,
-                                      onToggle: onToggle)
+                                      onToggle: onToggle, edit: edit)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Theme.stroke))
             }
-            if showChrome, let onToggle { HouseDeviceChipRow(rooms: rooms, onToggle: onToggle) }
+            if showChrome, edit == nil, let onToggle { HouseDeviceChipRow(rooms: rooms, onToggle: onToggle) }
         }
         .padding(showChrome ? 12 : 0)
         .background(showChrome ? Theme.bg : .clear)
@@ -473,6 +485,7 @@ struct HouseFullView: View {
                 Text(on ? L("设备已开", "Devices on") : L("已关灯", "Lights off")).font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
             }
             .padding(.horizontal, 8).padding(.vertical, 4).background(Theme.tile, in: Capsule())
+            if let accessory { accessory }
         }
         .padding(.bottom, 8)
     }
@@ -498,7 +511,7 @@ struct HouseDeviceChipRow: View {
     }
 }
 
-private enum HouseChipStyle {
+enum HouseChipStyle {
     static func icon(_ c: DeviceCategory) -> String {
         switch c { case .light: return "lightbulb.fill"; case .tv: return "tv.fill"; case .fan: return "fan.fill"; default: return c.icon }
     }
@@ -634,18 +647,72 @@ enum HouseWindow {
         w.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
+
+    /// 编辑模式右边多一个设备面板，窗口加宽（保持左上角不动）
+    static let normalSize = NSSize(width: 720, height: 560)
+    static let editSize = NSSize(width: 1041, height: 640)
+    static func resize(editing: Bool) {
+        guard let w = window else { return }
+        let size = editing ? editSize : normalSize
+        var f = w.frameRect(forContentRect: NSRect(origin: .zero, size: size))
+        f.origin = NSPoint(x: w.frame.minX, y: w.frame.maxY - f.height)
+        w.setFrame(f, display: true, animate: true)
+    }
 }
 
-private struct HousePilotHost: View {
+struct HousePilotHost: View {
     @EnvironmentObject var m: AppModel
+    @State var editing = false
+    @State var selection: HouseSelection?
+
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { ctx in
-            HouseFullView(rooms: m.houseRooms, phase: HousePhase.from(date: ctx.date), onToggle: { did in
-                guard let d = m.device(did) else { return }
-                withoutAnimation { m.toggle(d) }
-            })
+            let rooms = m.houseRooms
+            let phase = HousePhase.from(date: ctx.date)
+            if editing {
+                HStack(alignment: .top, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        HouseFullView(rooms: rooms, phase: phase, onToggle: nil,
+                                      edit: HouseEditContext(selected: selection) { sel in selection = sel == selection ? nil : sel },
+                                      accessory: AnyView(editButtons))
+                        Text(L("点虚线框选中一个灯具位或徽章位，在右边选放哪台设备；眼睛按钮控制设备在小屋里显示与否（不影响设备列表）。改动会马上保存，并同步到其他 Mac。",
+                               "Click a dashed spot to pick which device goes there; the eye button shows or hides a device in the house only. Changes save right away and sync to your other Macs."))
+                            .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                            .padding(.horizontal, 14).padding(.bottom, 12)
+                    }
+                    .frame(width: 684)
+                    Divider()
+                    HouseEditPanel(selection: $selection).frame(width: 356)
+                }
+            } else {
+                HouseFullView(rooms: rooms, phase: phase, onToggle: { did in
+                    guard let d = m.device(did) else { return }
+                    withoutAnimation { m.toggle(d) }
+                }, accessory: AnyView(editButton))
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(Theme.bg)
+    }
+
+    private var editButton: some View {
+        Button { selection = nil; editing = true; HouseWindow.resize(editing: true) } label: {
+            Label(L("编辑", "Edit"), systemImage: "pencil").font(.system(size: 11, weight: .medium))
+        }
+        .buttonStyle(.bordered).controlSize(.small)
+        .help(L("选择每个位置放哪台设备、哪些设备在小屋里显示", "Choose which device goes where and what shows in the house"))
+    }
+
+    private var editButtons: some View {
+        HStack(spacing: 6) {
+            Text(L("编辑中", "Editing")).font(.system(size: 11, weight: .semibold)).foregroundStyle(Color.orange)
+                .padding(.horizontal, 8).padding(.vertical, 4).background(Color.orange.opacity(0.14), in: Capsule())
+            Button(L("恢复自动", "Reset to automatic")) { selection = nil; m.houseResetAll() }
+                .buttonStyle(.bordered).controlSize(.small)
+                .disabled(m.house.homes[m.houseHomeKey].map { h in h.devices.values.allSatisfy(\.isEmpty) && h.rooms.values.allSatisfy { $0.module == nil } } ?? true)
+            Button(L("完成", "Done")) { selection = nil; editing = false; HouseWindow.resize(editing: false) }
+                .buttonStyle(.borderedProminent).controlSize(.small).keyboardShortcut(.defaultAction)
+        }
     }
 }
 
