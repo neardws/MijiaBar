@@ -17,6 +17,7 @@ extension AppModel {
             dev("d1", L("客厅空调", "Living room AC"), "lumi.acpartner.mcn02", L("客厅", "Living room")),
             dev("d2", L("卧室空调", "Bedroom AC"), "lumi.acpartner.mcn02", L("主卧", "Bedroom")),
             dev("d3", L("落地灯", "Floor lamp"), "yeelink.light.mbulb3", L("客厅", "Living room")),
+            dev("d14", L("客厅电视", "Living room TV"), "xiaomi.tv.demo", L("客厅", "Living room")),
             dev("d4", L("循环扇", "Circulator fan"), "xiaomi.fan.p51", L("主卧", "Bedroom")),
             dev("d5", L("智能插座", "Smart plug"), "cuco.plug.v3", L("书房", "Study")),
             dev("d6", L("温湿度计", "Thermometer"), "miaomiaoce.sensor_ht.t2", L("书房", "Study")),
@@ -45,6 +46,8 @@ extension AppModel {
                            P(2, 3, "color-temperature", "uint32", range: [2700, 6500, 1], unit: "kelvin"),
                            P(2, 4, "mode", "uint8", opts: [ValueOption(value: 0, description: "Day"), ValueOption(value: 1, description: "Night")])])])
         states["d3"] = DeviceState(values: ["2.1": .bool(true), "2.2": .int(72), "2.3": .int(3800), "2.4": .int(0)], spec: light, legacy: false, source: "cloud")
+        let tv = DeviceSpec(type: "", description: "", services: [S(2, "television", [P(2, 1, "on", "bool")])])
+        states["d14"] = DeviceState(values: ["2.1": .bool(true)], spec: tv, legacy: false, source: "cloud")
         let fan = DeviceSpec(type: "", description: "", services: [S(2, "fan", [P(2, 1, "on", "bool"),
             P(2, 2, "fan-level", "uint8", opts: [1, 2, 3, 4].map { ValueOption(value: $0, description: "Level\($0)") }), P(2, 4, "horizontal-swing", "bool")])])
         states["d4"] = DeviceState(values: ["2.1": .bool(false), "2.2": .int(2), "2.4": .bool(true)], spec: fan, legacy: false, source: "cloud")
