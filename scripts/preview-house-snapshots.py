@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""预览连通剖面小屋 night/off → docs/house-pilot/（近似 Swift 叠光强度）"""
+"""预览连通剖面小屋 day/night × on/off → docs/house-pilot/（近似 Swift 叠光强度）"""
 from __future__ import annotations
 
 import json
@@ -11,7 +11,6 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter
 ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / "Sources/MijiaBarApp/Resources/House"
 OUT = ROOT / "docs/house-pilot"
-BASE = RES / "house-cutaway-base.png"
 ANCHORS = RES / "house-cutaway-anchors.json"
 
 
@@ -27,7 +26,16 @@ def radial(w: int, h: int, cx: float, cy: float, r: float, color: tuple[int, int
     return layer.filter(ImageFilter.GaussianBlur(3))
 
 
-def window_glow(out: Image.Image, win: dict, strength: float) -> Image.Image:
+def window_day(out: Image.Image, win: dict, strength: float) -> Image.Image:
+    w, h = out.size
+    x0, y0 = int(win["x"] * w), int(win["y"] * h)
+    x1, y1 = int((win["x"] + win["w"]) * w), int((win["y"] + win["h"]) * h)
+    layer = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    ImageDraw.Draw(layer).rectangle((x0, y0, x1, y1), fill=(210, 232, 255, int(95 * strength)))
+    return Image.alpha_composite(out, layer.filter(ImageFilter.GaussianBlur(2)))
+
+
+def window_night(out: Image.Image, win: dict, strength: float) -> Image.Image:
     w, h = out.size
     x0, y0 = int(win["x"] * w), int(win["y"] * h)
     x1, y1 = int((win["x"] + win["w"]) * w), int((win["y"] + win["h"]) * h)
@@ -45,12 +53,16 @@ def screen_bloom(out: Image.Image, rect: dict, alpha: int) -> Image.Image:
     return ImageChops.screen(out, layer.filter(ImageFilter.GaussianBlur(1)))
 
 
-def apply_module(out: Image.Image, mod: dict, mode: str) -> Image.Image:
-    if mode != "night":
+def apply_module(out: Image.Image, mod: dict, phase: str, devices_on: bool) -> Image.Image:
+    active = 1.0 if devices_on else 0.0
+    win = mod.get("window")
+    if win:
+        if phase == "day":
+            out = window_day(out, win, 0.42 + active * 0.18)
+        elif active > 0:
+            out = window_night(out, win, min(0.22, 0.06 + active * 0.14))
+    if not devices_on:
         return out
-    active = 1.0
-    if mod.get("window") and active > 0:
-        out = window_glow(out, mod["window"], min(0.22, 0.06 + active * 0.14))
     tv = mod.get("tv")
     if tv:
         out = screen_bloom(out, tv, 72)
@@ -64,22 +76,34 @@ def apply_module(out: Image.Image, mod: dict, mode: str) -> Image.Image:
     return out
 
 
-def compose(mode: str) -> Image.Image:
+def compose(phase: str, devices_on: bool) -> Image.Image:
     meta = json.loads(ANCHORS.read_text())
-    out = Image.open(BASE).convert("RGBA")
-    if mode == "night":
-        for mod in meta["modules"].values():
-            out = apply_module(out, mod, mode)
-    cozy = 1.0 if mode == "night" else 0.1
-    dim = Image.new("RGBA", out.size, (0, 0, 0, int(255 * (1 - cozy) * 0.8)))
+    base_name = "house-cutaway-day-base.png" if phase == "day" else "house-cutaway-night-base.png"
+    out = Image.open(RES / base_name).convert("RGBA")
+    for mod in meta["modules"].values():
+        out = apply_module(out, mod, phase, devices_on)
+    device_cozy = 1.0 if devices_on else 0.0
+    floor = 0.64 if phase == "day" else 0.38
+    ambient = min(1.0, max(device_cozy, floor))
+    dim_strength = 0.38 if phase == "day" else 0.52
+    dim = Image.new("RGBA", out.size, (0, 0, 0, int(255 * (1 - ambient) * dim_strength)))
     return ImageChops.multiply(out, Image.alpha_composite(Image.new("RGBA", out.size, (255, 255, 255, 255)), dim))
 
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    for name in ("house-night", "house-off"):
-        compose("night" if name.endswith("night") else "off").save(OUT / f"{name}.png", optimize=True)
-        print(OUT / f"{name}.png")
+    jobs = [
+        ("house-day-on", "day", True),
+        ("house-day-off", "day", False),
+        ("house-night-on", "night", True),
+        ("house-night-off", "night", False),
+        ("house-night", "night", True),
+        ("house-off", "night", False),
+    ]
+    for name, phase, on in jobs:
+        path = OUT / f"{name}.png"
+        compose(phase, on).save(path, optimize=True)
+        print(path)
 
 
 if __name__ == "__main__":

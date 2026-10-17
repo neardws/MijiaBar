@@ -29,9 +29,22 @@ struct HouseCutawayAnchorsFile: Codable {
     var artSize: CGSize { CGSize(width: size[0], height: size[1]) }
 }
 
+/// 剖面底图时段：本地 6:00–18:00 为白天，其余为夜间（与系统时区一致）。
+enum HousePhase: Equatable {
+    case day, night
+
+    static func from(date: Date = Date(), calendar: Calendar = .current) -> HousePhase {
+        let h = calendar.component(.hour, from: date)
+        return (6..<18).contains(h) ? .day : .night
+    }
+}
+
 enum HouseAssets {
-    static func cutawayImage() -> NSImage? {
-        let url = Bundle.module.url(forResource: "house-cutaway-base", withExtension: "png", subdirectory: "House")
+    static func cutawayImage(phase: HousePhase) -> NSImage? {
+        let name = phase == .day ? "house-cutaway-day-base" : "house-cutaway-night-base"
+        let url = Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "House")
+            ?? Bundle.module.url(forResource: name, withExtension: "png")
+            ?? Bundle.module.url(forResource: "house-cutaway-base", withExtension: "png", subdirectory: "House")
             ?? Bundle.module.url(forResource: "house-cutaway-base", withExtension: "png")
         guard let url else { return nil }
         return NSImage(contentsOf: url)
@@ -77,7 +90,7 @@ struct RoomModuleLighting: Equatable {
     var cozy: Double
 
     static let demoNight = RoomModuleLighting(lampLevels: [1, 0.6], tv: 1, ac: 1, cozy: 1)
-    static let allOff = RoomModuleLighting(lampLevels: [0, 0], tv: 0, ac: 0, cozy: 0.1)
+    static let allOff = RoomModuleLighting(lampLevels: [0, 0], tv: 0, ac: 0, cozy: 0)
 
     static func from(placed: [(Device, HouseSlot)], isOn: (Device) -> Bool?) -> RoomModuleLighting {
         var lamps = [0.0, 0.0]
@@ -146,12 +159,13 @@ struct HouseRoomOverlays: View {
     let anchors: HouseAnchorFile
     let lighting: RoomModuleLighting
     let artSize: CGSize
+    var phase: HousePhase = .night
 
     private var roomActive: Double { max(lighting.lampLevels.max() ?? 0, lighting.tv, lighting.ac) }
 
     var body: some View {
         ZStack {
-            windowMoon
+            windowFill
             acGlow
             tvGlow
             lampGlows
@@ -162,11 +176,21 @@ struct HouseRoomOverlays: View {
         .allowsHitTesting(false)
     }
 
-    /// 仅在本室有设备亮时、窗框内淡淡月光（全关时不画，避免漂浮蓝光）
-    @ViewBuilder private var windowMoon: some View {
-        if roomActive > 0.01, let r = anchors.window?.cgRect {
+    @ViewBuilder private var windowFill: some View {
+        guard let r = anchors.window?.cgRect else { return }
+        let w = r.width * artSize.width, h = r.height * artSize.height
+        if phase == .day {
+            let k = 0.42 + roomActive * 0.18
+            RoundedRectangle(cornerRadius: 2)
+                .fill(LinearGradient(colors: [
+                    Color(red: 0.82, green: 0.92, blue: 1).opacity(0.55),
+                    Color(red: 0.58, green: 0.78, blue: 0.98).opacity(0.28),
+                ], startPoint: .top, endPoint: .bottom))
+                .frame(width: w, height: h)
+                .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
+                .blendMode(.screen).opacity(k)
+        } else if roomActive > 0.01 {
             let k = min(0.22, 0.06 + roomActive * 0.14)
-            let w = r.width * artSize.width, h = r.height * artSize.height
             RoundedRectangle(cornerRadius: 2)
                 .fill(RadialGradient(colors: [Color(red: 0.62, green: 0.78, blue: 0.92).opacity(0.22), .clear],
                                      center: .center, startRadius: 0, endRadius: max(w, h) * 0.48))
@@ -236,12 +260,19 @@ struct HouseRoomOverlays: View {
 
 struct HouseCutawaySceneView: View {
     var rooms: [HouseRoom]
+    var phase: HousePhase = .from()
     var showLabels = true
     var fitWidth: CGFloat?
 
     private var cut: HouseCutawayAnchorsFile? { HouseAssets.cutawayAnchors() }
     private var artSize: CGSize { cut?.artSize ?? CGSize(width: 960, height: 540) }
-    private var cozy: Double { rooms.map(\.lighting.cozy).max() ?? 0.1 }
+    private var deviceCozy: Double { rooms.map(\.lighting.cozy).max() ?? 0 }
+    /// 关灯时仍保留可读环境光（白天底图更亮、乘暗更轻）。
+    private var ambient: Double {
+        let floor = phase == .day ? 0.64 : 0.38
+        return min(1, max(deviceCozy, floor))
+    }
+    private var dimStrength: Double { phase == .day ? 0.38 : 0.52 }
     private var displayScale: CGFloat {
         guard let fitWidth else { return 1 }
         return fitWidth / artSize.width
@@ -250,10 +281,10 @@ struct HouseCutawaySceneView: View {
     var body: some View {
         ZStack {
             baseArt
-            Color.black.opacity((1 - cozy) * 0.8).blendMode(.multiply)
+            Color.black.opacity((1 - ambient) * dimStrength).blendMode(.multiply)
             ForEach(rooms) { room in
                 if let anchors = cut?.modules[room.module.rawValue] ?? HouseAssets.anchors(room.module) {
-                    HouseRoomOverlays(anchors: anchors, lighting: room.lighting, artSize: artSize)
+                    HouseRoomOverlays(anchors: anchors, lighting: room.lighting, artSize: artSize, phase: phase)
                 }
             }
             if showLabels {
@@ -275,7 +306,7 @@ struct HouseCutawaySceneView: View {
     }
 
     @ViewBuilder private var baseArt: some View {
-        if let img = HouseAssets.cutawayImage() {
+        if let img = HouseAssets.cutawayImage(phase: phase) {
             Image(nsImage: img).interpolation(.none).resizable().aspectRatio(contentMode: .fill)
         } else {
             Theme.bg2.overlay(Text("house-cutaway").font(.caption).foregroundStyle(.tertiary))
@@ -309,6 +340,7 @@ struct HouseRoomTileView: View {
 
 struct HouseFullView: View {
     var rooms: [HouseRoom]
+    var phase: HousePhase = .from()
     var showChrome = true
     var onToggle: ((String) -> Void)? = nil
 
@@ -321,7 +353,7 @@ struct HouseFullView: View {
                 Text(L("这个家里还没有能放进小屋的房间", "No rooms for the house view yet"))
                     .font(.system(size: 12)).foregroundStyle(.secondary).frame(width: sceneWidth, height: 200)
             } else {
-                HouseCutawaySceneView(rooms: rooms, showLabels: true, fitWidth: showChrome ? sceneWidth : nil)
+                HouseCutawaySceneView(rooms: rooms, phase: phase, showLabels: true, fitWidth: showChrome ? sceneWidth : nil)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Theme.stroke))
             }
@@ -335,10 +367,18 @@ struct HouseFullView: View {
         HStack {
             Text(L("小屋", "House")).font(.system(size: 15, weight: .semibold))
             Spacer()
+            HStack(spacing: 6) {
+                Image(systemName: phase == .day ? "sun.max.fill" : "moon.stars.fill")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(phase == .day ? Color.orange.opacity(0.85) : Color.indigo.opacity(0.75))
+                Text(phase == .day ? L("白天", "Daytime") : L("夜间", "Nighttime"))
+                    .font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 8).padding(.vertical, 4).background(Theme.tile, in: Capsule())
             let on = rooms.contains { $0.lighting.cozy > 0.35 }
             HStack(spacing: 4) {
                 Circle().fill(on ? Color.green : Color.secondary.opacity(0.5)).frame(width: 6, height: 6)
-                Text(on ? L("夜灯已开", "Lights on") : L("已关灯", "Lights off")).font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
+                Text(on ? L("设备已开", "Devices on") : L("已关灯", "Lights off")).font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
             }
             .padding(.horizontal, 8).padding(.vertical, 4).background(Theme.tile, in: Capsule())
         }
@@ -440,10 +480,12 @@ enum HouseWindow {
 private struct HousePilotHost: View {
     @EnvironmentObject var m: AppModel
     var body: some View {
-        HouseFullView(rooms: m.houseRooms, onToggle: { did in
-            guard let d = m.device(did) else { return }
-            withoutAnimation { m.toggle(d) }
-        })
+        TimelineView(.periodic(from: .now, by: 60)) { ctx in
+            HouseFullView(rooms: m.houseRooms, phase: HousePhase.from(date: ctx.date), onToggle: { did in
+                guard let d = m.device(did) else { return }
+                withoutAnimation { m.toggle(d) }
+            })
+        }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
@@ -469,8 +511,16 @@ extension Snapshot {
             HouseRoom(key: r.key, title: r.title, module: r.module, devices: r.devices, overflow: r.overflow, lighting: .allOff)
         }
         self.appearance = NSAppearance(named: .darkAqua)
-        for (name, rs) in [("house-night", nightRooms), ("house-off", offRooms)] {
-            render(HouseCutawaySceneView(rooms: rs, showLabels: false), out.appendingPathComponent("\(name).png"),
+        let exports: [(String, HousePhase, [HouseRoom])] = [
+            ("house-day-on", .day, nightRooms),
+            ("house-day-off", .day, offRooms),
+            ("house-night-on", .night, nightRooms),
+            ("house-night-off", .night, offRooms),
+            ("house-night", .night, nightRooms),
+            ("house-off", .night, offRooms),
+        ]
+        for (name, phase, rs) in exports {
+            render(HouseCutawaySceneView(rooms: rs, phase: phase, showLabels: false), out.appendingPathComponent("\(name).png"),
                    size: CGSize(width: 960, height: 540))
         }
         render(LivingRoomHouseView(lighting: .nightOn, showChrome: false), out.appendingPathComponent("living-room-night.png"), size: CGSize(width: 640, height: 359))
