@@ -22,7 +22,7 @@ func json(_ a: Any) -> String {
 // 顶层变量属于主 actor，用到它们的函数都标了 @MainActor（命令行本来就是单线程）
 let prefs = Prefs.load()
 let policy = AgentPolicy.load()
-let controller = Controller(cloud: Session.load().map { XiaomiCloud(session: $0) })
+// controller 在 Lazy.swift：用到时才读钥匙串，只读本地文件的命令（house、走缓存的 list）不会触发钥匙串授权弹窗
 
 @MainActor func devices(refresh: Bool = false) async throws -> [Device] {
     if !refresh, let c = DeviceCache.load(), !c.devices.isEmpty { return c.devices }
@@ -157,7 +157,9 @@ let mcpTools: [[String: Any]] = [
     case "get_device_state": return try await getState(anyString(a["device"]))
     case "set_property": return try await setProperty(anyString(a["device"]), anyString(a["property"]), PropValue(a["value"]))
     case "run_action": return try await runAction(anyString(a["device"]), anyString(a["action"]), (a["params"] as? [Any] ?? []).map { PropValue($0) })
-    default: throw MijiaError.unknownProperty(name)
+    default:
+        if let r = try await callHouseTool(name, a) { return r }
+        throw MijiaError.unknownProperty(name)
     }
 }
 
@@ -171,7 +173,7 @@ let mcpTools: [[String: Any]] = [
         case "initialize":
             resp["result"] = ["protocolVersion": params["protocolVersion"] as? String ?? "2024-11-05",
                               "capabilities": ["tools": [String: Any]()], "serverInfo": ["name": "mijiabar", "version": version]]
-        case "tools/list": resp["result"] = ["tools": mcpTools]
+        case "tools/list": resp["result"] = ["tools": mcpTools + houseMCPTools]
         case "tools/call":
             do {
                 let r = try await callTool(params["name"] as? String ?? "", params["arguments"] as? [String: Any] ?? [:])
@@ -196,6 +198,8 @@ mijiabar \(version) — 米家设备命令行 / MCP
   mijiabar get <设备>                         读取状态（设备 = did 或名称）
   mijiabar set <设备> <属性> <值>              设置属性，例: set 客厅空调 tar_temp 26 / set 台灯 on true
   mijiabar action <设备> <动作> [JSON数组]     执行 MIoT 动作
+  mijiabar house <子命令> [--json]            小屋布局：show / slots / hide / unhide / assign / set / room / reset / sync / schema
+                                             （mijiabar house help 查看详细用法，格式见 docs/HOUSE.md）
   mijiabar mcp                               以 stdio MCP 服务器运行
   mijiabar setup-prompt                      打印给 Agent 的安装说明（与设置里的「复制安装说明」相同）
   mijiabar lan-get --ip IP --token T [--model M]  只读：直接走局域网读取（调试用）
@@ -219,6 +223,7 @@ do {
         guard args.count >= 3 else { fail(usage) }
         let ins = (args.count > 3 ? (try? JSONSerialization.jsonObject(with: Data(args[3].utf8))) as? [Any] ?? [] : []).map { PropValue($0) }
         print(json(try await runAction(args[1], args[2], ins)))
+    case "house": try await houseCommand(Array(args.dropFirst()))
     case "mcp": await mcp()
     case "setup-prompt":
         let me = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().path

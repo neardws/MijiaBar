@@ -117,7 +117,8 @@ public final class XiaomiCloud: Sendable {
             return Device(did: did, name: d["name"] as? String ?? did, model: d["model"] as? String ?? "",
                           ip: nz(d["localip"]), token: nz(d["token"]), isOnline: d["isOnline"] as? Bool ?? true,
                           homeId: home.id, homeName: home.name,
-                          roomName: home.rooms.first { $0.dids.contains(did) }?.name, lastOnline: last)
+                          roomName: home.rooms.first { $0.dids.contains(did) }?.name,
+                          roomId: home.rooms.first { $0.dids.contains(did) }?.id, lastOnline: last)
         }
     }
 
