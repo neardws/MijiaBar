@@ -126,7 +126,7 @@ public enum HouseComposer {
             let key = it.placed.cell.room.isEmpty ? it.placed.cell.module : it.placed.cell.room
             sceneMods[key] = [
                 "module": it.placed.cell.module,
-                "label": tx(it.art.label),
+                "label": tx(labelPoint(it.art, segments: it.placed.segments)),
                 "region": silhouette(it.placed).map { [Double($0.x) + dx, Double($0.y) + dy] },
                 "visible": polygons(visible),
                 "badges": it.art.badges.map(tx),
@@ -238,6 +238,24 @@ public enum HouseComposer {
 
     /// 模块图：全高版为底，被切的墙段上方竖条换成切墙版（两版像素对齐）
     /// 墙挂灯具是否被切掉：找到 anchor 所在的那一段墙（按 x 范围）；没有 anchor 时看这一侧任一段。
+    /// 房间名标签位（模块 PNG 内）：默认贴在左后墙（NW）上沿；那面墙被切矮（标签会飘到后面房间上）
+    /// 或墙上挂着灯具/空调时，改贴右后墙（NE）；两面都切了就放地板中间。
+    public static func labelPoint(_ art: HouseModuleArt, segments: [HouseWallSegment]) -> [Double] {
+        let full = { (side: HouseWallSegment.Side) in !segments.contains { $0.side == side && $0.height < HouseGrid.wallH } }
+        let busy = { (side: String) in art.lights.contains { $0.wall == side } }
+        let t = (x: Double(art.tip.first ?? 186), y: Double(art.tip.count > 1 ? art.tip[1] : 124))
+        let fw = Double(art.fw), fh = Double(art.fh)
+        func P(_ u: Double, _ v: Double, _ z: Double) -> [Double] {
+            [t.x + (u - v) * Double(HouseGrid.W) / 2, t.y + (u + v) * Double(HouseGrid.floorH) / 2 - z]
+        }
+        let ne = P(fw * 0.45, 0.02, 98)
+        if full(.nw), !busy("nw") { return art.label }
+        if full(.ne), !busy("ne") { return ne }
+        if full(.nw) { return art.label }
+        if full(.ne) { return ne }
+        return P(fw * 0.5, fh * 0.55, 0)
+    }
+
     static func isHidden(_ L: HouseModuleLight, wall: String, segments: [HouseWallSegment]) -> Bool {
         let side: HouseWallSegment.Side = wall == "nw" ? .nw : .ne
         let segs = segments.filter { $0.side == side }

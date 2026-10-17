@@ -34,6 +34,11 @@ struct HouseLightSpec: Decodable, Identifiable {
     let screen: [[Double]]?   // 屏幕四边形
     let core: [[Double]]?     // 灯具本体（关灯时用 unlit 盖回去）
 
+    /// 合成场景：墙挂灯具所在那段墙被切掉了（本体不可见，没有 shade/screen/core）
+    var hidden: Bool? = nil
+    /// 本体被切掉时的徽章位（地面点，空调用）
+    var alt: [Double]? = nil
+
     /// 关掉时需要用 unlit 盖回去的灯具本体（防止同房间其他灯的 lit 蒙版把它“点亮”）
     var corePolygon: [[Double]]? { core ?? screen ?? shade }
 
@@ -49,6 +54,27 @@ struct HouseCutawayModule: Decodable {
     let badges: [[Double]]?
     let region: [[Double]]
     let lights: [HouseLightSpec]
+    /// 合成场景：本模块剪影减去后画模块（前方房间）的剪影；灯光蒙版用它，光不会透过前屋的墙
+    var visible: [[[Double]]]? = nil
+}
+
+/// 场景来源：经典四室 = 手绘整图 + house-cutaway.json（按模块名查）；
+/// 自定义布局 = 模块合成图 + 合成场景（HouseComposer，按房间 key 查）。
+struct HouseSceneSource {
+    let unlit: NSImage
+    let lit: NSImage
+    let scene: HouseCutawaySceneFile
+    let byRoom: Bool
+    var artSize: CGSize { scene.artSize }
+    func module(for room: HouseRoom) -> HouseCutawayModule? { scene.modules[byRoom ? room.key : room.module.rawValue] }
+
+    @MainActor static func make(layout: [HouseLayoutCell]?, phase: HousePhase) -> HouseSceneSource? {
+        if let layout, !HouseLayoutSolver.isClassicGeometry(layout),
+           let c = HouseModuleAssets.composedScene(layout: layout, phase: phase) { return c }
+        guard let u = HouseAssets.cutawayImage(phase: phase, lit: false), let l = HouseAssets.cutawayImage(phase: phase, lit: true),
+              let sc = HouseAssets.cutawayScene() else { return nil }
+        return HouseSceneSource(unlit: u, lit: l, scene: sc, byRoom: false)
+    }
 }
 
 struct HouseCutawaySceneFile: Decodable {
@@ -58,7 +84,7 @@ struct HouseCutawaySceneFile: Decodable {
 }
 
 /// 剖面底图时段：本地 6:00–18:00 为白天，其余为夜间（与系统时区一致）。
-enum HousePhase: Equatable {
+enum HousePhase: Hashable {
     case day, night
 
     static func from(date: Date = Date(), calendar: Calendar = .current) -> HousePhase {
@@ -173,10 +199,18 @@ extension AppModel {
     /// 自动布局 + house.json 覆盖项（纯函数，见 MijiaCore/HouseLayout.swift）
     var houseResolved: ResolvedHouse {
         let inHome = devices.filter { currentHomeId == nil || $0.homeId == currentHomeId }
-        return HouseResolver.resolve(devices: inHome, config: house.homes[houseHomeKey], isHidden: { self.isHidden($0) }, name: { self.displayName($0) })
+        return HouseResolver.resolve(devices: inHome, config: house.homes[houseHomeKey], isHidden: { self.isHidden($0) }, name: { self.displayName($0) },
+                                     layout: house.homes[houseHomeKey]?.layout)
     }
 
     var houseRooms: [HouseRoom] { houseResolved.rooms.map(houseRoom) }
+
+    /// 用户自定义布局（非经典四室）时用模块合成图
+    var houseLayoutCells: [HouseLayoutCell]? {
+        let L = house.homes[houseHomeKey]?.layout
+        return HouseLayoutSolver.isClassicGeometry(L) ? nil : L
+    }
+
 
     func houseRoom(_ r: ResolvedHouseRoom) -> HouseRoom {
         let ds = r.devices.map { x -> HouseDevice in
@@ -209,34 +243,36 @@ struct HouseCutawaySceneView: View {
     var onToggle: ((String) -> Void)? = nil
     /// 编辑模式（HouseWindow）：画出灯具位 / 徽章位，点击选中位置，不切换设备
     var edit: HouseEditContext? = nil
+    /// 自定义布局（非经典四室）→ 用模块合成图；nil / 经典几何 → 手绘整图
+    var layout: [HouseLayoutCell]? = nil
 
-    private var cut: HouseCutawaySceneFile? { HouseAssets.cutawayScene() }
-    private var artSize: CGSize { cut?.artSize ?? CGSize(width: 960, height: 540) }
+    private var source: HouseSceneSource? { HouseSceneSource.make(layout: layout, phase: phase) }
+    private var artSize: CGSize { source?.artSize ?? CGSize(width: 960, height: 540) }
     private var displayScale: CGFloat {
         guard let fitWidth else { return 1 }
         return fitWidth / artSize.width
     }
 
     var body: some View {
+        let src = source
         ZStack(alignment: .topLeading) {
-            if let unlit = HouseAssets.cutawayImage(phase: phase, lit: false) {
+            if let src {
+                let unlit = src.unlit, lit = src.lit
                 art(unlit)
-                if let lit = HouseAssets.cutawayImage(phase: phase, lit: true) {
-                    ForEach(rooms) { room in
-                        if let m = cut?.modules[room.module.rawValue] {
-                            HouseRoomLightLayer(module: m, devices: room.devices, lighting: room.lighting,
-                                                lit: lit, unlit: unlit, artSize: artSize, onToggle: edit == nil ? onToggle : nil)
-                        }
+                ForEach(rooms) { room in
+                    if let m = src.module(for: room) {
+                        HouseRoomLightLayer(module: m, devices: room.devices, lighting: room.lighting,
+                                            lit: lit, unlit: unlit, artSize: artSize, onToggle: edit == nil ? onToggle : nil)
                     }
                 }
                 ForEach(rooms) { room in
-                    if let m = cut?.modules[room.module.rawValue] {
+                    if let m = src.module(for: room) {
                         HouseBadgeLayer(module: m, room: room, phase: phase, artSize: artSize, onToggle: edit == nil ? onToggle : nil)
                     }
                 }
                 if let edit {
                     ForEach(rooms) { room in
-                        if let m = cut?.modules[room.module.rawValue] {
+                        if let m = src.module(for: room) {
                             HouseEditSlots(module: m, room: room, artSize: artSize, edit: edit)
                         }
                     }
@@ -246,7 +282,7 @@ struct HouseCutawaySceneView: View {
             }
             if showLabels {
                 ForEach(rooms) { room in
-                    if let p = cut?.modules[room.module.rawValue]?.label, p.count >= 2 {
+                    if let p = src?.module(for: room)?.label, p.count >= 2 {
                         Text(room.title).font(.system(size: 10, weight: .semibold, design: .rounded))
                             .padding(.horizontal, 7).padding(.vertical, 3)
                             .background(.black.opacity(0.5), in: Capsule()).foregroundStyle(.white.opacity(0.92))
@@ -265,9 +301,9 @@ struct HouseCutawaySceneView: View {
     }
 
     private var editTargets: [(sel: HouseSelection, rect: CGRect)] {
-        guard edit != nil, let cut else { return [] }
+        guard edit != nil, let src = source else { return [] }
         return rooms.flatMap { room -> [(sel: HouseSelection, rect: CGRect)] in
-            guard let m = cut.modules[room.module.rawValue] else { return [] }
+            guard let m = src.module(for: room) else { return [] }
             return HouseEditSlots.targets(module: m, room: room).map { (sel: $0.sel, rect: $0.rect) }
         }
     }
@@ -294,6 +330,13 @@ private struct HouseRoomLightLayer: View {
                 if let reveal = light.reveal {
                     image(lit)
                         .mask(revealMask(reveal))
+                        .opacity(k)
+                        .animation(.easeInOut(duration: 0.35), value: k)
+                }
+                // 灯具本体（灯罩 / 屏幕）一定亮：合成场景的电视 reveal 只是地上的椭圆，盖不到抬高的屏幕
+                if let core = light.corePolygon {
+                    image(lit)
+                        .mask(HousePolygon(points: core).fill(Color.white))
                         .opacity(k)
                         .animation(.easeInOut(duration: 0.35), value: k)
                 }
@@ -332,7 +375,7 @@ private struct HouseRoomLightLayer: View {
 
     /// 不用 .blur：--house-snapshot 走 cacheDisplay，图层滤镜不会被渲染；羽化用渐变代替。
     @ViewBuilder private func revealMask(_ r: HouseReveal) -> some View {
-        let room = HousePolygon(points: module.region).fill(Color.white)
+        let room = HouseMultiPolygon(polygons: module.visible ?? [module.region]).fill(Color.white, style: FillStyle(eoFill: true))
         switch r {
         case .room:
             room
@@ -361,6 +404,19 @@ struct HouseBadgeLayer: View {
         ZStack(alignment: .topLeading) {
             ForEach(Array(HouseCatalog.badgeIds(room.module).enumerated()), id: \.offset) { i, id in
                 if let d = room.devices.first(where: { $0.spot == .badge(id) }), let p = module.badges?[safe: i], p.count >= 2 {
+                    HouseBadge(device: d, phase: phase)
+                        .position(x: p[0], y: p[1] - 14)
+                        .contentShape(Rectangle())
+                        .onTapGesture { if d.toggleable { onToggle?(d.did) } }
+                        .allowsHitTesting(onToggle != nil && d.toggleable)
+                        .accessibilityElement()
+                        .accessibilityLabel(d.name)
+                        .accessibilityValue(d.toggleable ? (d.on ? L("开", "On") : L("关", "Off")) : "")
+                }
+            }
+            // 合成场景里被切掉的墙挂设备（空调）：本体不在了，在 alt 地面点画成徽章
+            ForEach(module.lights.filter { $0.hidden == true && ($0.alt?.count ?? 0) >= 2 }) { light in
+                if let d = room.devices.first(where: { $0.spot == .fixture(light.id) }), let p = light.alt {
                     HouseBadge(device: d, phase: phase)
                         .position(x: p[0], y: p[1] - 14)
                         .contentShape(Rectangle())
@@ -414,6 +470,16 @@ extension Array {
     subscript(safe i: Int) -> Element? { indices.contains(i) ? self[i] : nil }
 }
 
+/// 多个多边形（合成场景的 visible 区域：本模块减去前方房间）
+struct HouseMultiPolygon: Shape {
+    let polygons: [[[Double]]]
+    func path(in r: CGRect) -> Path {
+        var p = Path()
+        for poly in polygons { p.addPath(HousePolygon(points: poly).path(in: r)) }
+        return p
+    }
+}
+
 /// 画布像素坐标的多边形（房间区域 / 灯具本体）
 struct HousePolygon: Shape {
     let points: [[Double]]
@@ -462,6 +528,8 @@ struct HouseFullView: View {
     var showStatus = true
     /// 标题栏右侧的按钮（「编辑」/「恢复自动」「完成」）
     var accessory: AnyView? = nil
+    /// 自定义布局 → 模块合成图
+    var layout: [HouseLayoutCell]? = nil
 
     private let sceneWidth: CGFloat = 660
 
@@ -473,7 +541,7 @@ struct HouseFullView: View {
                     .font(.system(size: 12)).foregroundStyle(.secondary).frame(width: sceneWidth, height: 200)
             } else {
                 HouseCutawaySceneView(rooms: rooms, phase: phase, showLabels: true, fitWidth: showChrome ? sceneWidth : nil,
-                                      onToggle: onToggle, edit: edit)
+                                      onToggle: onToggle, edit: edit, layout: layout)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Theme.stroke))
             }
@@ -605,10 +673,10 @@ struct HouseListEmbed: View {
     }
 
     private func cutaway(rooms: [HouseRoom], phase: HousePhase, width: CGFloat) -> some View {
-        HouseCutawaySceneView(rooms: rooms, phase: phase, showLabels: false, fitWidth: width) { did in
+        HouseCutawaySceneView(rooms: rooms, phase: phase, showLabels: false, fitWidth: width, onToggle: { did in
             guard let d = m.device(did) else { return }
             withoutAnimation { m.toggle(d) }
-        }
+        }, layout: m.houseLayoutCells)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.stroke))
         .overlay(alignment: .topTrailing) {
@@ -680,37 +748,56 @@ enum HouseWindow {
     }
 }
 
+enum HouseEditTab: String, CaseIterable { case devices, arrange }
+
 struct HousePilotHost: View {
     @EnvironmentObject var m: AppModel
     @State var editing = false
     @State var selection: HouseSelection?
     @State var drag = HouseDragState()
+    @State var editTab: HouseEditTab = .devices
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { ctx in
             let rooms = m.houseRooms
             let phase = HousePhase.from(date: ctx.date)
             if editing {
-                let resolved = m.houseResolved
-                let edit = context(resolved)
-                HStack(alignment: .top, spacing: 0) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        HouseFullView(rooms: rooms, phase: phase, onToggle: nil, edit: edit, showStatus: false, accessory: AnyView(editButtons))
-                            .overlay(alignment: .bottom) { notice }
-                        Text(L("把右边的设备拖到虚线框上放置；拖动已放好的设备可移动或交换，拖回右边或空白处移出。也可以点虚线框再在右边选。眼睛按钮只控制小屋里显示与否（不影响设备列表）。改动立即保存并同步到其他 Mac，⌘Z 撤销。",
-                               "Drag a device from the right onto a dashed spot. Drag a placed device to move or swap it, or back to the list or an empty area to take it off. You can also click a spot and pick a device. The eye button shows or hides a device in the house only. Changes save right away and sync to your other Macs; ⌘Z undoes."))
-                            .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                            .padding(.horizontal, 14).padding(.bottom, 12)
+                VStack(spacing: 0) {
+                    HStack {
+                        Picker("", selection: $editTab) {
+                            Text(L("设备", "Devices")).tag(HouseEditTab.devices)
+                            Text(L("房间布局", "Room layout")).tag(HouseEditTab.arrange)
+                        }.pickerStyle(.segmented).frame(width: 240)
+                        Spacer()
+                        editButtons
                     }
-                    .frame(width: 684)
+                    .padding(.horizontal, 14).padding(.vertical, 8)
                     Divider()
-                    HouseEditPanel(selection: $selection, edit: edit).frame(width: 356)
+                    if editTab == .arrange {
+                        HouseArrangeView()
+                    } else {
+                        let resolved = m.houseResolved
+                        let edit = context(resolved)
+                        HStack(alignment: .top, spacing: 0) {
+                            VStack(alignment: .leading, spacing: 0) {
+                                HouseFullView(rooms: rooms, phase: phase, onToggle: nil, edit: edit, showStatus: false, accessory: nil, layout: m.houseLayoutCells)
+                                    .overlay(alignment: .bottom) { notice }
+                                Text(L("把右边的设备拖到虚线框上放置；拖动已放好的设备可移动或交换，拖回右边或空白处移出。也可以点虚线框再在右边选。眼睛按钮只控制小屋里显示与否（不影响设备列表）。改动立即保存并同步到其他 Mac，⌘Z 撤销。",
+                                       "Drag a device from the right onto a dashed spot. Drag a placed device to move or swap it, or back to the list or an empty area to take it off. You can also click a spot and pick a device. The eye button shows or hides a device in the house only. Changes save right away and sync to your other Macs; ⌘Z undoes."))
+                                    .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                                    .padding(.horizontal, 14).padding(.bottom, 12)
+                            }
+                            .frame(width: 684)
+                            Divider()
+                            HouseEditPanel(selection: $selection, edit: edit).frame(width: 356)
+                        }
+                    }
                 }
             } else {
                 HouseFullView(rooms: rooms, phase: phase, onToggle: { did in
                     guard let d = m.device(did) else { return }
                     withoutAnimation { m.toggle(d) }
-                }, accessory: AnyView(editButton))
+                }, accessory: AnyView(editButton), layout: m.houseLayoutCells)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -783,8 +870,6 @@ struct HousePilotHost: View {
 
     private var editButtons: some View {
         HStack(spacing: 6) {
-            Text(L("编辑中", "Editing")).font(.system(size: 11, weight: .semibold)).foregroundStyle(Color.orange)
-                .padding(.horizontal, 8).padding(.vertical, 4).background(Color.orange.opacity(0.14), in: Capsule())
             Button { m.houseUndoStep(redo: false) } label: {
                 Label(L("撤销", "Undo"), systemImage: "arrow.uturn.backward").font(.system(size: 11, weight: .medium))
             }

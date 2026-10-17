@@ -34,6 +34,8 @@ enum HouseFixtureNames {
         case "bedside": return L("床头灯位", "Bedside lamp")
         case "ac": return L("空调位", "Air conditioner")
         case "ceiling": return L("吸顶灯位", "Ceiling light")
+        case "pendant": return L("吊灯位", "Pendant light")
+        case "wall_lamp": return L("壁灯位", "Wall lamp")
         case "monitor": return L("显示器位", "Monitor")
         case "entry_light": return L("玄关灯位", "Entry light")
         default: return id
@@ -448,7 +450,9 @@ struct HouseEditPanel: View {
     private func roomMapping(_ resolved: ResolvedHouse) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(L("房间", "Rooms")).font(.system(size: 12, weight: .semibold))
-            Text(L("每个小屋房间放一个米家房间，最多 4 个（厨房、卫生间、阳台的素材之后加）。", "Each house room shows one Mijia room (kitchen, bathroom and balcony art come later)."))
+            Text(m.houseLayoutCells != nil
+                 ? L("用的是自定义布局：在「房间布局」里加减房间、换模块；不在布局里的米家房间不显示。", "Using a custom layout: add, remove or re-type rooms in Room layout. Mijia rooms not in the layout aren't shown.")
+                 : L("每个小屋房间放一个米家房间，最多 4 个；想要厨房、卫生间、阳台或别的摆法，用「房间布局」。", "Each house room shows one Mijia room, up to 4. For a kitchen, bathroom, balcony or another arrangement, use Room layout."))
                 .font(.system(size: 10)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             ForEach(resolved.rooms, id: \.key) { r in mappingRow(key: r.key, title: r.title, status: r.module.title, active: true) }
             ForEach(resolved.excluded) { e in mappingRow(key: e.key, title: e.title, status: reason(e), active: false) }
@@ -462,6 +466,7 @@ struct HouseEditPanel: View {
         case .spotTaken: return e.module.title + L(" · 已被占用", " · taken")
         case .excluded: return L("不放进小屋", "Not in house")
         case .unassigned: return L("未分配房间", "No room")
+        case .notInLayout: return L("不在布局里", "Not in layout")
         }
     }
 
@@ -581,6 +586,27 @@ extension Snapshot {
         for (suffix, name) in [("light", NSAppearance.Name.aqua), ("dark", NSAppearance.Name.darkAqua)] {
             appearance = NSAppearance(named: name)
             render(HousePilotHost(editing: true).environmentObject(m), out.appendingPathComponent("house-edit-undo-\(suffix).png"), size: HouseWindow.editSize)
+        }
+        // 房间布局标签
+        // 用解析出来的真实房间 key（标题跟语言走），再加两间没有经典美术的房间（厨房 / 浴室）
+        let key = { (mod: HouseModule) in m.houseResolved.rooms.first { $0.module == mod }?.key ?? "name:" + mod.title }
+        let mix: [HouseLayoutCell] = [
+            .init(room: key(.bedroom), module: "bedroom", col: 0, row: 0),
+            .init(room: key(.study), module: "study", col: 1, row: 0),
+            .init(room: "name:" + L("卫生间", "Bathroom"), module: "bathroom", col: 2, row: 0),
+            .init(room: key(.living), module: "living", col: 0, row: 1),
+            .init(room: "name:" + L("厨房", "Kitchen"), module: "kitchen", col: 2, row: 1),
+        ]
+        m.houseEdit("layout") { $0.setLayout(home: home, layout: mix) }
+        for (suffix, name) in [("light", NSAppearance.Name.aqua), ("dark", NSAppearance.Name.darkAqua)] {
+            appearance = NSAppearance(named: name)
+            render(HousePilotHost(editing: true, editTab: .arrange).environmentObject(m), out.appendingPathComponent("house-arrange-\(suffix).png"), size: HouseWindow.editSize)
+        }
+        // 自定义布局后的小屋本身：模块合成图 + 灯光 / 徽章（查看 + 摆放）
+        for (suffix, name) in [("light", NSAppearance.Name.aqua), ("dark", NSAppearance.Name.darkAqua)] {
+            appearance = NSAppearance(named: name)
+            render(HousePilotHost().environmentObject(m), out.appendingPathComponent("house-composed-window-\(suffix).png"), size: HouseWindow.normalSize)
+            render(HousePilotHost(editing: true).environmentObject(m), out.appendingPathComponent("house-composed-edit-\(suffix).png"), size: HouseWindow.editSize)
         }
         exit(0)
     }
