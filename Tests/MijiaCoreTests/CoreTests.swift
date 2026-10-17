@@ -363,6 +363,8 @@ func acSpec() throws -> DeviceSpec {
         #expect(HouseModule.from(roomName: "主卧") == .bedroom)
         #expect(HouseModule.from(roomName: "书房") == .study)
         #expect(HouseModule.from(roomName: "厨房") == .generic)
+        #expect(HouseModule.isEntryFoyer(roomName: "门口"))
+        #expect(!HouseModule.isEntryFoyer(roomName: "厨房"))
     }
     @Test func assignsLivingSlots() {
         let ds = [

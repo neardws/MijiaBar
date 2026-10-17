@@ -245,7 +245,7 @@ struct DeviceListView: View {
             }
             .menuStyle(.borderlessButton).menuIndicator(m.homes.count > 1 ? .visible : .hidden).fixedSize().disabled(m.homes.count < 2)
             Spacer()
-            IconButton(icon: "house.lodge", help: L("客厅小屋", "Living room")) { HouseWindow.open(model: m) }
+            IconButton(icon: "house.lodge", help: L("小屋", "House")) { HouseWindow.open(model: m) }
             IconButton(icon: "arrow.up.arrow.down", help: L("调整顺序", "Reorder"), tint: m.editingOrder ? Theme.cool : nil) { m.editingOrder.toggle() }
             IconButton(icon: "arrow.clockwise", help: L("刷新", "Refresh"), spinning: m.refreshing) { Task { await m.refresh() } }
             IconButton(icon: m.showHidden ? "eye" : "eye.slash", help: L("显示已隐藏设备", "Show hidden")) { m.toggleShowHidden() }

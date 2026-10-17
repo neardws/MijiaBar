@@ -1,7 +1,7 @@
 import Foundation
 
 /// 「小屋」视图的布局：固定的像素房间模块，按米家房间名自动匹配；每个模块有按设备类型固定的位置。
-/// 用户不需要画户型；房间按列表里保存的房间顺序拼成一栋房子（本 PR 仅客厅试点）。
+/// 用户不需要画户型；房间按列表里保存的房间顺序拼成一栋房子。
 public enum HouseModule: String, CaseIterable, Codable, Sendable {
     case living, bedroom, study, generic
 
@@ -13,6 +13,21 @@ public enum HouseModule: String, CaseIterable, Codable, Sendable {
         if has(["卧", "臥", "bedroom", "睡房"]) { return .bedroom }
         if has(["书房", "書房", "办公", "辦公", "工作室", "study", "office"]) { return .study }
         return .generic
+    }
+
+    /// 玄关 / 门口类房间用 generic 模块展示；其他未识别房间不进小屋
+    public static func isEntryFoyer(roomName: String?) -> Bool {
+        let n = (roomName ?? "").lowercased()
+        return ["门口", "門口", "玄关", "玄關", "entry", "entrance", "foyer", "hall", "走廊"].contains { n.contains($0) }
+    }
+
+    public var assetPrefix: String {
+        switch self {
+        case .living: return "living-room"
+        case .bedroom: return "bedroom"
+        case .study: return "study"
+        case .generic: return "generic"
+        }
     }
 }
 
@@ -37,8 +52,12 @@ public enum HouseLayout {
         case (.bedroom, .light): return 2
         case (.study, .light): return 2
         case (.living, .tv), (.bedroom, .tv): return 1
-        case (.generic, _), (.study, .tv): return 0
+        case (.study, .tv): return 1
+        case (.generic, .tv): return 0
+        case (.generic, .light): return 1
+        case (.generic, .ac): return 0
         case (_, .ac): return 1
+        default: return 0
         }
     }
     /// 按顺序把设备放进位置；放不下或类型不支持的进 overflow
