@@ -217,7 +217,7 @@ struct HouseRoomTileView: View {
 struct HouseFullView: View {
     var rooms: [HouseRoom]
     var showChrome = true
-    var onToggle: ((String) -> Void)?
+    var onToggle: ((String) -> Void)? = nil
 
     private let tileScale: CGFloat = 0.5
     private let tileW: CGFloat = 640 * 0.5
@@ -274,7 +274,7 @@ struct HouseFullView: View {
         .padding(.bottom, 8)
     }
 
-    @ViewBuilder private func deviceChips(_ onToggle: (String) -> Void) -> some View {
+    @ViewBuilder private func deviceChips(_ onToggle: @escaping (String) -> Void) -> some View {
         let chips = rooms.flatMap(\.devices).filter { $0.kind != .ac || $0.on }
         if !chips.isEmpty {
             ScrollView(.horizontal, showsIndicators: false) {
