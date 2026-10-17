@@ -177,26 +177,27 @@ struct HouseRoomOverlays: View {
     }
 
     @ViewBuilder private var windowFill: some View {
-        guard let r = anchors.window?.cgRect else { return }
-        let w = r.width * artSize.width, h = r.height * artSize.height
-        if phase == .day {
-            let k = 0.42 + roomActive * 0.18
-            RoundedRectangle(cornerRadius: 2)
-                .fill(LinearGradient(colors: [
-                    Color(red: 0.82, green: 0.92, blue: 1).opacity(0.55),
-                    Color(red: 0.58, green: 0.78, blue: 0.98).opacity(0.28),
-                ], startPoint: .top, endPoint: .bottom))
-                .frame(width: w, height: h)
-                .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
-                .blendMode(.screen).opacity(k)
-        } else if roomActive > 0.01 {
-            let k = min(0.22, 0.06 + roomActive * 0.14)
-            RoundedRectangle(cornerRadius: 2)
-                .fill(RadialGradient(colors: [Color(red: 0.62, green: 0.78, blue: 0.92).opacity(0.22), .clear],
-                                     center: .center, startRadius: 0, endRadius: max(w, h) * 0.48))
-                .frame(width: w, height: h)
-                .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
-                .blendMode(.screen).opacity(k)
+        if let r = anchors.window?.cgRect {
+            let w = r.width * artSize.width, h = r.height * artSize.height
+            if phase == .day {
+                let k = 0.42 + roomActive * 0.18
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(LinearGradient(colors: [
+                        Color(red: 0.82, green: 0.92, blue: 1).opacity(0.55),
+                        Color(red: 0.58, green: 0.78, blue: 0.98).opacity(0.28),
+                    ], startPoint: .top, endPoint: .bottom))
+                    .frame(width: w, height: h)
+                    .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
+                    .blendMode(.screen).opacity(k)
+            } else if roomActive > 0.01 {
+                let k = min(0.22, 0.06 + roomActive * 0.14)
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(RadialGradient(colors: [Color(red: 0.62, green: 0.78, blue: 0.92).opacity(0.22), .clear],
+                                         center: .center, startRadius: 0, endRadius: max(w, h) * 0.48))
+                    .frame(width: w, height: h)
+                    .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
+                    .blendMode(.screen).opacity(k)
+            }
         }
     }
 
