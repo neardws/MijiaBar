@@ -208,6 +208,11 @@ html:not(.js) .paddles{display:none}
 .split .shot{width:340px}
 @media (max-width:833px){.split{grid-template-columns:1fr;gap:48px}.split .shot{width:min(340px,100%);margin:0 auto}}
 .shot picture{display:block;border-radius:18px;overflow:hidden;box-shadow:var(--shot-shadow);background:var(--bg)}
+.cutaway{margin-top:72px}
+.cutaway picture{display:block;border-radius:22px;overflow:hidden;box-shadow:var(--shot-shadow);background:#000}
+.cutaway img{display:block;width:100%;height:auto;aspect-ratio:16/9}
+.cutaway figcaption{margin-top:18px;font-size:15px;line-height:1.47;color:var(--fg2);text-align:center}
+@media (max-width:833px){.cutaway{margin-top:48px}.cutaway picture{border-radius:14px}}
 .points{display:grid;gap:22px;margin-top:40px}
 .points li{display:grid;grid-template-columns:28px 1fr;gap:14px;align-items:start}
 .points svg{width:28px;height:28px;stroke:var(--fg);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
@@ -416,8 +421,12 @@ footer a{color:var(--fg)}
           <li><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M6 8.5h12v11H6z"/><path d="M18 12.5l4-2.5v8l-4-2.5"/></svg><p><b>{{house_p4_t}}</b><span>{{house_p4_d}}</span></p></li>
         </ul>
       </div>
-      <div class="shot rv"><picture><source srcset="{{cdn}}/shots/{{shots}}/list-dark.webp" media="(prefers-color-scheme: dark)"><img src="{{cdn}}/shots/{{shots}}/list-light.webp" width="360" height="560" alt="{{alt_house|attr}}" loading="lazy" decoding="async"></picture></div>
+      <div class="shot rv"><picture><source srcset="{{cdn}}/shots/{{shots}}/list-night-dark.webp" media="(prefers-color-scheme: dark)"><img src="{{cdn}}/shots/{{shots}}/list-night-light.webp" width="360" height="560" alt="{{alt_house|attr}}" loading="lazy" decoding="async"></picture></div>
     </div>
+    <figure class="wrap cutaway rv">
+      <picture><img src="{{cdn}}/shots/house/house-night-partial.webp" width="1440" height="810" alt="{{alt_cutaway|attr}}" loading="lazy" decoding="async"></picture>
+      <figcaption>{{house_caption}}</figcaption>
+    </figure>
   </section>
 
   <section class="alt" id="devices">
