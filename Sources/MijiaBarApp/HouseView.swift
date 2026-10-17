@@ -208,7 +208,8 @@ struct HouseRoomOverlays: View {
     var body: some View {
         ZStack {
             ForEach(layout.lights) { light in
-                lightLayer(light)
+                HouseLightGlowLayer(light: light, lighting: lighting, artSize: artSize, phase: phase,
+                                    roomActive: roomActive, compactLamps: compactLamps)
             }
         }
         .frame(width: artSize.width, height: artSize.height)
@@ -222,92 +223,97 @@ struct HouseRoomOverlays: View {
             .frame(width: r.width * artSize.width, height: r.height * artSize.height)
             .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
     }
+}
 
-    @ViewBuilder private func lightLayer(_ light: HouseLightAnchor) -> some View {
-        if light.kind == .window {
-            windowFill(light)
-        } else if light.kind == .ac {
-            acGlow(light)
-        } else if light.kind == .screen {
-            screenGlow(light)
-        } else {
-            lampGlow(light)
-        }
-    }
+private struct HouseLightGlowLayer: View {
+    let light: HouseLightAnchor
+    let lighting: RoomModuleLighting
+    let artSize: CGSize
+    let phase: HousePhase
+    let roomActive: Double
+    var compactLamps = false
 
-    private func lampStrength(_ light: HouseLightAnchor) -> Double {
+    private var lampK: Double {
         guard light.role == "light", let i = light.slot, i < lighting.lampLevels.count else { return 0 }
         return lighting.lampLevels[i]
     }
 
-    @ViewBuilder private func windowFill(_ light: HouseLightAnchor) {
+    var body: some View {
+        switch light.kind {
+        case .window: windowFill
+        case .ac: acGlow
+        case .screen: screenGlow
+        case .lamp, .sconce, .entry: lampGlow
+        }
+    }
+
+    @ViewBuilder private var windowFill: some View {
         if let r = light.rect?.cgRect {
-        let w = r.width * artSize.width, h = r.height * artSize.height
-        if phase == .day {
-            let k = 0.42 + roomActive * 0.18
-            RoundedRectangle(cornerRadius: 2)
-                .fill(LinearGradient(colors: [
-                    Color(red: 0.82, green: 0.92, blue: 1).opacity(0.55),
-                    Color(red: 0.58, green: 0.78, blue: 0.98).opacity(0.28),
-                ], startPoint: .top, endPoint: .bottom))
-                .frame(width: w, height: h)
-                .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
-                .blendMode(.screen).opacity(k)
-        } else if roomActive > 0.01 {
-            let k = min(0.22, 0.06 + roomActive * 0.14)
-            RoundedRectangle(cornerRadius: 2)
-                .fill(RadialGradient(colors: [Color(red: 0.62, green: 0.78, blue: 0.92).opacity(0.22), .clear],
-                                     center: .center, startRadius: 0, endRadius: max(w, h) * 0.48))
-                .frame(width: w, height: h)
-                .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
-                .blendMode(.screen).opacity(k)
-        }
+            let w = r.width * artSize.width, h = r.height * artSize.height
+            if phase == .day {
+                let k = 0.42 + roomActive * 0.18
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(LinearGradient(colors: [
+                        Color(red: 0.82, green: 0.92, blue: 1).opacity(0.55),
+                        Color(red: 0.58, green: 0.78, blue: 0.98).opacity(0.28),
+                    ], startPoint: .top, endPoint: .bottom))
+                    .frame(width: w, height: h)
+                    .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
+                    .blendMode(.screen).opacity(k)
+            } else if roomActive > 0.01 {
+                let k = min(0.22, 0.06 + roomActive * 0.14)
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(RadialGradient(colors: [Color(red: 0.62, green: 0.78, blue: 0.92).opacity(0.22), .clear],
+                                         center: .center, startRadius: 0, endRadius: max(w, h) * 0.48))
+                    .frame(width: w, height: h)
+                    .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
+                    .blendMode(.screen).opacity(k)
+            }
         }
     }
 
-    @ViewBuilder private func acGlow(_ light: HouseLightAnchor) {
+    @ViewBuilder private var acGlow: some View {
         if lighting.ac > 0, let r = light.rect?.cgRect {
-        let k = lighting.ac
-        let w = r.width * artSize.width, h = r.height * artSize.height
-        RoundedRectangle(cornerRadius: 3)
-            .fill(RadialGradient(colors: [Theme.cool.opacity(0.32 * k), Theme.cool.opacity(0.12 * k), .clear],
-                                 center: .top, startRadius: 0, endRadius: h * 1.2))
-            .frame(width: w, height: h)
-            .clipShape(RoundedRectangle(cornerRadius: 3))
-            .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
-            .blendMode(.screen)
+            let k = lighting.ac
+            let w = r.width * artSize.width, h = r.height * artSize.height
+            RoundedRectangle(cornerRadius: 3)
+                .fill(RadialGradient(colors: [Theme.cool.opacity(0.32 * k), Theme.cool.opacity(0.12 * k), .clear],
+                                     center: .top, startRadius: 0, endRadius: h * 1.2))
+                .frame(width: w, height: h)
+                .clipShape(RoundedRectangle(cornerRadius: 3))
+                .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
+                .blendMode(.screen)
         }
     }
 
-    @ViewBuilder private func screenGlow(_ light: HouseLightAnchor) {
+    @ViewBuilder private var screenGlow: some View {
         if lighting.tv > 0, let r = light.rect?.cgRect {
-        let k = lighting.tv
-        let w = r.width * artSize.width, h = r.height * artSize.height
-        RoundedRectangle(cornerRadius: 4)
-            .fill(RadialGradient(colors: [
-                Color(red: 0.48, green: 0.72, blue: 0.96).opacity(0.38 * k),
-                Color(red: 0.22, green: 0.48, blue: 0.78).opacity(0.2 * k),
-                Color(red: 0.12, green: 0.32, blue: 0.62).opacity(0.08 * k),
-            ], center: .center, startRadius: 0, endRadius: max(w, h) * 0.58))
-            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white.opacity(0.1 * k), lineWidth: 0.5))
-            .frame(width: w, height: h)
-            .clipShape(RoundedRectangle(cornerRadius: 4))
-            .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
-            .blendMode(.screen)
+            let k = lighting.tv
+            let w = r.width * artSize.width, h = r.height * artSize.height
+            RoundedRectangle(cornerRadius: 4)
+                .fill(RadialGradient(colors: [
+                    Color(red: 0.48, green: 0.72, blue: 0.96).opacity(0.38 * k),
+                    Color(red: 0.22, green: 0.48, blue: 0.78).opacity(0.2 * k),
+                    Color(red: 0.12, green: 0.32, blue: 0.62).opacity(0.08 * k),
+                ], center: .center, startRadius: 0, endRadius: max(w, h) * 0.58))
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white.opacity(0.1 * k), lineWidth: 0.5))
+                .frame(width: w, height: h)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
+                .blendMode(.screen)
         }
     }
 
-    @ViewBuilder private func lampGlow(_ light: HouseLightAnchor) {
-        let k = lampStrength(light)
-        if k > 0, let p = light.at?.point {
-        let inner: CGFloat = compactLamps ? 34 : 44
-        let outer: CGFloat = compactLamps ? 72 : 100
-        ZStack {
-            Glow(Color(red: 1, green: 0.78, blue: 0.42), 0.48 * k, diameter: inner, softness: 26)
-            Glow(Color(red: 1, green: 0.9, blue: 0.65), 0.24 * k, diameter: outer, softness: 40)
-        }
-        .position(x: p.x * artSize.width, y: p.y * artSize.height)
-        .blendMode(.screen).opacity(0.85 * k)
+    @ViewBuilder private var lampGlow: some View {
+        if lampK > 0, let p = light.at?.point {
+            let inner: CGFloat = compactLamps ? 34 : 44
+            let outer: CGFloat = compactLamps ? 72 : 100
+            ZStack {
+                Glow(Color(red: 1, green: 0.78, blue: 0.42), 0.48 * lampK, diameter: inner, softness: 26)
+                Glow(Color(red: 1, green: 0.9, blue: 0.65), 0.24 * lampK, diameter: outer, softness: 40)
+            }
+            .position(x: p.x * artSize.width, y: p.y * artSize.height)
+            .blendMode(.screen).opacity(0.85 * lampK)
         }
     }
 }
