@@ -255,16 +255,29 @@ private struct HouseLightGlowLayer: View {
     private var strength: Double {
         switch light.kind {
         case .window:
-            if phase == .day { return 0.42 + roomActive * 0.18 }
-            return roomActive > 0.01 ? min(0.22, 0.06 + roomActive * 0.14) : 0
+            if phase == .day { return 0.58 + roomActive * 0.22 }
+            return roomActive > 0.01 ? min(0.48, 0.14 + roomActive * 0.32) : 0
         case .ac: return lighting.ac
         case .screen: return lighting.tv
         case .lamp, .sconce, .entry: return lampK
         }
     }
 
+    /// 静态 PNG 叠层：设备灯夜间再叠一层 screen，拉开 on/off 对比（锚点不变）。
+    private var displayOpacity: Double { min(1, strength) }
+    private var deviceBoost: Bool {
+        light.kind != .window && strength > 0.35
+    }
+
     var body: some View {
-        if strength > 0.001 { pngOverlay.opacity(strength) }
+        if displayOpacity > 0.001 {
+            ZStack {
+                pngOverlay.opacity(displayOpacity)
+                if deviceBoost {
+                    pngOverlay.opacity(displayOpacity * (phase == .night ? 0.52 : 0.38))
+                }
+            }
+        }
     }
 
     @ViewBuilder private var pngOverlay: some View {

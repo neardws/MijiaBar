@@ -42,7 +42,7 @@ def warm_blob(w: int, h: int, *, tight: bool = False) -> Image.Image:
             d = math.hypot(dx, dy)
             if d < 1:
                 t = (1 - d) ** 2.2
-                a = int(255 * t * (0.85 if tight else 0.72))
+                a = int(255 * t * (0.98 if tight else 0.92))
                 px[x, y] = (255, 210, 140, a)
     im = im.filter(ImageFilter.GaussianBlur(0.8))
     return pixelize(im)
@@ -51,13 +51,13 @@ def warm_blob(w: int, h: int, *, tight: bool = False) -> Image.Image:
 def cool_screen(w: int, h: int) -> Image.Image:
     im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(im)
-    draw.rounded_rectangle((0, 0, w - 1, h - 1), radius=max(2, min(w, h) // 6), fill=(120, 185, 255, 200))
+    draw.rounded_rectangle((0, 0, w - 1, h - 1), radius=max(2, min(w, h) // 6), fill=(130, 195, 255, 245))
     inner = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     ipx = inner.load()
     for y in range(h):
         for x in range(w):
             t = 1 - abs(x - w / 2) / (w / 2) * 0.35
-            ipx[x, y] = (200, 230, 255, int(90 * t))
+            ipx[x, y] = (210, 238, 255, int(130 * t))
     im = Image.alpha_composite(im, inner)
     return pixelize(im.filter(ImageFilter.GaussianBlur(0.6)))
 
@@ -68,15 +68,15 @@ def ac_wash(w: int, h: int) -> Image.Image:
     for y in range(h):
         for x in range(w):
             t = (1 - y / h) ** 1.6
-            px[x, y] = (140, 210, 255, int(180 * t))
+            px[x, y] = (150, 220, 255, int(220 * t))
     return pixelize(im)
 
 
 def window_day(w: int, h: int) -> Image.Image:
     im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(im)
-    draw.rectangle((0, 0, w - 1, h - 1), fill=(220, 238, 255, 210))
-    draw.rectangle((2, 2, w - 3, h // 2), fill=(245, 252, 255, 120))
+    draw.rectangle((0, 0, w - 1, h - 1), fill=(230, 244, 255, 235))
+    draw.rectangle((2, 2, w - 3, h // 2), fill=(250, 253, 255, 150))
     return pixelize(im)
 
 
@@ -88,8 +88,8 @@ def window_night(w: int, h: int) -> Image.Image:
         for x in range(w):
             d = math.hypot(x - cx, y - cy) / (min(w, h) * 0.45)
             if d < 1:
-                a = int(160 * (1 - d) ** 2)
-                px[x, y] = (170, 205, 235, a)
+                a = int(210 * (1 - d) ** 1.8)
+                px[x, y] = (175, 210, 240, a)
     return pixelize(im)
 
 

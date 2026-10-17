@@ -32,11 +32,18 @@ def strength(light: dict, phase: str, devices_on: bool) -> float:
     active = 1.0 if devices_on else 0.0
     if kind == "window":
         if phase == "day":
-            return 0.42 + active * 0.18
-        return min(0.22, 0.06 + active * 0.14) if active > 0 else 0.0
+            return 0.58 + active * 0.22
+        return min(0.48, 0.14 + active * 0.32) if active > 0 else 0.0
     if not devices_on:
         return 0.0
     return 1.0
+
+
+def paste_boost(layer: Image.Image, light: dict, phase: str, k: float) -> Image.Image:
+    if light["kind"] == "window" or k <= 0.35:
+        return layer
+    boost = 0.52 if phase == "night" else 0.38
+    return paste_light(layer, light, phase, k * boost)
 
 
 def overlay_name(light: dict, phase: str) -> str | None:
@@ -86,6 +93,7 @@ def compose(phase: str, devices_on: bool) -> Image.Image:
         for light in mod["lights"]:
             k = strength(light, phase, devices_on)
             layer = paste_light(layer, light, phase, k)
+            layer = paste_boost(layer, light, phase, k)
         layer = clip_layer(layer, mod["clip"])
         out = Image.alpha_composite(out, layer)
     device_cozy = 1.0 if devices_on else 0.0
