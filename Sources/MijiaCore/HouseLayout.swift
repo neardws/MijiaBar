@@ -252,6 +252,13 @@ public enum HouseResolver {
         for (d, p, _) in explicit {
             if p == "none" { chipOnly.insert(d.did); pinned.insert(d.did); continue }
             if p == "badge" { wantsBadge.append(d); pinned.insert(d.did); continue }
+            if p.hasPrefix("badge:") {   // 指定某个徽章位（拖放）；位置不存在或被占用时退回任意徽章位
+                let id = String(p.dropFirst("badge:".count))
+                if HouseCatalog.badgeIds(mod).contains(id), !taken.contains(.badge(id)) {
+                    spot[d.did] = .badge(id); taken.insert(.badge(id))
+                } else { wantsBadge.append(d) }
+                pinned.insert(d.did); continue
+            }
             if p.hasPrefix("fixture:") {
                 let id = String(p.dropFirst("fixture:".count))
                 if let f = HouseCatalog.fixture(mod, id), f.accepts(d.category), !taken.contains(.fixture(id)) {
@@ -274,7 +281,7 @@ public enum HouseResolver {
         }
         // 4. 徽章：用户指定的优先，其余按类型、did
         let rest = ds.filter { free($0) }.sorted { ($0.category.rawValue, $0.did) < ($1.category.rawValue, $1.did) }
-        var badges = HouseCatalog.badgeIds(mod)[...]
+        var badges = HouseCatalog.badgeIds(mod).filter { !taken.contains(.badge($0)) }[...]
         for d in wantsBadge + rest {
             guard let b = badges.popFirst() else { break }
             spot[d.did] = .badge(b)

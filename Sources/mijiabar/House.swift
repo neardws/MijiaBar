@@ -10,7 +10,7 @@ let houseUsage = """
   mijiabar house slots [--json]                     模块目录：每个模块的灯具位 id、接受的设备类型、徽章位
   mijiabar house hide <设备>                         小屋里不显示这台设备（列表不受影响）
   mijiabar house unhide <设备>                       小屋里显示（即使列表里隐藏了）
-  mijiabar house assign <设备> <位置>                位置 = 灯具位 id（如 floor_lamp）| badge | none | auto
+  mijiabar house assign <设备> <位置>                位置 = 灯具位 id（如 floor_lamp）| badge | badge:b2 | none | auto
   mijiabar house set <设备> [--visible true|false|auto] [--place <位置>]
   mijiabar house room <房间> <模块>                   模块 = living | bedroom | study | generic | none（不放进小屋）| auto
   mijiabar house reset [<设备> | --room <房间>] [--home H]   恢复自动（不带参数 = 整个家）
@@ -91,6 +91,12 @@ func parsePlace(_ s: String) throws -> String? {
     switch s {
     case "auto": return nil
     case "badge", "none": return s
+    case _ where s.hasPrefix("badge:"):
+        let id = String(s.dropFirst(6))
+        guard HouseModule.allCases.contains(where: { HouseCatalog.badgeIds($0).contains(id) }) else {
+            throw MijiaError.unknownProperty(L("位置 ", "spot ") + s + L("（可用 mijiabar house slots 查看）", " (see mijiabar house slots)"))
+        }
+        return s
     default:
         let id = s.hasPrefix("fixture:") ? String(s.dropFirst(8)) : s
         guard HouseModule.allCases.contains(where: { HouseCatalog.fixture($0, id) != nil }) else {
@@ -213,7 +219,7 @@ nonisolated(unsafe) let houseSchema: [String: Any] = [
         ]],
         "device": ["type": "object", "required": ["updatedAt"], "properties": [
             "visible": ["type": ["boolean", "null"], "description": "null = follow the device list's hidden state"],
-            "place": ["type": ["string", "null"], "pattern": "^(fixture:[a-z_]+|badge|none)$", "description": "null = automatic"],
+            "place": ["type": ["string", "null"], "pattern": "^(fixture:[a-z_]+|badge(:b[0-9]+)?|none)$", "description": "null = automatic"],
             "updatedAt": ["type": "string", "format": "date-time"],
         ]],
     ],
@@ -285,7 +291,7 @@ nonisolated(unsafe) let houseMCPTools: [[String: Any]] = [
      "inputSchema": ["type": "object", "properties": ["home": ["type": "string", "description": "家庭 id 或名称（默认当前家庭）"]]]],
     ["name": "get_house_slots", "description": "小屋模块目录：每个模块的灯具位 id 和接受的设备类型。List house modules and fixture slot ids.",
      "inputSchema": ["type": "object", "properties": [String: Any]()]],
-    ["name": "set_house_device", "description": "设置一台设备在小屋里的显示和位置（只改小屋，不控制设备）。visible: true/false/\"auto\"；place: 灯具位 id | badge | none | auto。",
+    ["name": "set_house_device", "description": "设置一台设备在小屋里的显示和位置（只改小屋，不控制设备）。visible: true/false/\"auto\"；place: 灯具位 id | badge | badge:<id> | none | auto。",
      "inputSchema": ["type": "object", "properties": ["device": ["type": "string"], "visible": ["description": "true | false | \"auto\""], "place": ["type": "string"]], "required": ["device"]]],
     ["name": "set_house_room", "description": "设置米家房间在小屋里用哪个模块：living | bedroom | study | generic | none（不放进小屋）| auto。",
      "inputSchema": ["type": "object", "properties": ["room": ["type": "string"], "module": ["type": "string"], "home": ["type": "string"]], "required": ["room", "module"]]],
