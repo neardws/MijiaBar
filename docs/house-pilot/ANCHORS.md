@@ -19,8 +19,9 @@ Pixel coordinates on the 960×540 canvas. Per module (`living`, `bedroom`, `stud
 
 - `label`: `[x, y]` room name pill
 - `region`: room polygon (floor + walls); light never leaves it
+- `badges`: `[[x, y], …]` floor points for badge slots `b1, b2, …` (pixel icons for devices without a fixture; count must match `HouseCatalog.badgeCount`)
 - `lights[]`:
-  - `id`, `kind` (`lamp` | `sconce` | `ceiling` | `screen` | `ac`), `role` (`light` + `slot`, `tv`, `ac`)
+  - `id` — stable fixture id used by `HouseCatalog`, `house.json` (`fixture:<id>`) and the CLI; `kind` (`lamp` | `sconce` | `ceiling` | `screen` | `ac`), `role` (`light` + `slot`, `tv`, `ac`)
   - `reveal`: `[cx, cy, rx, ry]` ellipse per fixture (full to 0.55 radius, linear fade to 1.0). Each device
     uses its own mask so neighbors stay unlit. Same math in Swift, the bake script and the preview script.
     (`"room"` is only for legacy previews — not used in `house-cutaway.json`.)
@@ -36,3 +37,7 @@ python3 scripts/preview-house-snapshots.py    # docs/house-pilot/house-{day,nigh
 ```
 
 On a Mac, `MijiaBarApp --house-snapshot <dir>` writes `house-{day,night}-{on,off}.png` from the real view.
+
+## Badges
+
+`python3 scripts/gen-house-badges.py` writes the 12×12 pixel icons `badge-<category>-{on,off}.png` (drawn at 3× nearest-neighbour).

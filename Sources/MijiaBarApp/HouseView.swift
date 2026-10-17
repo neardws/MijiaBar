@@ -37,30 +37,16 @@ struct HouseLightSpec: Decodable, Identifiable {
     /// 关掉时需要用 unlit 盖回去的灯具本体（防止同房间其他灯的 lit 蒙版把它“点亮”）
     var corePolygon: [[Double]]? { core ?? screen ?? shade }
 
-    func strength(_ l: RoomModuleLighting) -> Double {
-        switch role {
-        case "tv": return l.tv
-        case "ac": return l.ac
-        default:
-            guard let i = slot, i < l.lampLevels.count else { return 0 }
-            return l.lampLevels[i]
-        }
-    }
+    func strength(_ l: RoomLighting) -> Double { l.level(id) }
 
-    /// 与 HouseDevice 的 slot / kind 对应（仅已放进小屋的位置）
-    func matchedDevice(in devices: [HouseDevice]) -> HouseDevice? {
-        switch role {
-        case "tv": return devices.first { $0.kind == .tv && $0.slot == (slot ?? 0) }
-        case "ac": return devices.first { $0.kind == .ac && $0.slot == (slot ?? 0) }
-        default:
-            guard let i = slot else { return nil }
-            return devices.first { $0.kind == .light && $0.slot == i }
-        }
-    }
+    /// 放在这个灯具位上的设备（id 与 HouseCatalog / house.json 的 fixture id 一致）
+    func matchedDevice(in devices: [HouseDevice]) -> HouseDevice? { devices.first { $0.spot == .fixture(id) } }
 }
 
 struct HouseCutawayModule: Decodable {
     let label: [Double]?
+    /// 徽章位脚下的点（[x, y]），顺序对应 HouseCatalog.badgeIds：b1, b2, …
+    let badges: [[Double]]?
     let region: [[Double]]
     let lights: [HouseLightSpec]
 }
@@ -103,6 +89,15 @@ enum HouseAssets {
         return img
     }
 
+    /// 徽章小图标：badge-<category>-{on,off}.png（scripts/gen-house-badges.py 生成，12×12）
+    static func badge(_ c: DeviceCategory, on: Bool) -> NSImage? {
+        let name = "badge-\(c.rawValue)-\(on ? "on" : "off")"
+        if let img = images[name] { return img }
+        guard let url = resourceURL(name, "png"), let img = NSImage(contentsOf: url) else { return nil }
+        images[name] = img
+        return img
+    }
+
     static func cutawayScene() -> HouseCutawaySceneFile? {
         if let cached = sceneCache { return cached }
         let scene = resourceURL("house-cutaway", "json")
@@ -121,63 +116,81 @@ enum HouseAssets {
 
 // MARK: - 灯光状态
 
-struct RoomModuleLighting: Equatable {
-    var lampLevels: [Double]
-    var tv: Double
-    var ac: Double
+/// 一个房间的灯光：灯具位 id → 亮度（0…1）
+struct RoomLighting: Equatable {
+    var levels: [String: Double]
     var cozy: Double
 
-    static let demoNight = RoomModuleLighting(lampLevels: [1, 0.6], tv: 1, ac: 1, cozy: 1)
-    static let allOff = RoomModuleLighting(lampLevels: [0, 0], tv: 0, ac: 0, cozy: 0)
+    static let allOff = RoomLighting(levels: [:], cozy: 0)
+    func level(_ id: String) -> Double { levels[id] ?? 0 }
 
-    static func from(placed: [(Device, HouseSlot)], isOn: (Device) -> Bool?) -> RoomModuleLighting {
-        var lamps = [0.0, 0.0]
-        var tv = 0.0, ac = 0.0
-        for (d, slot) in placed {
-            guard d.isOnline, isOn(d) == true else { continue }
-            switch slot.kind {
-            case .light where slot.index < lamps.count: lamps[slot.index] = 1
-            case .tv: tv = 1
-            case .ac: ac = 1
-            default: break
-            }
+    static func from(_ devices: [HouseDevice]) -> RoomLighting {
+        var lv: [String: Double] = [:]
+        var lamps = 0.0, tv = 0.0, ac = 0.0
+        for d in devices where d.on {
+            guard case .fixture(let id)? = d.spot else { continue }
+            lv[id] = 1
+            switch d.category { case .tv: tv = 1; case .ac: ac = 1; default: lamps += 1 }
         }
-        let cozy = min(1, 0.12 + lamps.reduce(0, +) * 0.28 + tv * 0.32 + ac * 0.22)
-        return RoomModuleLighting(lampLevels: lamps, tv: tv, ac: ac, cozy: cozy)
+        return RoomLighting(levels: lv, cozy: min(1, 0.12 + lamps * 0.28 + tv * 0.32 + ac * 0.22))
     }
 }
 
 struct HouseDevice: Equatable {
-    let did: String, name: String, kind: HouseSlotKind, slot: Int, on: Bool
+    let did: String, name: String, category: DeviceCategory
+    let spot: HouseSpot?
+    var on: Bool
+    let online: Bool
+    /// 有开关（传感器之类没有）
+    let toggleable: Bool
 }
 
 struct HouseRoom: Identifiable, Equatable {
     var id: String { key }
     let key: String, title: String, module: HouseModule
-    let devices: [HouseDevice], overflow: Int
-    let lighting: RoomModuleLighting
+    var devices: [HouseDevice]
+    var lighting: RoomLighting
+
+    /// 截图用：指定哪些灯具位亮着；徽章设备跟着 badgesOn
+    func lit(_ fixtures: Set<String>, badgesOn: Bool) -> HouseRoom {
+        var r = self
+        r.devices = devices.map { d in
+            var d = d
+            switch d.spot { case .fixture(let id)?: d.on = fixtures.contains(id); case .badge?: d.on = badgesOn && d.toggleable; case nil: break }
+            return d
+        }
+        r.lighting = RoomLighting(levels: Dictionary(uniqueKeysWithValues: fixtures.map { ($0, 1.0) }), cozy: fixtures.isEmpty ? 0 : min(1, 0.12 + Double(fixtures.count) * 0.3))
+        return r
+    }
 }
 
 extension AppModel {
     func housePower(_ d: Device) -> Bool? { powerInfo(d)?.isOn }
 
-    var houseRooms: [HouseRoom] {
-        let hid = currentHomeId ?? ""
+    /// house.json 里的家庭 key
+    var houseHomeKey: String { currentHomeId ?? devices.first?.homeId ?? "" }
+
+    /// 自动布局 + house.json 覆盖项（纯函数，见 MijiaCore/HouseLayout.swift）
+    var houseResolved: ResolvedHouse {
         let inHome = devices.filter { currentHomeId == nil || $0.homeId == currentHomeId }
-        let groups = Dictionary(grouping: inHome) { $0.roomName ?? "" }
-        return prefs.orderedRooms(home: hid, Array(groups.keys)).compactMap { k in
-            let mod = HouseModule.from(roomName: k)
-            if !mod.hasArt || (mod == .generic && !HouseModule.isEntryFoyer(roomName: k)) { return nil }
-            let list = prefs.orderedDevices(home: hid, key: k, groups[k] ?? [])
-            let r = HouseLayout.assign(list, in: mod)
-            let ds = r.placed.map { d, s in
-                HouseDevice(did: d.did, name: displayName(d), kind: s.kind, slot: s.index, on: d.isOnline && (housePower(d) == true))
-            }
-            let light = RoomModuleLighting.from(placed: r.placed, isOn: { housePower($0) })
-            return HouseRoom(key: k, title: k.isEmpty ? L("未分配房间", "Unassigned") : k, module: mod, devices: ds, overflow: r.overflow.count, lighting: light)
-        }
+        return HouseResolver.resolve(devices: inHome, config: house.homes[houseHomeKey], isHidden: { self.isHidden($0) }, name: { self.displayName($0) })
     }
 
+    var houseRooms: [HouseRoom] { houseResolved.rooms.map(houseRoom) }
+
+    func houseRoom(_ r: ResolvedHouseRoom) -> HouseRoom {
+        let ds = r.devices.map { x -> HouseDevice in
+            let p = device(x.did).flatMap { powerInfo($0) }
+            return HouseDevice(did: x.did, name: x.name, category: x.category, spot: x.spot, on: x.online && p?.isOn == true, online: x.online, toggleable: p != nil)
+        }
+        return HouseRoom(key: r.key, title: r.title, module: r.module, devices: ds, lighting: .from(ds))
+    }
+
+    /// 改小屋配置：写 house.json（iCloud Drive 同步、文件协调锁），演示模式只改内存
+    func updateHouse(_ f: (inout HouseFile) -> Void) {
+        if mock { var h = house; f(&h); house = h; return }
+        do { house = try HouseStore.update(f) } catch { showToast(L("保存小屋设置失败：", "Couldn't save house settings: ") + error.localizedDescription, error: true) }
+    }
 }
 
 // MARK: - 连通剖面整栋（烘焙灯光）
@@ -207,6 +220,11 @@ struct HouseCutawaySceneView: View {
                             HouseRoomLightLayer(module: m, devices: room.devices, lighting: room.lighting,
                                                 lit: lit, unlit: unlit, artSize: artSize, onToggle: onToggle)
                         }
+                    }
+                }
+                ForEach(rooms) { room in
+                    if let m = cut?.modules[room.module.rawValue] {
+                        HouseBadgeLayer(module: m, room: room, phase: phase, artSize: artSize, onToggle: onToggle)
                     }
                 }
             } else {
@@ -240,7 +258,7 @@ struct HouseCutawaySceneView: View {
 private struct HouseRoomLightLayer: View {
     let module: HouseCutawayModule
     let devices: [HouseDevice]
-    let lighting: RoomModuleLighting
+    let lighting: RoomLighting
     let lit: NSImage
     let unlit: NSImage
     let artSize: CGSize
@@ -306,6 +324,71 @@ private struct HouseRoomLightLayer: View {
             .mask(room)
         }
     }
+}
+
+/// 徽章：没有专属灯具的设备（风扇、插座、净化器、传感器……）在地上的像素小图标；开着时脚下有一圈对应颜色的光。
+struct HouseBadgeLayer: View {
+    let module: HouseCutawayModule
+    let room: HouseRoom
+    let phase: HousePhase
+    let artSize: CGSize
+    var onToggle: ((String) -> Void)?
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(Array(HouseCatalog.badgeIds(room.module).enumerated()), id: \.offset) { i, id in
+                if let d = room.devices.first(where: { $0.spot == .badge(id) }), let p = module.badges?[safe: i], p.count >= 2 {
+                    HouseBadge(device: d, phase: phase)
+                        .position(x: p[0], y: p[1] - 14)
+                        .contentShape(Rectangle())
+                        .onTapGesture { if d.toggleable { onToggle?(d.did) } }
+                        .allowsHitTesting(onToggle != nil && d.toggleable)
+                        .accessibilityElement()
+                        .accessibilityLabel(d.name)
+                        .accessibilityValue(d.toggleable ? (d.on ? L("开", "On") : L("关", "Off")) : "")
+                }
+            }
+        }
+        .frame(width: artSize.width, height: artSize.height, alignment: .topLeading)
+    }
+}
+
+struct HouseBadge: View {
+    let device: HouseDevice
+    let phase: HousePhase
+
+    /// 有开关的设备开着时亮；传感器这类没有开关的，在线就显示彩色
+    private var lit: Bool { device.toggleable ? device.on : device.online }
+    private var glow: Color {
+        switch device.category {
+        case .light: return Color(red: 1, green: 0.8, blue: 0.4)
+        case .tv, .camera: return Color(red: 0.5, green: 0.75, blue: 1)
+        case .ac, .fan, .airPurifier, .purifier, .dehumidifier: return Color(red: 0.55, green: 0.9, blue: 1)
+        case .heater, .kitchen: return Color(red: 1, green: 0.6, blue: 0.3)
+        default: return Color(red: 0.55, green: 1, blue: 0.6)
+        }
+    }
+
+    var body: some View {
+        ZStack {
+            Ellipse().fill(Color.black.opacity(0.35)).frame(width: 30, height: 8).offset(y: 18)
+            if device.toggleable && device.on {
+                EllipticalGradient(colors: [glow.opacity(phase == .night ? 0.85 : 0.55), glow.opacity(0)])
+                    .frame(width: 76, height: 28).offset(y: 17)
+            }
+            if let img = HouseAssets.badge(device.category, on: lit) {
+                // 12×12 精灵按 3 倍最近邻放大（底图像素格是 2，徽章略粗一点，菜单栏里缩小后也看得清）
+                Image(nsImage: img).interpolation(.none).resizable().frame(width: 36, height: 36)
+                    .opacity(!device.online ? 0.45 : (!lit && phase == .night ? 0.8 : 1))
+            }
+        }
+        .frame(width: 76, height: 56)
+        .animation(.easeInOut(duration: 0.35), value: device.on)
+    }
+}
+
+extension Array {
+    subscript(safe i: Int) -> Element? { indices.contains(i) ? self[i] : nil }
 }
 
 /// 画布像素坐标的多边形（房间区域 / 灯具本体）
@@ -402,12 +485,12 @@ struct HouseDeviceChipRow: View {
     var topPadding: CGFloat = 10
 
     var body: some View {
-        let chips = rooms.flatMap(\.devices).filter { $0.kind != .ac || $0.on }
+        let chips = rooms.flatMap(\.devices).filter { $0.toggleable && $0.online && ($0.category != .ac || $0.on) }
         if !chips.isEmpty {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(chips, id: \.did) { d in
-                        HouseTapChip(icon: HouseChipStyle.icon(d.kind), label: d.name, on: d.on, tint: HouseChipStyle.tint(d.kind)) { onToggle(d.did) }
+                        HouseTapChip(icon: HouseChipStyle.icon(d.category), label: d.name, on: d.on, tint: HouseChipStyle.tint(d.category)) { onToggle(d.did) }
                     }
                 }.padding(.top, topPadding)
             }
@@ -416,11 +499,11 @@ struct HouseDeviceChipRow: View {
 }
 
 private enum HouseChipStyle {
-    static func icon(_ k: HouseSlotKind) -> String {
-        switch k { case .light: return "lightbulb.fill"; case .tv: return "tv.fill"; case .ac: return "air.conditioner.horizontal" }
+    static func icon(_ c: DeviceCategory) -> String {
+        switch c { case .light: return "lightbulb.fill"; case .tv: return "tv.fill"; case .fan: return "fan.fill"; default: return c.icon }
     }
-    static func tint(_ k: HouseSlotKind) -> Color {
-        switch k { case .light: return .yellow; case .tv: return .indigo; case .ac: return Theme.cool }
+    static func tint(_ c: DeviceCategory) -> Color {
+        switch c { case .light: return .yellow; case .tv: return .indigo; case .ac: return Theme.cool; case .heater: return .orange; default: return .green }
     }
 }
 
@@ -575,17 +658,9 @@ extension Snapshot {
         try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
         let m = AppModel(mock: true)
         let rooms = m.houseRooms
-        let onRooms = rooms.map { r -> HouseRoom in
-            var l = r.lighting
-            l.lampLevels = l.lampLevels.map { _ in 1 }
-            l.tv = 1
-            if r.module == .bedroom { l.ac = 1 }
-            l.cozy = 1
-            return HouseRoom(key: r.key, title: r.title, module: r.module, devices: r.devices, overflow: r.overflow, lighting: l)
-        }
-        let offRooms = rooms.map { r in
-            HouseRoom(key: r.key, title: r.title, module: r.module, devices: r.devices, overflow: r.overflow, lighting: .allOff)
-        }
+        func all(_ r: HouseRoom) -> Set<String> { Set(HouseCatalog.fixtures(r.module).map(\.id)) }
+        let onRooms = rooms.map { $0.lit(all($0), badgesOn: true) }
+        let offRooms = rooms.map { $0.lit([], badgesOn: false) }
         self.appearance = NSAppearance(named: .darkAqua)
         let exports: [(String, HousePhase, [HouseRoom])] = [
             ("house-day-on", .day, onRooms),
@@ -596,14 +671,10 @@ extension Snapshot {
             ("house-off", .night, offRooms),
         ]
         // 网站用：只开部分灯具，展示「开哪盏只亮哪一处」
-        func only(_ pick: (HouseRoom) -> RoomModuleLighting?) -> [HouseRoom] {
-            rooms.map { r in HouseRoom(key: r.key, title: r.title, module: r.module, devices: r.devices, overflow: r.overflow, lighting: pick(r) ?? .allOff) }
-        }
-        let lamp = RoomModuleLighting(lampLevels: [1, 0], tv: 0, ac: 0, cozy: 0.4)
-        let oneLamp = only { $0.module == .living ? lamp : nil }
-        let twoLamps = only { $0.module == .living || $0.module == .bedroom ? lamp : nil }
+        let oneLamp = rooms.map { $0.lit($0.module == .living ? ["floor_lamp"] : [], badgesOn: false) }
+        let twoLamps = rooms.map { $0.lit($0.module == .living ? ["floor_lamp"] : $0.module == .bedroom ? ["bedside"] : [], badgesOn: false) }
         let partial: [(String, HousePhase, [HouseRoom])] = [
-            ("house-night-partial", .night, rooms),   // 演示数据的真实状态：客厅落地灯 + 电视
+            ("house-night-partial", .night, rooms),   // 演示数据的真实状态：客厅落地灯 + 电视，客厅空调徽章
             ("house-day-partial", .day, rooms),
             ("house-night-onelamp", .night, oneLamp),
             ("house-night-twolamps", .night, twoLamps),
