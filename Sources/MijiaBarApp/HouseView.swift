@@ -158,12 +158,20 @@ struct HouseRoomOverlays: View {
         .allowsHitTesting(false)
     }
 
+    /// 月光只在窗框内淡淡铺开，避免大块漂浮蓝光
+    private var windowStrength: Double {
+        let active = max(lighting.lampLevels.max() ?? 0, lighting.tv, lighting.ac)
+        return min(0.32, 0.04 + active * 0.14 + lighting.cozy * 0.08)
+    }
+
     @ViewBuilder private var windowMoon: some View {
         if let r = anchors.window?.cgRect {
-            let k = 0.3 + lighting.cozy * 0.35
+            let k = windowStrength
+            let w = r.width * artSize.width, h = r.height * artSize.height
             Ellipse()
-                .fill(RadialGradient(colors: [Color(red: 0.55, green: 0.72, blue: 0.9).opacity(0.5 * k), .clear], center: .center, startRadius: 0, endRadius: 110))
-                .frame(width: r.width * artSize.width, height: r.height * artSize.height * 0.75)
+                .fill(RadialGradient(colors: [Color(red: 0.62, green: 0.78, blue: 0.92).opacity(0.28), .clear],
+                                     center: .center, startRadius: 0, endRadius: max(w, h) * 0.42))
+                .frame(width: w * 0.92, height: h * 0.88)
                 .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
                 .blendMode(.screen).opacity(k)
         }
@@ -171,28 +179,30 @@ struct HouseRoomOverlays: View {
 
     @ViewBuilder private var acGlow: some View {
         if lighting.ac > 0, let r = anchors.ac?.cgRect {
+            let k = lighting.ac
             ZStack {
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(LinearGradient(colors: [Theme.cool.opacity(0.9), Theme.cool.opacity(0.5)], startPoint: .top, endPoint: .bottom))
-                Glow(Theme.cool, 0.55, diameter: 48, softness: 36)
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(LinearGradient(colors: [Theme.cool.opacity(0.45), Theme.cool.opacity(0.22)], startPoint: .top, endPoint: .bottom))
+                Glow(Theme.cool, 0.22 * k, diameter: 36, softness: 28)
             }
             .frame(width: r.width * artSize.width, height: r.height * artSize.height)
             .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
-            .blendMode(.screen).opacity(lighting.ac)
+            .blendMode(.screen).opacity(0.55 * k)
         }
     }
 
     @ViewBuilder private var tvGlow: some View {
         if lighting.tv > 0, let r = anchors.tv?.cgRect {
+            let k = lighting.tv
             ZStack {
-                Rectangle()
-                    .fill(LinearGradient(colors: [Color(red: 0.25, green: 0.58, blue: 0.98), Color(red: 0.12, green: 0.38, blue: 0.72)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .opacity(0.88)
-                Glow(Theme.cool, 0.6, diameter: 72, softness: 42)
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(LinearGradient(colors: [Color(red: 0.35, green: 0.62, blue: 0.92).opacity(0.5), Color(red: 0.18, green: 0.42, blue: 0.72).opacity(0.35)],
+                                         startPoint: .topLeading, endPoint: .bottomTrailing))
+                Glow(Theme.cool, 0.28 * k, diameter: min(r.width * artSize.width * 1.1, 52), softness: 32)
             }
             .frame(width: r.width * artSize.width, height: r.height * artSize.height)
             .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
-            .blendMode(.screen).opacity(lighting.tv)
+            .blendMode(.screen).opacity(0.72 * k)
         }
     }
 
@@ -203,19 +213,19 @@ struct HouseRoomOverlays: View {
             if k > 0 {
                 let p = lamps[i].point
                 ZStack {
-                    Glow(Color(red: 1, green: 0.78, blue: 0.42), 0.75 * k, diameter: 56, softness: 38)
-                    Glow(Color(red: 1, green: 0.9, blue: 0.65), 0.5 * k, diameter: 200, softness: 64)
+                    Glow(Color(red: 1, green: 0.78, blue: 0.42), 0.48 * k, diameter: 44, softness: 30)
+                    Glow(Color(red: 1, green: 0.9, blue: 0.65), 0.26 * k, diameter: 130, softness: 52)
                 }
                 .position(x: p.x * artSize.width, y: p.y * artSize.height)
-                .blendMode(.screen).opacity(k)
+                .blendMode(.screen).opacity(0.85 * k)
             }
         }
     }
 
     private var warmWash: some View {
-        let k = max(lighting.lampLevels.max() ?? 0, lighting.tv * 0.65, lighting.ac * 0.4)
-        return LinearGradient(colors: [Color(red: 1, green: 0.72, blue: 0.38).opacity(0.35 * k), .clear], startPoint: .bottom, endPoint: .top)
-            .frame(height: artSize.height * 0.22).frame(maxHeight: .infinity, alignment: .bottom)
+        let k = max(lighting.lampLevels.max() ?? 0, lighting.tv * 0.45, lighting.ac * 0.25)
+        return LinearGradient(colors: [Color(red: 1, green: 0.72, blue: 0.38).opacity(0.18 * k), .clear], startPoint: .bottom, endPoint: .top)
+            .frame(height: artSize.height * 0.18).frame(maxHeight: .infinity, alignment: .bottom)
             .blendMode(.screen)
     }
 }
@@ -238,7 +248,7 @@ struct HouseCutawaySceneView: View {
     var body: some View {
         ZStack {
             baseArt
-            Color.black.opacity((1 - cozy) * 0.78).blendMode(.multiply)
+            Color.black.opacity((1 - cozy) * 0.8).blendMode(.multiply)
             ForEach(rooms) { room in
                 if let anchors = cut?.modules[room.module.rawValue] ?? HouseAssets.anchors(room.module) {
                     HouseRoomOverlays(anchors: anchors, lighting: room.lighting, artSize: artSize)
