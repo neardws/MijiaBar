@@ -305,7 +305,7 @@ struct HouseFullView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Theme.stroke))
             }
-            if showChrome, let onToggle { deviceChips(onToggle) }
+            if showChrome, let onToggle { HouseDeviceChipRow(rooms: rooms, onToggle: onToggle) }
         }
         .padding(showChrome ? 12 : 0)
         .background(showChrome ? Theme.bg : .clear)
@@ -333,24 +333,122 @@ struct HouseFullView: View {
         .padding(.bottom, 8)
     }
 
-    @ViewBuilder private func deviceChips(_ onToggle: @escaping (String) -> Void) -> some View {
+}
+
+struct HouseDeviceChipRow: View {
+    var rooms: [HouseRoom]
+    var onToggle: (String) -> Void
+    var topPadding: CGFloat = 10
+
+    var body: some View {
         let chips = rooms.flatMap(\.devices).filter { $0.kind != .ac || $0.on }
         if !chips.isEmpty {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(chips, id: \.did) { d in
-                        HouseTapChip(icon: icon(d.kind), label: d.name, on: d.on, tint: tint(d.kind)) { onToggle(d.did) }
+                        HouseTapChip(icon: HouseChipStyle.icon(d.kind), label: d.name, on: d.on, tint: HouseChipStyle.tint(d.kind)) { onToggle(d.did) }
                     }
-                }.padding(.top, 10)
+                }.padding(.top, topPadding)
+            }
+        }
+    }
+}
+
+private enum HouseChipStyle {
+    static func icon(_ k: HouseSlotKind) -> String {
+        switch k { case .light: return "lightbulb.fill"; case .tv: return "tv.fill"; case .ac: return "air.conditioner.horizontal" }
+    }
+    static func tint(_ k: HouseSlotKind) -> Color {
+        switch k { case .light: return .yellow; case .tv: return .indigo; case .ac: return Theme.cool }
+    }
+}
+
+// MARK: - 主面板嵌入
+
+/// 设备列表顶部的紧凑剖面：宽度随主面板，点场景或「放大」打开独立小屋窗口。
+struct HouseListEmbed: View {
+    @EnvironmentObject var m: AppModel
+    @State private var contentWidth: CGFloat = 0
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 60)) { ctx in
+            let rooms = m.houseRooms
+            if !rooms.isEmpty {
+                let phase = HousePhase.from(date: ctx.date)
+                VStack(alignment: .leading, spacing: 6) {
+                    embedChrome(phase: phase, cozy: rooms.contains { $0.lighting.cozy > 0.35 })
+                    if contentWidth > 0 {
+                        cutaway(rooms: rooms, phase: phase, width: contentWidth)
+                    }
+                    HouseDeviceChipRow(rooms: rooms, topPadding: 4) { did in
+                        guard let d = m.device(did) else { return }
+                        withoutAnimation { m.toggle(d) }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background {
+                    GeometryReader { geo in
+                        Color.clear.onChange(of: geo.size.width, initial: true) { _, w in contentWidth = w }
+                    }
+                }
             }
         }
     }
 
-    private func icon(_ k: HouseSlotKind) -> String {
-        switch k { case .light: return "lightbulb.fill"; case .tv: return "tv.fill"; case .ac: return "air.conditioner.horizontal" }
+    private func embedChrome(phase: HousePhase, cozy: Bool) -> some View {
+        HStack(spacing: 8) {
+            Text(L("小屋", "House")).font(.system(size: 12, weight: .semibold)).foregroundStyle(.secondary)
+            HStack(spacing: 4) {
+                Image(systemName: phase == .day ? "sun.max.fill" : "moon.stars.fill")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(phase == .day ? Color.orange.opacity(0.85) : Color.indigo.opacity(0.75))
+                Text(phase == .day ? L("白天", "Daytime") : L("夜间", "Nighttime"))
+                    .font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 7).padding(.vertical, 3).background(Theme.tile, in: Capsule())
+            Circle().fill(cozy ? Color.green : Color.secondary.opacity(0.45)).frame(width: 6, height: 6)
+            Spacer(minLength: 0)
+            expandButton
+        }
     }
-    private func tint(_ k: HouseSlotKind) -> Color {
-        switch k { case .light: return .yellow; case .tv: return .indigo; case .ac: return Theme.cool }
+
+    private var expandButton: some View {
+        Button { HouseWindow.open(model: m) } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "arrow.up.left.and.arrow.down.right").font(.system(size: 10, weight: .semibold))
+                Text(L("放大", "Enlarge")).font(.system(size: 11, weight: .medium))
+            }
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .background(Theme.tile, in: Capsule())
+            .overlay(Capsule().stroke(Theme.stroke))
+        }
+        .buttonStyle(.plain).hoverHighlight()
+        .help(L("在窗口中打开小屋", "Open house in a window"))
+        .accessibilityLabel(L("放大", "Enlarge"))
+    }
+
+    private func cutaway(rooms: [HouseRoom], phase: HousePhase, width: CGFloat) -> some View {
+        HouseCutawaySceneView(rooms: rooms, phase: phase, showLabels: false, fitWidth: width)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.stroke))
+            .overlay(alignment: .topTrailing) {
+                Button { HouseWindow.open(model: m) } label: {
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.92))
+                        .padding(6)
+                        .background(.black.opacity(0.45), in: Circle())
+                }
+                .buttonStyle(.plain).hoverHighlight()
+                .help(L("放大", "Enlarge"))
+                .padding(6)
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .onTapGesture { HouseWindow.open(model: m) }
+            .accessibilityElement(children: .ignore)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityLabel(L("放大", "Enlarge"))
+            .accessibilityHint(L("在窗口中打开小屋", "Open house in a window"))
     }
 }
 
