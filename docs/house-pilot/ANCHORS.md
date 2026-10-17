@@ -38,6 +38,8 @@ Regenerate cutaway **base PNGs** separately: `python3 scripts/gen-house-cutaway-
 
 Regenerate glow PNGs: `python3 scripts/gen-house-light-overlays.py` (also runs from `sync-house-lights.py`). Swift draws overlays with **opacity = device/phase strength**; no procedural `Glow` blobs.
 
+**Bundle lookup:** SwiftPM may flatten `Resources/House/glows/*.png` into the module bundle root; `HouseAssets.glowImage` resolves root → `glows/` → `House/glows/` → `House/`.
+
 ## Verifying alignment
 
 1. Overlay anchors on the night base (debug): adjust JSON, `sync-house-lights.py`, rebuild app or `scripts/preview-house-snapshots.py`.

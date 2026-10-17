@@ -123,11 +123,36 @@ enum HouseAssets {
         return try? JSONDecoder().decode(HouseAnchorFile.self, from: data)
     }
 
+    /// 光效 PNG：SPM 会把 `Resources/House/glows/` 摊平到 bundle 根目录，因此按多路径解析。
     static func glowImage(_ name: String) -> NSImage? {
-        let url = Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "House/glows")
-            ?? Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "glows")
-        guard let url else { return nil }
+        guard let url = moduleResourceURL(name: name, extension: "png", subdirectories: glowPNGSubdirectories) else {
+            #if DEBUG
+            warnMissingGlow(name)
+            #endif
+            return nil
+        }
         return NSImage(contentsOf: url)
+    }
+
+    /// 查找顺序：bundle 根 → `glows/` → `House/glows/` → `House/`（与 cutaway/base 一致）。
+    private static let glowPNGSubdirectories: [String?] = [nil, "glows", "House/glows", "House"]
+
+    private static var warnedGlowNames = Set<String>()
+
+    private static func warnMissingGlow(_ name: String) {
+        guard warnedGlowNames.insert(name).inserted else { return }
+        fputs("HouseAssets: missing glow PNG \"\(name).png\" (tried bundle root + glows/ + House/glows/)\n", stderr)
+    }
+
+    private static func moduleResourceURL(name: String, extension ext: String, subdirectories: [String?]) -> URL? {
+        for sub in subdirectories {
+            if let sub {
+                if let url = Bundle.module.url(forResource: name, withExtension: ext, subdirectory: sub) { return url }
+            } else if let url = Bundle.module.url(forResource: name, withExtension: ext) {
+                return url
+            }
+        }
+        return nil
     }
 
     static func moduleArtSize(_ module: HouseModule, cutaway: Bool = false) -> CGSize {
