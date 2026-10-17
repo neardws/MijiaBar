@@ -1,133 +1,140 @@
-"""把模块瓦片按格子叠成整屋 unlit/lit（画家算法）。"""
-from __future__ import annotations
+"""Python 版合成（与 Swift HouseComposer 同算法），用于离线出图/校验。
 
-import json
-import time
-from pathlib import Path
-
+模块素材：full（两面后墙全高）+ cut（两面后墙切到 CUT_H）两张对齐图。
+每段后墙：有邻居在它后面（共享墙）→ 用 cut；外墙 → full。共享墙只由前/右格子画。
+"""
 from PIL import Image, ImageDraw
+import sys; sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
+from geom import *
 
-from .grid import FLOOR_H, W, WALL_H, cell_origin, layout_canvas, painter_key, snap
+CAP_TOP = (108, 66, 38, 255)
+CAP_EDGE = (38, 20, 11, 255)
+END_FACE = (72, 42, 24, 255)
+OUTLINE = (12, 8, 6, 235)
 
-ROOT = Path(__file__).resolve().parents[2]
-MOD = ROOT / "assets/house/modules"
-
-
-def load_catalog() -> dict:
-    return json.loads((MOD / "catalog.json").read_text())
-
-
-def compose(layout: list[dict], phase: str, lit: bool, catalog: dict | None = None) -> tuple[Image.Image, dict, float]:
-    """layout: [{module, col, row, key?}]。返回 (图, 场景 JSON, 耗时 ms)。"""
-    cat = catalog or load_catalog()
-    cells = []
-    for c in layout:
-        m = cat["modules"][c["module"]]
-        fw, fh = m["footprint"] if isinstance(m["footprint"], list) else (m["footprint"], 1)
-        if isinstance(fw, (list, tuple)):
-            fw, fh = fw[0], fw[1] if len(fw) > 1 else 1
-        cells.append((c["col"], c["row"], int(fw), int(fh)))
-    width, height, ox, oy = layout_canvas(cells)
-    t0 = time.perf_counter()
-    canvas = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-
-    # 外轮廓底色（夜空 / 昼空）只画一次在背后
-    bg = Image.new("RGBA", (width, height), (18, 22, 40, 255) if phase == "night" else (120, 175, 220, 255))
-    canvas.alpha_composite(bg)
-
-    ordered = sorted(enumerate(layout), key=lambda iv: painter_key(iv[1]["col"], iv[1]["row"]))
-    scene_modules = {}
-    for _, cell in ordered:
-        mid = cell["module"]
-        m = cat["modules"][mid]
-        fw, fh = m["footprint"] if not isinstance(m["footprint"][0] if isinstance(m["footprint"], list) else m["footprint"], list) else (1, 1)
-        if isinstance(m["footprint"], list):
-            fw, fh = int(m["footprint"][0]), int(m["footprint"][1]) if len(m["footprint"]) > 1 else 1
-        else:
-            fw, fh = int(m["footprint"]), 1
-        variant = m["variants"][f"{phase}-{'lit' if lit else 'unlit'}"]
-        tile = Image.open(MOD / variant).convert("RGBA")
-        tip_world = cell_origin(cell["col"], cell["row"])
-        tip_local = m["tip"]
-        # 模块 PNG 左上角世界坐标
-        paste_x = tip_world[0] - tip_local[0] - ox
-        paste_y = tip_world[1] - tip_local[1] - oy
-        canvas.alpha_composite(tile, (snap(paste_x), snap(paste_y)))
-
-        # 锚点转到全局
-        def tx(pt):
-            return [int(pt[0] - tip_local[0] + tip_world[0] - ox), int(pt[1] - tip_local[1] + tip_world[1] - oy)]
-
-        key = cell.get("key", mid)
-        lights = []
-        for L in m["lights"]:
-            L2 = dict(L)
-            if L2.get("reveal"):
-                r = L2["reveal"]
-                L2["reveal"] = [r[0] - tip_local[0] + tip_world[0] - ox, r[1] - tip_local[1] + tip_world[1] - oy, r[2], r[3]]
-            for poly_key in ("shade", "screen", "core"):
-                if L2.get(poly_key):
-                    L2[poly_key] = [tx(p) for p in L2[poly_key]]
-            lights.append(L2)
-        scene_modules[key] = {
-            "module": mid,
-            "label": tx(m["label"]),
-            "region": [tx(p) for p in m["region"]],
-            "badges": [tx(p) for p in m["badges"]],
-            "lights": lights,
-            "col": cell["col"], "row": cell["row"],
-        }
-
-    # 接缝件：简单的地基描边（spike）
-    draw = ImageDraw.Draw(canvas)
-    # 底部阴影线
-    draw.rectangle([0, height - 8, width, height], fill=(0, 0, 0, 80))
-
-    ms = (time.perf_counter() - t0) * 1000
-    scene = {"size": [width, height], "origin": [ox, oy], "phase": phase, "lit": lit, "modules": scene_modules}
-    return canvas, scene, ms
+def add(p, q): return (p[0] + q[0], p[1] + q[1])
 
 
-# 三种 spike 布局
-LAYOUTS = {
-    "living-bed": [
-        {"module": "living", "col": 0, "row": 0, "key": "living"},
-        {"module": "bedroom", "col": 2, "row": 0, "key": "bedroom"},
-    ],
-    "three": [
-        {"module": "bedroom", "col": 0, "row": 0, "key": "bedroom"},
-        {"module": "study", "col": 1, "row": 0, "key": "study"},
-        {"module": "living", "col": 0, "row": 1, "key": "living"},
-    ],
-    "classic4": [
-        {"module": "bedroom", "col": 0, "row": 0, "key": "bedroom"},
-        {"module": "study", "col": 1, "row": 0, "key": "study"},
-        {"module": "living", "col": 0, "row": 1, "key": "living"},
-        {"module": "generic", "col": 2, "row": 1, "key": "generic"},
-    ],
-}
 
+    segs = []
+    return segs
 
-def main():
-    # 需要 generic 也生成
-    from .paint import generate_all
-    generate_all(MOD, ["living", "bedroom", "study", "generic", "kitchen", "bathroom", "balcony"])
-    out = ROOT / "assets/house/spike"
-    out.mkdir(parents=True, exist_ok=True)
-    cat = load_catalog()
-    times = []
-    for name, layout in LAYOUTS.items():
-        for phase in ("day", "night"):
-            for lit in (False, True):
-                im, scene, ms = compose(layout, phase, lit, cat)
-                times.append(ms)
-                tag = f"{name}-{phase}-{'lit' if lit else 'unlit'}"
-                im.save(out / f"{tag}.png", optimize=True)
-                if lit and phase == "night":
-                    (out / f"{name}-scene.json").write_text(json.dumps(scene, indent=2), encoding="utf-8")
-                print(f"{tag}: {im.size[0]}x{im.size[1]} in {ms:.1f} ms")
-    print(f"compose ms: min={min(times):.1f} median={sorted(times)[len(times)//2]:.1f} max={max(times):.1f}")
+def plan(layout, modules):
+    cells = {}
+    for key, col, row in layout:
+        fw = modules[key]['fw']
+        for dc in range(fw):
+            cells[(col + dc, row)] = key
+    out = []
+    for key, col, row in layout:
+        fw = modules[key]['fw']
+        g = module_geom(fw)
+        T = g['T']
+        segs = []
+        # NW 墙：与 (col-1,row) 共享
+        h = CUT_H if (col - 1, row) in cells else WALL_H
+        segs.append(('nw', T, g['L'], h))
+        # NE 墙：逐格，与 (col+i,row-1) 共享
+        for i in range(fw):
+            a = (T[0] + i * W // 2, T[1] + i * FH // 2)
+            b = (a[0] + W // 2, a[1] + FH // 2)
+            h = CUT_H if (col + i, row - 1) in cells else WALL_H
+            segs.append(('ne', a, b, h))
+        out.append(dict(key=key, col=col, row=row, fw=fw, g=g, segs=segs))
+    return cells, out
 
+def nw_height(cells, col, row):
+    if (col, row) not in cells: return 0
+    return CUT_H if (col - 1, row) in cells else WALL_H
 
-if __name__ == "__main__":
-    main()
+def ne_height(cells, col, row):
+    if (col, row) not in cells: return 0
+    return CUT_H if (col, row - 1) in cells else WALL_H
+
+def module_image(m, mod):
+    """按墙段拼 full/cut：每段墙上方的竖条区域取对应版本。"""
+    full, cut = mod['full'], mod['cut']
+    img = full.copy()
+    w, h = img.size
+    for name, a, b, hh in m['segs']:
+        if hh == WALL_H: continue
+        mask = Image.new('L', (w, h), 0)
+        # 墙段上方整条（含挡在墙前的家具，两版对齐）
+        x0, x1 = sorted((a[0], b[0]))
+        ya, yb = (a[1], b[1]) if a[0] <= b[0] else (b[1], a[1])
+        ImageDraw.Draw(mask).polygon([(x0, 0), (x1, 0), (x1, yb), (x0, ya)], fill=255)
+        img.paste(cut, (0, 0), mask) if False else None
+        img = Image.composite(cut, img, mask)
+    return img
+
+def compose(layout, modules, pad=24):
+    cells, items = plan(layout, modules)
+    xs, ys = [], []
+    for it in items:
+        tx, ty = tip(it['col'], it['row'])
+        it['ox'], it['oy'] = tx - it['g']['T'][0], ty - it['g']['T'][1]
+        for p in it['g']['silhouette']:
+            xs.append(p[0] + it['ox']); ys.append(p[1] + it['oy'])
+    minx, miny = min(xs) - pad, min(ys) - pad - 6
+    Wc, Hc = max(xs) + pad - minx, max(ys) + pad - miny
+    Wc += Wc % 2; Hc += Hc % 2
+    canvas = Image.new('RGBA', (Wc, Hc), (0, 0, 0, 0))
+    d = ImageDraw.Draw(canvas)
+    off = lambda pts, it: [(x + it['ox'] - minx, y + it['oy'] - miny) for x, y in pts]
+    for it in items:  # 外轮廓
+        g = it['g']
+        sil = list(g['silhouette'])
+        hn = it['segs'][0][3]
+        sil = [(g['T'][0], g['T'][1] - WALL_H), (g['R'][0], g['R'][1] - WALL_H), g['R'], (g['R'][0], g['R'][1] + SLAB),
+               (g['F'][0], g['F'][1] + SLAB), (g['L'][0], g['L'][1] + SLAB), g['L'], (g['L'][0], g['L'][1] - hn)]
+        pts = off(sil, it)
+        d.polygon(pts, fill=OUTLINE)
+        d.line(pts + [pts[0]], fill=OUTLINE, width=5)
+    items.sort(key=lambda it: (it['row'], it['col']))
+    for it in items:
+        mod = modules[it['key']]
+        img = module_image(it, mod)
+        # 剪影外的像素不要（cut 版墙上方是透明的）
+        canvas.alpha_composite(img, (it['ox'] - minx, it['oy'] - miny))
+        d = ImageDraw.Draw(canvas)
+        col, row, fw, g = it['col'], it['row'], it['fw'], it['g']
+        for name, a, b, hh in it['segs']:
+            o = CAP_NW if name == 'nw' else CAP_NE
+            ua, ub = (a[0], a[1] - hh), (b[0], b[1] - hh)
+            d.polygon(off([ua, ub, add(ub, o), add(ua, o)], it), fill=CAP_TOP, outline=CAP_EDGE)
+        # 后角
+        hn = it['segs'][0][3]; he = it['segs'][1][3]
+        T = g['T']
+        hc = max(hn, he)
+        uT = (T[0], T[1] - hc)
+        d.polygon(off([uT, add(uT, CAP_NW), add(add(uT, CAP_NW), CAP_NE), add(uT, CAP_NE)], it), fill=CAP_TOP, outline=CAP_EDGE)
+        # 墙端面：本墙比延续墙高的部分露出来
+        L, R = g['L'], g['R']
+        cont = nw_height(cells, col, row + 1)
+        if hn > cont:
+            q = [(L[0], L[1] - cont), (L[0], L[1] - hn), add((L[0], L[1] - hn), CAP_NW), add((L[0], L[1] - cont), CAP_NW)]
+            d.polygon(off(q, it), fill=END_FACE, outline=CAP_EDGE)
+        hlast = it['segs'][-1][3]
+        cont = ne_height(cells, col + fw, row)
+        if hlast > cont:
+            q = [(R[0], R[1] - cont), (R[0], R[1] - hlast), add((R[0], R[1] - hlast), CAP_NE), add((R[0], R[1] - cont), CAP_NE)]
+            d.polygon(off(q, it), fill=END_FACE, outline=CAP_EDGE)
+        # NE 墙段之间高度变化处（客厅跨两格）
+        for s0, s1 in zip(it['segs'][1:], it['segs'][2:]):
+            if s0[3] != s1[3]:
+                hi, lo = max(s0[3], s1[3]), min(s0[3], s1[3])
+                p = s0[2]
+                q = [(p[0], p[1] - lo), (p[0], p[1] - hi), add((p[0], p[1] - hi), CAP_NE), add((p[0], p[1] - lo), CAP_NE)]
+                if s0[3] > s1[3]:
+                    d.polygon(off(q, it), fill=END_FACE, outline=CAP_EDGE)
+        # 后方邻居墙在本格后角结束、比本墙高 → 那面墙的端面朝前露出
+        for (nc, nr, mine, o) in ((col, row - 1, hn, CAP_NW), (col - 1, row, he, CAP_NE)):
+            hb = nw_height(cells, nc, nr) if o is CAP_NW else ne_height(cells, nc, nr)
+            if hb > mine:
+                q = [(T[0], T[1] - mine), (T[0], T[1] - hb), add((T[0], T[1] - hb), o), add((T[0], T[1] - mine), o)]
+                # 端面在邻居墙的末端；朝向与本墙同向
+                d.polygon(off(q, it), fill=END_FACE, outline=CAP_EDGE)
+        if (col - 1, row) in cells or (col, row - 1) in cells:
+            x, y = off([T], it)[0]
+            d.rectangle([x - 3, y - hc, x + 2, y], fill=(66, 38, 22, 255), outline=CAP_EDGE)
+    return canvas
