@@ -108,11 +108,17 @@ touch the keychain.
 
 Open the house window (**Enlarge**) and click **Edit**. The window widens:
 
-- Dashed frames mark every fixture spot (round) and badge spot (square) in the cutaway. Click one to choose which device in that room goes there, or click "Empty this spot".
-- The right panel lists the devices of each house room. The **eye** button shows or hides a device *in the house only* (`visible`), and the menu sets its spot (`automatic / <fixture> / badge / button row only`, plus a per-device reset). A pin marks devices with an override.
+- **Drag and drop.**
+  - Drag a device row from the right panel onto a dashed spot in the cutaway: round spots are fixtures, square spots are badges. While you drag, spots that can take the device turn green and the rest fade. The spot under the pointer shows "Drop here" / "Swap with …", or a red reason: *Devices can only go in their own Mijia room* or *This spot doesn't take this kind of device*.
+  - Drag a placed device to another spot to move it. If the spot is taken, the two swap; the other device goes back to the old spot when it fits there, otherwise it becomes a badge.
+  - Drag a placed device back to the panel, or onto an empty part of the cutaway, to take it off: fixture → badge, badge → button row. Dropping outside the window cancels.
+  - Dropping a device that is hidden in the house also shows it.
+- **Click.** Click a dashed spot to pick the device from a list in the panel, or click "Empty this spot".
+- **Panel.** The **eye** button shows or hides a device *in the house only* (`visible`). The menu sets its spot (`automatic / <fixture> / badge / button row only`, plus a per-device reset). A pin marks devices with an override.
 - **Rooms** maps Mijia rooms to house modules (`automatic / Living room / Bedroom / Study / Entry / Not in house`).
 - **Reset to automatic** removes every override for the current home.
+- **Undo / Redo** (toolbar buttons, ⌘Z / ⇧⌘Z) cover every edit above for as long as the house window stays open.
 
-Edits are written to `house.json` right away. There is no draft or undo. Changes from the CLI, agents or other Macs show up live through the file watcher.
+Edits are written to `house.json` right away. Undo writes the previous values back with a fresh `updatedAt`, so it wins the merge on other Macs like any other edit. If the CLI, an agent or another Mac changes an entry that is in the undo history, the history is cleared with a notice, so undo never reverts someone else's change. External edits to other entries keep the history.
 
-Screenshots with demo data: `MijiaBar --house-window-snapshot <dir>` (set `MIJIABAR_LANG=en|zh-Hans` and `MIJIABAR_HOUSE_PHASE=day|night`).
+Screenshots with demo data: `MijiaBar --house-window-snapshot <dir>` (set `MIJIABAR_LANG=en|zh-Hans` and `MIJIABAR_HOUSE_PHASE=day|night`). It renders the window, edit mode, two mid-drag states (`house-drag-valid`, `house-drag-invalid`, with the drag image drawn by the app because the system drag image can't be captured) and `house-edit-undo`.
