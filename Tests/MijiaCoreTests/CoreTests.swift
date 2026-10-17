@@ -356,6 +356,27 @@ func acSpec() throws -> DeviceSpec {
     }
 }
 
+@Suite struct HouseLayoutTests {
+    @Test func matchesRoomNames() {
+        #expect(HouseModule.from(roomName: "客厅") == .living)
+        #expect(HouseModule.from(roomName: "Living room") == .living)
+        #expect(HouseModule.from(roomName: "主卧") == .bedroom)
+        #expect(HouseModule.from(roomName: "书房") == .study)
+        #expect(HouseModule.from(roomName: "厨房") == .generic)
+    }
+    @Test func assignsLivingSlots() {
+        let ds = [
+            Device(did: "1", name: "Lamp", model: "yeelink.light.x", isOnline: true, homeId: "h", homeName: "", roomName: "客厅"),
+            Device(did: "2", name: "TV", model: "xiaomi.tv.x", isOnline: true, homeId: "h", homeName: "", roomName: "客厅"),
+            Device(did: "3", name: "AC", model: "lumi.acpartner.x", isOnline: true, homeId: "h", homeName: "", roomName: "客厅"),
+        ]
+        let r = HouseLayout.assign(ds, in: .living)
+        #expect(r.placed.count == 3)
+        #expect(r.placed.map(\.1.kind) == [.light, .tv, .ac])
+        #expect(r.overflow.isEmpty)
+    }
+}
+
 @Suite struct NotifyTests {
     @Test func detectsTransitionsButNotFirstSight() {
         let closed = NotifySnapshot(online: true, contactClosed: true, leak: false)

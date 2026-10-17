@@ -18,6 +18,7 @@ let package = Package(
         .executableTarget(
             name: "MijiaBarApp",
             dependencies: ["MijiaCore", "Sparkle"],
+            resources: [.process("Resources")],
             swiftSettings: strict
         ),
         .executableTarget(name: "mijiabar", dependencies: ["MijiaCore"], swiftSettings: strict),
