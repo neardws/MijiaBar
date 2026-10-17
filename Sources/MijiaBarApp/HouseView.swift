@@ -147,6 +147,8 @@ struct HouseRoomOverlays: View {
     let lighting: RoomModuleLighting
     let artSize: CGSize
 
+    private var roomActive: Double { max(lighting.lampLevels.max() ?? 0, lighting.tv, lighting.ac) }
+
     var body: some View {
         ZStack {
             windowMoon
@@ -155,23 +157,20 @@ struct HouseRoomOverlays: View {
             lampGlows
             warmWash
         }
+        .frame(width: artSize.width, height: artSize.height)
+        .clipped()
         .allowsHitTesting(false)
     }
 
-    /// 月光只在窗框内淡淡铺开，避免大块漂浮蓝光
-    private var windowStrength: Double {
-        let active = max(lighting.lampLevels.max() ?? 0, lighting.tv, lighting.ac)
-        return min(0.32, 0.04 + active * 0.14 + lighting.cozy * 0.08)
-    }
-
+    /// 仅在本室有设备亮时、窗框内淡淡月光（全关时不画，避免漂浮蓝光）
     @ViewBuilder private var windowMoon: some View {
-        if let r = anchors.window?.cgRect {
-            let k = windowStrength
+        if roomActive > 0.01, let r = anchors.window?.cgRect {
+            let k = min(0.22, 0.06 + roomActive * 0.14)
             let w = r.width * artSize.width, h = r.height * artSize.height
-            Ellipse()
-                .fill(RadialGradient(colors: [Color(red: 0.62, green: 0.78, blue: 0.92).opacity(0.28), .clear],
-                                     center: .center, startRadius: 0, endRadius: max(w, h) * 0.42))
-                .frame(width: w * 0.92, height: h * 0.88)
+            RoundedRectangle(cornerRadius: 2)
+                .fill(RadialGradient(colors: [Color(red: 0.62, green: 0.78, blue: 0.92).opacity(0.22), .clear],
+                                     center: .center, startRadius: 0, endRadius: max(w, h) * 0.48))
+                .frame(width: w, height: h)
                 .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
                 .blendMode(.screen).opacity(k)
         }
@@ -180,29 +179,32 @@ struct HouseRoomOverlays: View {
     @ViewBuilder private var acGlow: some View {
         if lighting.ac > 0, let r = anchors.ac?.cgRect {
             let k = lighting.ac
-            ZStack {
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(LinearGradient(colors: [Theme.cool.opacity(0.45), Theme.cool.opacity(0.22)], startPoint: .top, endPoint: .bottom))
-                Glow(Theme.cool, 0.22 * k, diameter: 36, softness: 28)
-            }
-            .frame(width: r.width * artSize.width, height: r.height * artSize.height)
-            .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
-            .blendMode(.screen).opacity(0.55 * k)
+            let w = r.width * artSize.width, h = r.height * artSize.height
+            RoundedRectangle(cornerRadius: 3)
+                .fill(RadialGradient(colors: [Theme.cool.opacity(0.32 * k), Theme.cool.opacity(0.12 * k), .clear],
+                                     center: .top, startRadius: 0, endRadius: h * 1.2))
+                .frame(width: w, height: h)
+                .clipShape(RoundedRectangle(cornerRadius: 3))
+                .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
+                .blendMode(.screen)
         }
     }
 
     @ViewBuilder private var tvGlow: some View {
         if lighting.tv > 0, let r = anchors.tv?.cgRect {
             let k = lighting.tv
-            ZStack {
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(LinearGradient(colors: [Color(red: 0.35, green: 0.62, blue: 0.92).opacity(0.5), Color(red: 0.18, green: 0.42, blue: 0.72).opacity(0.35)],
-                                         startPoint: .topLeading, endPoint: .bottomTrailing))
-                Glow(Theme.cool, 0.28 * k, diameter: min(r.width * artSize.width * 1.1, 52), softness: 32)
-            }
-            .frame(width: r.width * artSize.width, height: r.height * artSize.height)
-            .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
-            .blendMode(.screen).opacity(0.72 * k)
+            let w = r.width * artSize.width, h = r.height * artSize.height
+            RoundedRectangle(cornerRadius: 4)
+                .fill(RadialGradient(colors: [
+                    Color(red: 0.48, green: 0.72, blue: 0.96).opacity(0.38 * k),
+                    Color(red: 0.22, green: 0.48, blue: 0.78).opacity(0.2 * k),
+                    Color(red: 0.12, green: 0.32, blue: 0.62).opacity(0.08 * k),
+                ], center: .center, startRadius: 0, endRadius: max(w, h) * 0.58))
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white.opacity(0.1 * k), lineWidth: 0.5))
+                .frame(width: w, height: h)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
+                .blendMode(.screen)
         }
     }
 
@@ -223,7 +225,7 @@ struct HouseRoomOverlays: View {
     }
 
     private var warmWash: some View {
-        let k = max(lighting.lampLevels.max() ?? 0, lighting.tv * 0.45, lighting.ac * 0.25)
+        let k = lighting.lampLevels.max() ?? 0
         return LinearGradient(colors: [Color(red: 1, green: 0.72, blue: 0.38).opacity(0.18 * k), .clear], startPoint: .bottom, endPoint: .top)
             .frame(height: artSize.height * 0.18).frame(maxHeight: .infinity, alignment: .bottom)
             .blendMode(.screen)
@@ -266,8 +268,10 @@ struct HouseCutawaySceneView: View {
             }
         }
         .frame(width: artSize.width, height: artSize.height)
+        .clipped()
         .scaleEffect(displayScale, anchor: .top)
         .frame(width: artSize.width * displayScale, height: artSize.height * displayScale)
+        .clipped()
     }
 
     @ViewBuilder private var baseArt: some View {
