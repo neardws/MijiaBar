@@ -249,11 +249,9 @@ final class HouseMetalRenderer: NSObject, MTKViewDelegate {
             Self.fail("makeCommandQueue() returned nil")
             return nil
         }
-        let lib: MTLLibrary
-        switch HouseMetalLibrary.load(device: dev) {
-        case .success(let l): lib = l
-        case .failure(let msg):
-            Self.fail(msg)
+        let (loaded, loadErr) = HouseMetalLibrary.load(device: dev)
+        guard let lib = loaded else {
+            Self.fail(loadErr ?? "HouseMetalLibrary.load returned nil")
             return nil
         }
         device = dev; queue = q; view.device = dev
