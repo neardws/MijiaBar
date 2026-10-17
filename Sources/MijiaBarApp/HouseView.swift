@@ -327,7 +327,7 @@ struct HouseCutawaySceneView: View {
             Color.black.opacity((1 - ambient) * dimStrength).blendMode(.multiply)
             ForEach(rooms) { room in
                 if let layout = cutawayLayout(for: room.module) {
-                    HouseRoomOverlays(layout: layout, lighting: room.lighting, artSize: artSize, phase: phase, compactLamps: true)
+                    HouseRoomOverlays(layout: layout, lighting: room.lighting, artSize: artSize, phase: phase)
                 }
             }
             if showLabels {
