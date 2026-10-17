@@ -3,21 +3,20 @@
     <channel>
         <title>MijiaBar</title>
         <item>
-            <title>0.1.11</title>
-            <pubDate>Wed, 14 Oct 2026 23:26:28 +0800</pubDate>
+            <title>0.1.12</title>
+            <pubDate>Sat, 17 Oct 2026 16:53:11 +0800</pubDate>
             <link>https://www.neardws.com/MijiaBar/</link>
-            <sparkle:version>0.1.11</sparkle:version>
-            <sparkle:shortVersionString>0.1.11</sparkle:shortVersionString>
+            <sparkle:version>0.1.12</sparkle:version>
+            <sparkle:shortVersionString>0.1.12</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description sparkle:format="markdown"><![CDATA[## 0.1.11
+            <description sparkle:format="markdown"><![CDATA[## 0.1.12
 
-- 房间和设备可调整顺序（拖动 / 上移下移，顺序按家庭保存，CLI 和 MCP 共用）/ Reorder rooms and devices (drag or move up/down; order is saved per home and shared with the CLI and MCP)
-- 通知：门窗打开、浸水、有人移动、设备上下线、开关变化（设置里可按类型和设备开关）/ Notifications for door/window opened, water leak, motion, device online/offline and on/off changes (toggle by type and per device in Settings)
-- 菜单栏速览：最多显示 3 个读数（温度、湿度、PM2.5、空调设定温度、功率）/ Menu bar glance: show up to 3 readings (temperature, humidity, PM2.5, AC target, power)
-- 用电统计：插座 / 空调伴侣详情页展示每天 / 每月用电量（本机记录 + 米家云，若可用）/ Power stats: daily and monthly kWh on plug and AC partner detail pages (local recordings + Mi Home cloud when available)
-- 传感器历史：温湿度曲线、门窗 / 水浸开合与浸水记录 / Sensor history: temperature and humidity charts, door/window and leak logs
+- 设备列表顶部嵌入像素风等距小屋剖面图；点 **放大 / Enlarge** 打开独立小屋窗口 / Pixel-art isometric house cutaway at the top of the device list; **Enlarge** opens a dedicated House window
+- 按本地时间切换白天与夜晚烘焙底图（约 6:00–17:59）/ Separate day and night baked art from local time (~6:00–17:59)
+- 点场景里的灯具、电视/显示器、空调、玄关灯等开关对应设备 / Tap fixtures on the art to toggle matched devices (lights, TV/monitor, AC, entry light)
+- 每个点位单独亮灯（烘焙底图 + 椭圆揭示），不再叠发光 PNG / Per-fixture local glow (baked bases + ellipse reveals); glow PNG overlays removed
 ]]></description>
-            <enclosure url="https://github.com/neardws/MijiaBar/releases/download/v0.1.11/MijiaBar-0.1.11.dmg" length="24032477" type="application/octet-stream" sparkle:edSignature="/QNT3z6Hmge9rV806Uaor+5aGk2svQ0eguT8AVj/9+s9zX50RM41n00HVUPMQeiMJAd7mcj3G5yScAj2+T1ZAw=="/>
+            <enclosure url="https://github.com/neardws/MijiaBar/releases/download/v0.1.12/MijiaBar-0.1.12.dmg" length="24299167" type="application/octet-stream" sparkle:edSignature="r9scRKMu/aOVv826yp6mBfa+XsBXeS3AUOI8GoLDSTY1PsxkS4D/EBbrMikB0DTjVzxogaFJiyxIT3ydLTv3Cg=="/>
         </item>
     </channel>
 </rss>
