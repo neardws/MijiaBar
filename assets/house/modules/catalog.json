@@ -1,0 +1,762 @@
+{
+  "schema": 2,
+  "style": "cozy-wood-classic-extract",
+  "grid": {
+    "W": 240,
+    "FLOOR_H": 120,
+    "WALL_H": 150,
+    "FLOOR_THICK": 12,
+    "PX": 2
+  },
+  "modules": {
+    "living": {
+      "footprint": [
+        2,
+        1
+      ],
+      "size": [
+        552,
+        410
+      ],
+      "tip": [
+        28,
+        150
+      ],
+      "region": [
+        [
+          8,
+          90
+        ],
+        [
+          223,
+          15
+        ],
+        [
+          544,
+          122
+        ],
+        [
+          544,
+          285
+        ],
+        [
+          478,
+          332
+        ],
+        [
+          428,
+          410
+        ],
+        [
+          8,
+          300
+        ]
+      ],
+      "label": [
+        46,
+        162
+      ],
+      "badges": [
+        [
+          108,
+          318
+        ],
+        [
+          360,
+          348
+        ],
+        [
+          466,
+          298
+        ],
+        [
+          256,
+          382
+        ]
+      ],
+      "lights": [
+        {
+          "id": "floor_lamp",
+          "kind": "lamp",
+          "role": "light",
+          "reveal": [
+            194,
+            148,
+            145,
+            98
+          ],
+          "shade": [
+            [
+              184,
+              85
+            ],
+            [
+              204,
+              85
+            ],
+            [
+              212,
+              118
+            ],
+            [
+              176,
+              118
+            ]
+          ]
+        },
+        {
+          "id": "sconce",
+          "kind": "sconce",
+          "role": "light",
+          "reveal": [
+            396,
+            122,
+            98,
+            78
+          ],
+          "shade": [
+            [
+              390,
+              111
+            ],
+            [
+              401,
+              111
+            ],
+            [
+              403,
+              124
+            ],
+            [
+              388,
+              124
+            ]
+          ]
+        },
+        {
+          "id": "tv",
+          "kind": "screen",
+          "role": "tv",
+          "reveal": [
+            433,
+            185,
+            120,
+            85
+          ],
+          "screen": [
+            [
+              422,
+              135
+            ],
+            [
+              484,
+              155
+            ],
+            [
+              484,
+              203
+            ],
+            [
+              422,
+              183
+            ]
+          ]
+        }
+      ],
+      "variants": {
+        "day-unlit": "module-living-day-unlit.png",
+        "day-lit": "module-living-day-lit.png",
+        "night-unlit": "module-living-night-unlit.png",
+        "night-lit": "module-living-night-lit.png"
+      },
+      "source": "classic-extract"
+    },
+    "bedroom": {
+      "footprint": [
+        1,
+        1
+      ],
+      "size": [
+        400,
+        332
+      ],
+      "tip": [
+        53,
+        150
+      ],
+      "region": [
+        [
+          8,
+          145
+        ],
+        [
+          178,
+          113
+        ],
+        [
+          393,
+          158
+        ],
+        [
+          393,
+          250
+        ],
+        [
+          258,
+          325
+        ],
+        [
+          11,
+          260
+        ]
+      ],
+      "label": [
+        23,
+        140
+      ],
+      "badges": [
+        [
+          321,
+          278
+        ],
+        [
+          275,
+          302
+        ],
+        [
+          367,
+          252
+        ]
+      ],
+      "lights": [
+        {
+          "id": "bedside",
+          "kind": "lamp",
+          "role": "light",
+          "reveal": [
+            73,
+            252,
+            128,
+            82
+          ],
+          "shade": [
+            [
+              50,
+              213
+            ],
+            [
+              65,
+              213
+            ],
+            [
+              69,
+              234
+            ],
+            [
+              45,
+              234
+            ]
+          ]
+        },
+        {
+          "id": "ac",
+          "kind": "ac",
+          "role": "ac",
+          "reveal": [
+            103,
+            200,
+            70,
+            50
+          ],
+          "core": [
+            [
+              63,
+              140
+            ],
+            [
+              137,
+              138
+            ],
+            [
+              137,
+              200
+            ],
+            [
+              73,
+              228
+            ],
+            [
+              61,
+              200
+            ]
+          ]
+        }
+      ],
+      "variants": {
+        "day-unlit": "module-bedroom-day-unlit.png",
+        "day-lit": "module-bedroom-day-lit.png",
+        "night-unlit": "module-bedroom-night-unlit.png",
+        "night-lit": "module-bedroom-night-lit.png"
+      },
+      "source": "classic-extract"
+    },
+    "study": {
+      "footprint": [
+        1,
+        1
+      ],
+      "size": [
+        460,
+        406
+      ],
+      "tip": [
+        143,
+        150
+      ],
+      "region": [
+        [
+          143,
+          125
+        ],
+        [
+          451,
+          170
+        ],
+        [
+          448,
+          365
+        ],
+        [
+          293,
+          398
+        ],
+        [
+          68,
+          330
+        ],
+        [
+          8,
+          295
+        ],
+        [
+          143,
+          220
+        ]
+      ],
+      "label": [
+        163,
+        140
+      ],
+      "badges": [
+        [
+          109,
+          334
+        ],
+        [
+          151,
+          374
+        ],
+        [
+          279,
+          380
+        ]
+      ],
+      "lights": [
+        {
+          "id": "ceiling",
+          "kind": "ceiling",
+          "role": "light",
+          "reveal": [
+            223,
+            315,
+            175,
+            92
+          ]
+        },
+        {
+          "id": "monitor",
+          "kind": "screen",
+          "role": "tv",
+          "reveal": [
+            213,
+            265,
+            85,
+            65
+          ],
+          "screen": [
+            [
+              191,
+              224
+            ],
+            [
+              240,
+              237
+            ],
+            [
+              239,
+              268
+            ],
+            [
+              192,
+              254
+            ]
+          ]
+        }
+      ],
+      "variants": {
+        "day-unlit": "module-study-day-unlit.png",
+        "day-lit": "module-study-day-lit.png",
+        "night-unlit": "module-study-night-unlit.png",
+        "night-lit": "module-study-night-lit.png"
+      },
+      "source": "classic-extract"
+    },
+    "generic": {
+      "footprint": [
+        1,
+        1
+      ],
+      "size": [
+        458,
+        370
+      ],
+      "tip": [
+        218,
+        150
+      ],
+      "region": [
+        [
+          74,
+          82
+        ],
+        [
+          288,
+          148
+        ],
+        [
+          443,
+          115
+        ],
+        [
+          443,
+          128
+        ],
+        [
+          288,
+          330
+        ],
+        [
+          218,
+          370
+        ],
+        [
+          8,
+          292
+        ],
+        [
+          74,
+          245
+        ]
+      ],
+      "label": [
+        208,
+        130
+      ],
+      "badges": [
+        [
+          66,
+          282
+        ],
+        [
+          130,
+          324
+        ],
+        [
+          260,
+          270
+        ]
+      ],
+      "lights": [
+        {
+          "id": "entry_light",
+          "kind": "ceiling",
+          "role": "light",
+          "reveal": [
+            168,
+            235,
+            145,
+            72
+          ]
+        }
+      ],
+      "variants": {
+        "day-unlit": "module-generic-day-unlit.png",
+        "day-lit": "module-generic-day-lit.png",
+        "night-unlit": "module-generic-night-unlit.png",
+        "night-lit": "module-generic-night-lit.png"
+      },
+      "source": "classic-extract"
+    },
+    "kitchen": {
+      "footprint": [
+        1,
+        1
+      ],
+      "variants": {
+        "day-unlit": "module-kitchen-day-unlit.png",
+        "day-lit": "module-kitchen-day-lit.png",
+        "night-unlit": "module-kitchen-night-unlit.png",
+        "night-lit": "module-kitchen-night-lit.png"
+      },
+      "source": "painted-textured",
+      "size": [
+        240,
+        282
+      ],
+      "tip": [
+        0,
+        150
+      ],
+      "region": [
+        [
+          0,
+          150
+        ],
+        [
+          120,
+          210
+        ],
+        [
+          0,
+          270
+        ],
+        [
+          -120,
+          210
+        ]
+      ],
+      "label": [
+        10,
+        130
+      ],
+      "badges": [
+        [
+          -40,
+          230
+        ],
+        [
+          20,
+          245
+        ],
+        [
+          70,
+          225
+        ]
+      ],
+      "lights": [
+        {
+          "id": "ceiling",
+          "kind": "ceiling",
+          "core": [
+            [
+              14,
+              102
+            ],
+            [
+              46,
+              102
+            ],
+            [
+              46,
+              114
+            ],
+            [
+              14,
+              114
+            ]
+          ],
+          "reveal": [
+            30,
+            130,
+            80,
+            50
+          ]
+        }
+      ]
+    },
+    "bathroom": {
+      "footprint": [
+        1,
+        1
+      ],
+      "variants": {
+        "day-unlit": "module-bathroom-day-unlit.png",
+        "day-lit": "module-bathroom-day-lit.png",
+        "night-unlit": "module-bathroom-night-unlit.png",
+        "night-lit": "module-bathroom-night-lit.png"
+      },
+      "source": "painted-textured",
+      "size": [
+        240,
+        282
+      ],
+      "tip": [
+        0,
+        150
+      ],
+      "region": [
+        [
+          0,
+          150
+        ],
+        [
+          120,
+          210
+        ],
+        [
+          0,
+          270
+        ],
+        [
+          -120,
+          210
+        ]
+      ],
+      "label": [
+        10,
+        130
+      ],
+      "badges": [
+        [
+          -40,
+          230
+        ],
+        [
+          20,
+          245
+        ],
+        [
+          70,
+          225
+        ]
+      ],
+      "lights": [
+        {
+          "id": "ceiling",
+          "kind": "ceiling",
+          "core": [
+            [
+              9,
+              102
+            ],
+            [
+              41,
+              102
+            ],
+            [
+              41,
+              114
+            ],
+            [
+              9,
+              114
+            ]
+          ],
+          "reveal": [
+            25,
+            130,
+            80,
+            50
+          ]
+        }
+      ]
+    },
+    "balcony": {
+      "footprint": [
+        1,
+        1
+      ],
+      "variants": {
+        "day-unlit": "module-balcony-day-unlit.png",
+        "day-lit": "module-balcony-day-lit.png",
+        "night-unlit": "module-balcony-night-unlit.png",
+        "night-lit": "module-balcony-night-lit.png"
+      },
+      "source": "painted-textured",
+      "size": [
+        240,
+        282
+      ],
+      "tip": [
+        0,
+        150
+      ],
+      "region": [
+        [
+          0,
+          150
+        ],
+        [
+          120,
+          210
+        ],
+        [
+          0,
+          270
+        ],
+        [
+          -120,
+          210
+        ]
+      ],
+      "label": [
+        10,
+        130
+      ],
+      "badges": [
+        [
+          -40,
+          230
+        ],
+        [
+          20,
+          245
+        ],
+        [
+          70,
+          225
+        ]
+      ],
+      "lights": [
+        {
+          "id": "ceiling",
+          "kind": "ceiling",
+          "core": [
+            [
+              14,
+              107
+            ],
+            [
+              46,
+              107
+            ],
+            [
+              46,
+              119
+            ],
+            [
+              14,
+              119
+            ]
+          ],
+          "reveal": [
+            30,
+            135,
+            80,
+            50
+          ]
+        }
+      ]
+    }
+  }
+}
