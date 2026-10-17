@@ -4,11 +4,11 @@ import MijiaCore
 
 // MARK: - 客厅小屋试点：预渲染像素底图 + 动态光层（非 3D / SpriteKit）
 
-/// 与底图 `living-room-base.png`（360×220）对齐的归一化锚点
+/// 与底图 `living-room-base.png`（640×359）对齐的归一化锚点；见 `living-room-anchors.json`
 enum LivingRoomAnchors {
-    static let lamp = CGPoint(x: 0.155, y: 0.38)
-    static let tvScreen = CGRect(x: 0.706, y: 0.355, width: 0.228, height: 0.227)
-    static let window = CGRect(x: 0.328, y: 0.082, width: 0.344, height: 0.236)
+    static let lamp = CGPoint(x: 0.178, y: 0.31)
+    static let tvScreen = CGRect(x: 0.628, y: 0.295, width: 0.21, height: 0.245)
+    static let window = CGRect(x: 0.43, y: 0.038, width: 0.26, height: 0.31)
 }
 
 /// 设备驱动的灯光强度（0…1）
@@ -19,7 +19,7 @@ struct LivingRoomLighting: Equatable {
     var cozy: Double
 
     static let nightOn = LivingRoomLighting(lamp: 1, tv: 1, cozy: 1)
-    static let allOff = LivingRoomLighting(lamp: 0, tv: 0, cozy: 0.12)
+    static let allOff = LivingRoomLighting(lamp: 0, tv: 0, cozy: 0.1)
 
     static func merge(lampOn: Bool, tvOn: Bool) -> LivingRoomLighting {
         let l = lampOn ? 1.0 : 0.0, t = tvOn ? 1.0 : 0.0
@@ -54,7 +54,10 @@ struct LivingRoomHouseView: View {
     var onToggleLamp: (() -> Void)?
     var onToggleTV: (() -> Void)?
 
-    private let artSize = CGSize(width: 360, height: 220)
+    private static let artSize = CGSize(width: 640, height: 359)
+    /// 菜单内嵌时缩到列表宽度；截图用原分辨率
+    private var fitWidth: CGFloat { showChrome ? 336 : Self.artSize.width }
+    private var fitScale: CGFloat { fitWidth / Self.artSize.width }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -67,7 +70,9 @@ struct LivingRoomHouseView: View {
                 lampGlow
                 warmWash
             }
-            .frame(width: artSize.width, height: artSize.height)
+            .frame(width: Self.artSize.width, height: Self.artSize.height)
+            .scaleEffect(fitScale, anchor: .top)
+            .frame(width: fitWidth, height: Self.artSize.height * fitScale)
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.stroke))
             if showChrome { footer }
@@ -117,7 +122,7 @@ struct LivingRoomHouseView: View {
 
     /// 全关时整体压暗（multiply）
     private var nightDim: some View {
-        Color.black.opacity((1 - lighting.cozy) * 0.72)
+        Color.black.opacity((1 - lighting.cozy) * 0.78)
             .blendMode(.multiply)
             .allowsHitTesting(false)
     }
@@ -125,11 +130,11 @@ struct LivingRoomHouseView: View {
     /// 窗户月光（常开，强度随 cozy 略变）
     private var windowMoon: some View {
         let r = LivingRoomAnchors.window
-        let k = 0.35 + lighting.cozy * 0.25
+        let k = 0.3 + lighting.cozy * 0.35
         return Ellipse()
-            .fill(RadialGradient(colors: [Color(red: 0.55, green: 0.72, blue: 0.9).opacity(0.55 * k), .clear], center: .center, startRadius: 0, endRadius: 80))
-            .frame(width: r.width * artSize.width, height: r.height * artSize.height * 0.7)
-            .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
+            .fill(RadialGradient(colors: [Color(red: 0.55, green: 0.72, blue: 0.9).opacity(0.5 * k), .clear], center: .center, startRadius: 0, endRadius: 110))
+            .frame(width: r.width * Self.artSize.width, height: r.height * Self.artSize.height * 0.75)
+            .position(x: r.midX * Self.artSize.width, y: r.midY * Self.artSize.height)
             .blendMode(.screen)
             .opacity(k)
             .allowsHitTesting(false)
@@ -140,12 +145,12 @@ struct LivingRoomHouseView: View {
         let r = LivingRoomAnchors.tvScreen
         return ZStack {
             Rectangle()
-                .fill(LinearGradient(colors: [Color(red: 0.2, green: 0.55, blue: 0.95), Color(red: 0.1, green: 0.35, blue: 0.65)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                .opacity(0.85 * k)
-            Glow(Theme.cool, 0.55 * k, diameter: 40, softness: 28)
+                .fill(LinearGradient(colors: [Color(red: 0.25, green: 0.58, blue: 0.98), Color(red: 0.12, green: 0.38, blue: 0.72)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .opacity(0.88 * k)
+            Glow(Theme.cool, 0.6 * k, diameter: 72, softness: 42)
         }
-        .frame(width: r.width * artSize.width, height: r.height * artSize.height)
-        .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
+        .frame(width: r.width * Self.artSize.width, height: r.height * Self.artSize.height)
+        .position(x: r.midX * Self.artSize.width, y: r.midY * Self.artSize.height)
         .blendMode(.screen)
         .opacity(k)
         .allowsHitTesting(false)
@@ -155,10 +160,10 @@ struct LivingRoomHouseView: View {
         let k = lighting.lamp
         let p = LivingRoomAnchors.lamp
         return ZStack {
-            Glow(Color(red: 1, green: 0.78, blue: 0.42), 0.7 * k, diameter: 36, softness: 32)
-            Glow(Color(red: 1, green: 0.9, blue: 0.65), 0.45 * k, diameter: 120, softness: 48)
+            Glow(Color(red: 1, green: 0.78, blue: 0.42), 0.75 * k, diameter: 56, softness: 38)
+            Glow(Color(red: 1, green: 0.9, blue: 0.65), 0.5 * k, diameter: 200, softness: 64)
         }
-        .position(x: p.x * artSize.width, y: p.y * artSize.height)
+        .position(x: p.x * Self.artSize.width, y: p.y * Self.artSize.height)
         .blendMode(.screen)
         .opacity(k)
         .allowsHitTesting(false)
@@ -166,9 +171,9 @@ struct LivingRoomHouseView: View {
 
     /// 地面暖反光
     private var warmWash: some View {
-        let k = max(lighting.lamp, lighting.tv * 0.6)
-        return LinearGradient(colors: [Color(red: 1, green: 0.72, blue: 0.38).opacity(0.35 * k), .clear], startPoint: .bottom, endPoint: .top)
-            .frame(height: artSize.height * 0.45)
+        let k = max(lighting.lamp, lighting.tv * 0.65)
+        return LinearGradient(colors: [Color(red: 1, green: 0.72, blue: 0.38).opacity(0.4 * k), .clear], startPoint: .bottom, endPoint: .top)
+            .frame(height: Self.artSize.height * 0.5)
             .frame(maxHeight: .infinity, alignment: .bottom)
             .blendMode(.screen)
             .allowsHitTesting(false)
@@ -212,7 +217,7 @@ enum HouseWindow {
     static func open(model: AppModel) {
         if let w = window { w.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true); return }
         let root = LivingRoomPilotHost().environmentObject(model)
-        let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 320),
+        let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 420, height: 480),
                          styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView], backing: .buffered, defer: false)
         w.title = L("客厅小屋", "Living room")
         w.titlebarAppearsTransparent = true
@@ -264,7 +269,7 @@ extension Snapshot {
         ] {
             self.appearance = NSAppearance(named: appearance)
             render(LivingRoomHouseView(lighting: lighting, showChrome: false), out.appendingPathComponent("\(name).png"),
-                   size: CGSize(width: 360, height: 220))
+                   size: CGSize(width: 640, height: 359))
         }
         exit(0)
     }
