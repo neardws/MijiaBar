@@ -2,73 +2,62 @@ import SwiftUI
 import AppKit
 import MijiaCore
 
-// MARK: - 锚点 / 素材（每房间 module-lights.json，见 docs/house-pilot/ANCHORS.md）
+// MARK: - 场景定义（Resources/House/house-cutaway.json，见 docs/house-pilot/ANCHORS.md）
+//
+// 灯光已经烘焙进底图：每个时段一张 unlit、一张 lit（像素完全对齐，只差灯光）。
+// 运行时铺 unlit，再按「房间多边形 ∩ 灯具蒙版」淡入 lit，所以光不会和家具错位。
+// 坐标均为 960×540 画布像素。
 
-struct HouseAnchorRect: Codable {
-    let x, y, w, h: Double
-    var cgRect: CGRect { CGRect(x: x, y: y, width: w, height: h) }
+/// 灯具蒙版："room" = 整个房间；[cx, cy, rx, ry] = 羽化椭圆（与 gen-house-baked-lighting.py 一致）
+enum HouseReveal: Decodable, Equatable {
+    case room
+    case ellipse(cx: Double, cy: Double, rx: Double, ry: Double)
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.singleValueContainer()
+        if let s = try? c.decode(String.self), s == "room" { self = .room; return }
+        let v = try c.decode([Double].self)
+        guard v.count == 4 else {
+            throw DecodingError.dataCorruptedError(in: c, debugDescription: "reveal must be \"room\" or [cx, cy, rx, ry]")
+        }
+        self = .ellipse(cx: v[0], cy: v[1], rx: v[2], ry: v[3])
+    }
 }
 
-struct HouseAnchorPoint: Codable {
-    let x, y: Double
-    var point: CGPoint { CGPoint(x: x, y: y) }
-}
-
-enum HouseLightKind: String, Codable {
-    case lamp, sconce, screen, ac, window, entry
-}
-
-struct HouseLightOverlay: Codable {
-    let image: String?
-    let imageDay: String?
-    let imageNight: String?
-    let w: Double?
-    let h: Double?
-}
-
-struct HouseLightAnchor: Codable, Identifiable {
+struct HouseLightSpec: Decodable, Identifiable {
     let id: String
-    let kind: HouseLightKind
-    let role: String
+    let kind: String          // lamp | sconce | ceiling | screen | ac
+    let role: String          // light（按 slot）| tv | ac
     let slot: Int?
-    let at: HouseAnchorPoint?
-    let rect: HouseAnchorRect?
-    let overlay: HouseLightOverlay?
+    let reveal: HouseReveal?
+    let shade: [[Double]]?    // 灯罩多边形
+    let screen: [[Double]]?   // 屏幕四边形
+    let core: [[Double]]?     // 灯具本体（关灯时用 unlit 盖回去）
+
+    /// 关掉时需要用 unlit 盖回去的灯具本体（防止同房间其他灯的 lit 蒙版把它“点亮”）
+    var corePolygon: [[Double]]? { core ?? screen ?? shade }
+
+    func strength(_ l: RoomModuleLighting) -> Double {
+        switch role {
+        case "tv": return l.tv
+        case "ac": return l.ac
+        default:
+            guard let i = slot, i < l.lampLevels.count else { return 0 }
+            return l.lampLevels[i]
+        }
+    }
 }
 
-struct HouseModuleLayout: Codable {
-    var size: [Double]?
-    let clip: HouseAnchorRect
-    var label: HouseAnchorPoint?
-    let lights: [HouseLightAnchor]
+struct HouseCutawayModule: Decodable {
+    let label: [Double]?
+    let region: [[Double]]
+    let lights: [HouseLightSpec]
 }
 
-struct HouseModuleLightsFile: Codable {
-    let module: String
-    let tile: HouseModuleLayout
-    let cutaway: HouseModuleLayout
-}
-
-struct HouseCutawayModule: Codable {
-    let clip: HouseAnchorRect
-    let label: HouseAnchorPoint?
-    let lights: [HouseLightAnchor]
-}
-
-struct HouseCutawaySceneFile: Codable {
+struct HouseCutawaySceneFile: Decodable {
     let size: [Double]
     let modules: [String: HouseCutawayModule]
     var artSize: CGSize { CGSize(width: size[0], height: size[1]) }
-}
-
-/// 旧 tile 锚点文件（由 sync-house-lights.py 生成）
-struct HouseAnchorFile: Codable {
-    let size: [Double]?
-    var lamps: [HouseAnchorPoint]?
-    var tv: HouseAnchorRect?
-    var window: HouseAnchorRect?
-    var ac: HouseAnchorRect?
-    var label: HouseAnchorPoint?
 }
 
 /// 剖面底图时段：本地 6:00–18:00 为白天，其余为夜间（与系统时区一致）。
@@ -79,87 +68,37 @@ enum HousePhase: Equatable {
         let h = calendar.component(.hour, from: date)
         return (6..<18).contains(h) ? .day : .night
     }
+
+    var assetName: String { self == .day ? "day" : "night" }
 }
 
+@MainActor
 enum HouseAssets {
-    static func cutawayImage(phase: HousePhase) -> NSImage? {
-        let name = phase == .day ? "house-cutaway-day-base" : "house-cutaway-night-base"
-        let url = Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "House")
-            ?? Bundle.module.url(forResource: name, withExtension: "png")
-            ?? Bundle.module.url(forResource: "house-cutaway-base", withExtension: "png", subdirectory: "House")
-            ?? Bundle.module.url(forResource: "house-cutaway-base", withExtension: "png")
-        guard let url else { return nil }
-        return NSImage(contentsOf: url)
+    private static var images: [String: NSImage] = [:]
+    private static var sceneCache: HouseCutawaySceneFile??
+
+    /// 烘焙底图：house-cutaway-{day,night}-{unlit,lit}.png
+    static func cutawayImage(phase: HousePhase, lit: Bool) -> NSImage? {
+        let name = "house-cutaway-\(phase.assetName)-\(lit ? "lit" : "unlit")"
+        if let img = images[name] { return img }
+        guard let url = resourceURL(name, "png"), let img = NSImage(contentsOf: url) else { return nil }
+        images[name] = img
+        return img
     }
 
     static func cutawayScene() -> HouseCutawaySceneFile? {
-        guard let url = Bundle.module.url(forResource: "house-cutaway", withExtension: "json", subdirectory: "House")
-            ?? Bundle.module.url(forResource: "house-cutaway", withExtension: "json"),
-              let data = try? Data(contentsOf: url) else { return nil }
-        return try? JSONDecoder().decode(HouseCutawaySceneFile.self, from: data)
+        if let cached = sceneCache { return cached }
+        let scene = resourceURL("house-cutaway", "json")
+            .flatMap { try? Data(contentsOf: $0) }
+            .flatMap { try? JSONDecoder().decode(HouseCutawaySceneFile.self, from: $0) }
+        sceneCache = .some(scene)
+        return scene
     }
 
-    static func moduleLights(_ module: HouseModule) -> HouseModuleLightsFile? {
-        let name = "\(module.assetPrefix)-lights"
-        guard let url = Bundle.module.url(forResource: name, withExtension: "json", subdirectory: "House")
-            ?? Bundle.module.url(forResource: name, withExtension: "json"),
-              let data = try? Data(contentsOf: url) else { return nil }
-        return try? JSONDecoder().decode(HouseModuleLightsFile.self, from: data)
-    }
-
-    static func baseImage(_ module: HouseModule) -> NSImage? {
-        let name = "\(module.assetPrefix)-base"
-        let url = Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "House")
-            ?? Bundle.module.url(forResource: name, withExtension: "png")
-        guard let url else { return nil }
-        return NSImage(contentsOf: url)
-    }
-
-    static func anchors(_ module: HouseModule) -> HouseAnchorFile? {
-        let name = "\(module.assetPrefix)-anchors"
-        guard let url = Bundle.module.url(forResource: name, withExtension: "json", subdirectory: "House")
-            ?? Bundle.module.url(forResource: name, withExtension: "json"),
-            let data = try? Data(contentsOf: url) else { return nil }
-        return try? JSONDecoder().decode(HouseAnchorFile.self, from: data)
-    }
-
-    /// 光效 PNG：SPM 会把 `Resources/House/glows/` 摊平到 bundle 根目录，因此按多路径解析。
-    static func glowImage(_ name: String) -> NSImage? {
-        guard let url = moduleResourceURL(name: name, extension: "png", subdirectories: glowPNGSubdirectories) else {
-            #if DEBUG
-            warnMissingGlow(name)
-            #endif
-            return nil
-        }
-        return NSImage(contentsOf: url)
-    }
-
-    /// 查找顺序：bundle 根 → `glows/` → `House/glows/` → `House/`（与 cutaway/base 一致）。
-    private static let glowPNGSubdirectories: [String?] = [nil, "glows", "House/glows", "House"]
-
-    private static var warnedGlowNames = Set<String>()
-
-    private static func warnMissingGlow(_ name: String) {
-        guard warnedGlowNames.insert(name).inserted else { return }
-        fputs("HouseAssets: missing glow PNG \"\(name).png\" (tried bundle root + glows/ + House/glows/)\n", stderr)
-    }
-
-    private static func moduleResourceURL(name: String, extension ext: String, subdirectories: [String?]) -> URL? {
-        for sub in subdirectories {
-            if let sub {
-                if let url = Bundle.module.url(forResource: name, withExtension: ext, subdirectory: sub) { return url }
-            } else if let url = Bundle.module.url(forResource: name, withExtension: ext) {
-                return url
-            }
-        }
-        return nil
-    }
-
-    static func moduleArtSize(_ module: HouseModule, cutaway: Bool = false) -> CGSize {
-        if cutaway, let s = cutawayScene()?.artSize { return s }
-        if let t = moduleLights(module)?.tile.size, t.count >= 2 { return CGSize(width: t[0], height: t[1]) }
-        if let a = anchors(module), let sz = a.size, sz.count >= 2 { return CGSize(width: sz[0], height: sz[1]) }
-        return CGSize(width: 640, height: 359)
+    /// SPM 的 .process 可能把 House/ 摊平到 bundle 根目录，两处都找
+    private static func resourceURL(_ name: String, _ ext: String) -> URL? {
+        Bundle.module.url(forResource: name, withExtension: ext, subdirectory: "House")
+            ?? Bundle.module.url(forResource: name, withExtension: ext)
     }
 }
 
@@ -222,122 +161,9 @@ extension AppModel {
         }
     }
 
-    var livingRoomLighting: LivingRoomLighting {
-        let l = houseRooms.first { $0.module == .living }?.lighting
-        return LivingRoomLighting(lamp: l?.lampLevels.first ?? 0, tv: l?.tv ?? 0, cozy: l?.cozy ?? 0.1)
-    }
 }
 
-/// 旧 API：单客厅灯光（截图 / 兼容）
-struct LivingRoomLighting: Equatable {
-    var lamp: Double, tv: Double, cozy: Double
-    static let nightOn = LivingRoomLighting(lamp: 1, tv: 1, cozy: 1)
-    static let allOff = LivingRoomLighting(lamp: 0, tv: 0, cozy: 0.1)
-}
-
-// MARK: - 叠光层（module lights 表驱动）
-
-struct HouseRoomOverlays: View {
-    let layout: HouseModuleLayout
-    let lighting: RoomModuleLighting
-    let artSize: CGSize
-    var phase: HousePhase = .night
-
-    private var roomActive: Double { max(lighting.lampLevels.max() ?? 0, lighting.tv, lighting.ac) }
-
-    var body: some View {
-        ZStack {
-            ForEach(layout.lights) { light in
-                HouseLightGlowLayer(light: light, lighting: lighting, artSize: artSize, phase: phase,
-                                    roomActive: roomActive)
-            }
-        }
-        .frame(width: artSize.width, height: artSize.height)
-        .mask(clipMask)
-        .allowsHitTesting(false)
-    }
-
-    private var clipMask: some View {
-        let r = layout.clip.cgRect
-        return Rectangle()
-            .frame(width: r.width * artSize.width, height: r.height * artSize.height)
-            .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
-    }
-}
-
-private struct HouseLightGlowLayer: View {
-    let light: HouseLightAnchor
-    let lighting: RoomModuleLighting
-    let artSize: CGSize
-    let phase: HousePhase
-    let roomActive: Double
-
-    private var lampK: Double {
-        guard light.role == "light", let i = light.slot, i < lighting.lampLevels.count else { return 0 }
-        return lighting.lampLevels[i]
-    }
-
-    private var strength: Double {
-        switch light.kind {
-        case .window:
-            if phase == .day { return 0.58 + roomActive * 0.22 }
-            return roomActive > 0.01 ? min(0.48, 0.14 + roomActive * 0.32) : 0
-        case .ac: return lighting.ac
-        case .screen: return lighting.tv
-        case .lamp, .sconce, .entry: return lampK
-        }
-    }
-
-    /// 静态 PNG 叠层：设备灯夜间再叠一层 screen，拉开 on/off 对比（锚点不变）。
-    private var displayOpacity: Double { min(1, strength) }
-    private var deviceBoost: Bool {
-        light.kind != .window && strength > 0.35
-    }
-
-    var body: some View {
-        if displayOpacity > 0.001 {
-            ZStack {
-                pngOverlay.opacity(displayOpacity)
-                if deviceBoost {
-                    pngOverlay.opacity(displayOpacity * (phase == .night ? 0.52 : 0.38))
-                }
-            }
-        }
-    }
-
-    @ViewBuilder private var pngOverlay: some View {
-        if let name = overlayImageName(), let img = HouseAssets.glowImage(name) {
-            let (w, h, px, py) = frameOnCanvas()
-            Image(nsImage: img)
-                .interpolation(.none)
-                .resizable()
-                .frame(width: w, height: h)
-                .position(x: px, y: py)
-                .blendMode(.screen)
-        }
-    }
-
-    private func overlayImageName() -> String? {
-        guard let ov = light.overlay else { return nil }
-        if light.kind == .window {
-            return phase == .day ? (ov.imageDay ?? ov.image) : (ov.imageNight ?? ov.image)
-        }
-        return ov.image
-    }
-
-    private func frameOnCanvas() -> (CGFloat, CGFloat, CGFloat, CGFloat) {
-        if let r = light.rect?.cgRect {
-            let w = r.width * artSize.width, h = r.height * artSize.height
-            return (w, h, r.midX * artSize.width, r.midY * artSize.height)
-        }
-        let ow = light.overlay?.w ?? 0.1, oh = light.overlay?.h ?? 0.18
-        let w = CGFloat(ow) * artSize.width, h = CGFloat(oh) * artSize.height
-        let p = light.at?.point ?? .zero
-        return (w, h, CGFloat(p.x) * artSize.width, CGFloat(p.y) * artSize.height)
-    }
-}
-
-// MARK: - 连通剖面整栋
+// MARK: - 连通剖面整栋（烘焙灯光）
 
 struct HouseCutawaySceneView: View {
     var rooms: [HouseRoom]
@@ -347,81 +173,114 @@ struct HouseCutawaySceneView: View {
 
     private var cut: HouseCutawaySceneFile? { HouseAssets.cutawayScene() }
     private var artSize: CGSize { cut?.artSize ?? CGSize(width: 960, height: 540) }
-    private var deviceCozy: Double { rooms.map(\.lighting.cozy).max() ?? 0 }
-    /// 关灯时仍保留可读环境光（白天底图更亮、乘暗更轻）。
-    private var ambient: Double {
-        let floor = phase == .day ? 0.64 : 0.38
-        return min(1, max(deviceCozy, floor))
-    }
-    private var dimStrength: Double { phase == .day ? 0.38 : 0.52 }
     private var displayScale: CGFloat {
         guard let fitWidth else { return 1 }
         return fitWidth / artSize.width
     }
 
     var body: some View {
-        ZStack {
-            baseArt
-            Color.black.opacity((1 - ambient) * dimStrength).blendMode(.multiply)
-            ForEach(rooms) { room in
-                if let layout = cutawayLayout(for: room.module) {
-                    HouseRoomOverlays(layout: layout, lighting: room.lighting, artSize: artSize, phase: phase)
+        ZStack(alignment: .topLeading) {
+            if let unlit = HouseAssets.cutawayImage(phase: phase, lit: false) {
+                art(unlit)
+                if let lit = HouseAssets.cutawayImage(phase: phase, lit: true) {
+                    ForEach(rooms) { room in
+                        if let m = cut?.modules[room.module.rawValue] {
+                            HouseRoomLightLayer(module: m, lighting: room.lighting, lit: lit, unlit: unlit, artSize: artSize)
+                        }
+                    }
                 }
+            } else {
+                Theme.bg2.overlay(Text("house-cutaway").font(.caption).foregroundStyle(.tertiary))
             }
             if showLabels {
                 ForEach(rooms) { room in
-                    if let p = cut?.modules[room.module.rawValue]?.label?.point
-                        ?? HouseAssets.moduleLights(room.module)?.cutaway.label?.point {
+                    if let p = cut?.modules[room.module.rawValue]?.label, p.count >= 2 {
                         Text(room.title).font(.system(size: 10, weight: .semibold, design: .rounded))
                             .padding(.horizontal, 7).padding(.vertical, 3)
                             .background(.black.opacity(0.5), in: Capsule()).foregroundStyle(.white.opacity(0.92))
-                            .position(x: p.x * artSize.width, y: p.y * artSize.height)
+                            .fixedSize()
+                            .position(x: p[0], y: p[1])
                     }
                 }
             }
         }
         .frame(width: artSize.width, height: artSize.height)
         .clipped()
-        .scaleEffect(displayScale, anchor: .top)
-        .frame(width: artSize.width * displayScale, height: artSize.height * displayScale)
+        .scaleEffect(displayScale, anchor: .topLeading)
+        .frame(width: artSize.width * displayScale, height: artSize.height * displayScale, alignment: .topLeading)
         .clipped()
     }
 
-    @ViewBuilder private var baseArt: some View {
-        if let img = HouseAssets.cutawayImage(phase: phase) {
-            Image(nsImage: img).interpolation(.none).resizable().aspectRatio(contentMode: .fill)
-        } else {
-            Theme.bg2.overlay(Text("house-cutaway").font(.caption).foregroundStyle(.tertiary))
-        }
-    }
-
-    private func cutawayLayout(for module: HouseModule) -> HouseModuleLayout? {
-        if let m = cut?.modules[module.rawValue] {
-            return HouseModuleLayout(size: [artSize.width, artSize.height], clip: m.clip, label: m.label, lights: m.lights)
-        }
-        return HouseAssets.moduleLights(module)?.cutaway
+    private func art(_ img: NSImage) -> some View {
+        Image(nsImage: img).interpolation(.none).resizable().frame(width: artSize.width, height: artSize.height)
     }
 }
 
-struct HouseRoomTileView: View {
-    let module: HouseModule
+/// 单个房间：每盏开着的灯按「房间多边形 ∩ 灯具蒙版」露出 lit 底图；关着的灯具本体用 unlit 盖回去。
+private struct HouseRoomLightLayer: View {
+    let module: HouseCutawayModule
     let lighting: RoomModuleLighting
-    var scale: CGFloat = 1
-
-    private var tileLayout: HouseModuleLayout? { HouseAssets.moduleLights(module)?.tile }
-    private var artSize: CGSize { HouseAssets.moduleArtSize(module) }
+    let lit: NSImage
+    let unlit: NSImage
+    let artSize: CGSize
 
     var body: some View {
-        ZStack {
-            if let img = HouseAssets.baseImage(module) {
-                Image(nsImage: img).interpolation(.none).resizable().aspectRatio(contentMode: .fill)
+        ZStack(alignment: .topLeading) {
+            ForEach(module.lights) { light in
+                let k = light.strength(lighting)
+                image(lit)
+                    .mask(revealMask(light.reveal ?? .room))
+                    .opacity(k)
+                    .animation(.easeInOut(duration: 0.35), value: k)
             }
-            Color.black.opacity((1 - lighting.cozy) * 0.78).blendMode(.multiply)
-            if let tileLayout { HouseRoomOverlays(layout: tileLayout, lighting: lighting, artSize: artSize) }
+            ForEach(module.lights) { light in
+                if let core = light.corePolygon {
+                    let k = light.strength(lighting)
+                    image(unlit)
+                        .mask(HousePolygon(points: core).fill(Color.white))
+                        .opacity(1 - k)
+                        .animation(.easeInOut(duration: 0.35), value: k)
+                }
+            }
         }
         .frame(width: artSize.width, height: artSize.height)
-        .scaleEffect(scale)
-        .frame(width: artSize.width * scale, height: artSize.height * scale)
+        .allowsHitTesting(false)
+    }
+
+    private func image(_ img: NSImage) -> some View {
+        Image(nsImage: img).interpolation(.none).resizable().frame(width: artSize.width, height: artSize.height)
+    }
+
+    /// 不用 .blur：--house-snapshot 走 cacheDisplay，图层滤镜不会被渲染；羽化用渐变代替。
+    @ViewBuilder private func revealMask(_ r: HouseReveal) -> some View {
+        let room = HousePolygon(points: module.region).fill(Color.white)
+        switch r {
+        case .room:
+            room
+        case let .ellipse(cx, cy, rx, ry):
+            ZStack(alignment: .topLeading) {
+                EllipticalGradient(stops: [.init(color: .white, location: 0), .init(color: .white, location: 0.55),
+                                           .init(color: .white.opacity(0), location: 1)])
+                    .frame(width: rx * 2, height: ry * 2)
+                    .offset(x: cx - rx, y: cy - ry)
+            }
+            .frame(width: artSize.width, height: artSize.height, alignment: .topLeading)
+            .mask(room)
+        }
+    }
+}
+
+/// 画布像素坐标的多边形（房间区域 / 灯具本体）
+struct HousePolygon: Shape {
+    let points: [[Double]]
+    func path(in _: CGRect) -> Path {
+        var p = Path()
+        let pts = points.filter { $0.count >= 2 }.map { CGPoint(x: $0[0], y: $0[1]) }
+        guard let first = pts.first else { return p }
+        p.move(to: first)
+        pts.dropFirst().forEach { p.addLine(to: $0) }
+        p.closeSubpath()
+        return p
     }
 }
 
@@ -495,36 +354,6 @@ struct HouseFullView: View {
     }
 }
 
-struct LivingRoomHouseView: View {
-    var lighting: LivingRoomLighting
-    var showChrome = true
-    var onToggleLamp: (() -> Void)?
-    var onToggleTV: (() -> Void)?
-
-    var body: some View {
-        let rl = RoomModuleLighting(lampLevels: [lighting.lamp], tv: lighting.tv, ac: 0, cozy: lighting.cozy)
-        VStack(spacing: 0) {
-            if showChrome {
-                HStack {
-                    Text(L("客厅小屋", "Living room")).font(.system(size: 15, weight: .semibold))
-                    Spacer()
-                }.padding(.bottom, 8)
-            }
-            HouseRoomTileView(module: .living, lighting: rl, scale: showChrome ? 336 / 640 : 1)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.stroke))
-            if showChrome {
-                HStack(spacing: 8) {
-                    if let onToggleLamp { HouseTapChip(icon: "lightbulb.fill", label: L("落地灯", "Floor lamp"), on: lighting.lamp > 0.5, tint: .yellow, action: onToggleLamp) }
-                    if let onToggleTV { HouseTapChip(icon: "tv.fill", label: L("电视", "TV"), on: lighting.tv > 0.5, tint: .indigo, action: onToggleTV) }
-                }.padding(.top, 10)
-            }
-        }
-        .padding(showChrome ? 12 : 0)
-        .background(showChrome ? Theme.bg : .clear)
-    }
-}
-
 struct HouseTapChip: View {
     let icon: String, label: String, on: Bool, tint: Color, action: () -> Void
     var body: some View {
@@ -588,7 +417,7 @@ extension Snapshot {
         try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
         let m = AppModel(mock: true)
         let rooms = m.houseRooms
-        let nightRooms = rooms.map { r -> HouseRoom in
+        let onRooms = rooms.map { r -> HouseRoom in
             var l = r.lighting
             l.lampLevels = l.lampLevels.map { _ in 1 }
             l.tv = 1
@@ -601,19 +430,17 @@ extension Snapshot {
         }
         self.appearance = NSAppearance(named: .darkAqua)
         let exports: [(String, HousePhase, [HouseRoom])] = [
-            ("house-day-on", .day, nightRooms),
+            ("house-day-on", .day, onRooms),
             ("house-day-off", .day, offRooms),
-            ("house-night-on", .night, nightRooms),
+            ("house-night-on", .night, onRooms),
             ("house-night-off", .night, offRooms),
-            ("house-night", .night, nightRooms),
+            ("house-night", .night, onRooms),
             ("house-off", .night, offRooms),
         ]
         for (name, phase, rs) in exports {
             render(HouseCutawaySceneView(rooms: rs, phase: phase, showLabels: false), out.appendingPathComponent("\(name).png"),
                    size: CGSize(width: 960, height: 540))
         }
-        render(LivingRoomHouseView(lighting: .nightOn, showChrome: false), out.appendingPathComponent("living-room-night.png"), size: CGSize(width: 640, height: 359))
-        render(LivingRoomHouseView(lighting: .allOff, showChrome: false), out.appendingPathComponent("living-room-off.png"), size: CGSize(width: 640, height: 359))
         exit(0)
     }
 }

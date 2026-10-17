@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""整栋连通剖面小屋：day/night cutaway PNG；锚点见 assets/house/module-lights.json"""
+"""整栋连通剖面小屋：从源图生成 day/night 像素底图（assets/house/），再烘焙 unlit/lit 灯光版本。"""
 from __future__ import annotations
 
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -11,7 +10,7 @@ from PIL import Image, ImageEnhance, ImageFilter
 ROOT = Path(__file__).resolve().parents[1]
 SRC_NIGHT = ROOT / "assets/house/house-cutaway-base-src.jpg"
 SRC_DAY = ROOT / "assets/house/house-cutaway-day-src.jpg"
-OUT_DIR = ROOT / "Sources/MijiaBarApp/Resources/House"
+OUT_DIR = ROOT / "assets/house"
 TARGET_W = 960
 
 
@@ -39,8 +38,7 @@ def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     night.save(OUT_DIR / "house-cutaway-night-base.png", optimize=True)
     day.save(OUT_DIR / "house-cutaway-day-base.png", optimize=True)
-    shutil.copyfile(OUT_DIR / "house-cutaway-night-base.png", OUT_DIR / "house-cutaway-base.png")
-    subprocess.run([str(ROOT / "scripts/sync-house-lights.py")], check=True)
+    subprocess.run(["python3", str(ROOT / "scripts/gen-house-baked-lighting.py")], check=True)
     print(f"cutaway night {night.width}x{night.height}")
     print(f"cutaway day {day.width}x{day.height}")
 

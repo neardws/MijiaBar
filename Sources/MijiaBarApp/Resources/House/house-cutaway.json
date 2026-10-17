@@ -1,243 +1,51 @@
 {
-  "size": [
-    960,
-    540
-  ],
+  "size": [960, 540],
   "modules": {
     "living": {
-      "clip": {
-        "x": 0.04,
-        "y": 0.33,
-        "w": 0.5,
-        "h": 0.64
-      },
-      "label": {
-        "x": 0.06,
-        "y": 0.54
-      },
+      "label": [58, 292],
+      "region": [[20, 220], [235, 145], [556, 252], [556, 415], [490, 462], [440, 540], [20, 430]],
       "lights": [
-        {
-          "id": "floor_lamp",
-          "kind": "lamp",
-          "role": "light",
-          "slot": 0,
-          "at": {
-            "x": 0.282,
-            "y": 0.448
-          },
-          "overlay": {
-            "image": "living-room-glow-floor_lamp-cutaway",
-            "w": 0.125,
-            "h": 0.24
-          }
-        },
-        {
-          "id": "sconce",
-          "kind": "sconce",
-          "role": "light",
-          "slot": 1,
-          "at": {
-            "x": 0.522,
-            "y": 0.402
-          },
-          "overlay": {
-            "image": "living-room-glow-sconce-cutaway",
-            "w": 0.07,
-            "h": 0.16
-          }
-        },
-        {
-          "id": "tv",
-          "kind": "screen",
-          "role": "tv",
-          "slot": 0,
-          "rect": {
-            "x": 0.565,
-            "y": 0.358,
-            "w": 0.076,
-            "h": 0.058
-          },
-          "overlay": {
-            "image": "living-room-glow-tv-cutaway"
-          }
-        },
-        {
-          "id": "window",
-          "kind": "window",
-          "role": "window",
-          "rect": {
-            "x": 0.328,
-            "y": 0.385,
-            "w": 0.062,
-            "h": 0.095
-          },
-          "overlay": {
-            "imageDay": "living-room-glow-window-cutaway-day",
-            "imageNight": "living-room-glow-window-cutaway-night"
-          }
-        }
+        {"id": "floor_lamp", "kind": "lamp", "role": "light", "slot": 0,
+         "source": [206, 238], "radius": 135, "pool": [210, 325, 125, 58],
+         "shade": [[196, 215], [216, 215], [224, 248], [188, 248]], "reveal": "room"},
+        {"id": "sconce", "kind": "sconce", "role": "light", "slot": 1,
+         "source": [408, 250], "radius": 75, "strength": 0.85,
+         "shade": [[402, 241], [413, 241], [415, 254], [400, 254]], "reveal": "room"},
+        {"id": "tv", "kind": "screen", "role": "tv", "slot": 0, "style": "tv",
+         "screen": [[434, 265], [496, 285], [496, 333], [434, 313]], "throw": [-40, 40], "radius": 85,
+         "reveal": [445, 315, 120, 85]}
       ]
     },
     "bedroom": {
-      "clip": {
-        "x": 0.02,
-        "y": 0.02,
-        "w": 0.56,
-        "h": 0.5
-      },
-      "label": {
-        "x": 0.04,
-        "y": 0.04
-      },
+      "label": [250, 30],
+      "region": [[235, 35], [405, 3], [620, 48], [620, 140], [485, 215], [238, 150]],
       "lights": [
-        {
-          "id": "bedside",
-          "kind": "lamp",
-          "role": "light",
-          "slot": 0,
-          "at": {
-            "x": 0.112,
-            "y": 0.278
-          },
-          "overlay": {
-            "image": "bedroom-glow-bedside-cutaway",
-            "w": 0.125,
-            "h": 0.24
-          }
-        },
-        {
-          "id": "ac",
-          "kind": "ac",
-          "role": "ac",
-          "slot": 0,
-          "rect": {
-            "x": 0.055,
-            "y": 0.082,
-            "w": 0.058,
-            "h": 0.04
-          },
-          "overlay": {
-            "image": "bedroom-glow-ac-cutaway"
-          }
-        },
-        {
-          "id": "window",
-          "kind": "window",
-          "role": "window",
-          "rect": {
-            "x": 0.518,
-            "y": 0.108,
-            "w": 0.054,
-            "h": 0.085
-          },
-          "overlay": {
-            "imageDay": "bedroom-glow-window-cutaway-day",
-            "imageNight": "bedroom-glow-window-cutaway-night"
-          }
-        }
+        {"id": "bedside", "kind": "lamp", "role": "light", "slot": 0,
+         "source": [283, 118], "radius": 115, "pool": [330, 168, 115, 45],
+         "shade": [[277, 103], [292, 103], [296, 124], [272, 124]], "reveal": "room"},
+        {"id": "ac", "kind": "ac", "role": "ac", "slot": 0,
+         "vent": [[301, 80], [359, 57]], "led": [350, 66],
+         "core": [[290, 30], [364, 28], [364, 90], [300, 118], [288, 90]],
+         "reveal": [330, 90, 70, 50]}
       ]
     },
     "study": {
-      "clip": {
-        "x": 0.48,
-        "y": 0.02,
-        "w": 0.5,
-        "h": 0.5
-      },
-      "label": {
-        "x": 0.52,
-        "y": 0.04
-      },
+      "label": [640, 60],
+      "region": [[620, 45], [928, 90], [925, 285], [770, 318], [545, 250], [485, 215], [620, 140]],
       "lights": [
-        {
-          "id": "desk_lamp",
-          "kind": "lamp",
-          "role": "light",
-          "slot": 0,
-          "at": {
-            "x": 0.675,
-            "y": 0.315
-          },
-          "overlay": {
-            "image": "study-glow-desk_lamp-cutaway",
-            "w": 0.125,
-            "h": 0.24
-          }
-        },
-        {
-          "id": "monitor",
-          "kind": "screen",
-          "role": "tv",
-          "slot": 0,
-          "rect": {
-            "x": 0.693,
-            "y": 0.284,
-            "w": 0.07,
-            "h": 0.05
-          },
-          "overlay": {
-            "image": "study-glow-monitor-cutaway"
-          }
-        },
-        {
-          "id": "window",
-          "kind": "window",
-          "role": "window",
-          "rect": {
-            "x": 0.745,
-            "y": 0.108,
-            "w": 0.065,
-            "h": 0.195
-          },
-          "overlay": {
-            "imageDay": "study-glow-window-cutaway-day",
-            "imageNight": "study-glow-window-cutaway-night"
-          }
-        }
+        {"id": "ceiling", "kind": "ceiling", "role": "light", "slot": 0,
+         "pool": [700, 235, 135, 58], "reveal": "room"},
+        {"id": "monitor", "kind": "screen", "role": "tv", "slot": 0, "style": "monitor",
+         "screen": [[668, 144], [717, 157], [716, 188], [669, 174]], "throw": [-8, 35], "radius": 60,
+         "reveal": [690, 185, 85, 65]}
       ]
     },
     "generic": {
-      "clip": {
-        "x": 0.5,
-        "y": 0.48,
-        "w": 0.48,
-        "h": 0.5
-      },
-      "label": {
-        "x": 0.54,
-        "y": 0.54
-      },
+      "label": [690, 300],
+      "region": [[556, 252], [770, 318], [925, 285], [925, 298], [770, 500], [700, 540], [490, 462], [556, 415]],
       "lights": [
-        {
-          "id": "entry_light",
-          "kind": "entry",
-          "role": "light",
-          "slot": 0,
-          "at": {
-            "x": 0.722,
-            "y": 0.648
-          },
-          "overlay": {
-            "image": "generic-glow-entry_light-cutaway",
-            "w": 0.09,
-            "h": 0.14
-          }
-        },
-        {
-          "id": "window",
-          "kind": "window",
-          "role": "window",
-          "rect": {
-            "x": 0.718,
-            "y": 0.588,
-            "w": 0.042,
-            "h": 0.068
-          },
-          "overlay": {
-            "imageDay": "generic-glow-window-cutaway-day",
-            "imageNight": "generic-glow-window-cutaway-night"
-          }
-        }
+        {"id": "entry_light", "kind": "ceiling", "role": "light", "slot": 0,
+         "pool": [650, 405, 115, 50], "reveal": "room"}
       ]
     }
   }
