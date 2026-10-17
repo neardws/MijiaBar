@@ -76,6 +76,12 @@ enum HousePhase: Equatable {
     case day, night
 
     static func from(date: Date = Date(), calendar: Calendar = .current) -> HousePhase {
+        // 截图用：MIJIABAR_HOUSE_PHASE=day / night 固定白天或夜晚，不随本机时间变
+        switch ProcessInfo.processInfo.environment["MIJIABAR_HOUSE_PHASE"] {
+        case "day": return .day
+        case "night": return .night
+        default: break
+        }
         let h = calendar.component(.hour, from: date)
         return (6..<18).contains(h) ? .day : .night
     }
@@ -589,7 +595,20 @@ extension Snapshot {
             ("house-night", .night, onRooms),
             ("house-off", .night, offRooms),
         ]
-        for (name, phase, rs) in exports {
+        // 网站用：只开部分灯具，展示「开哪盏只亮哪一处」
+        func only(_ pick: (HouseRoom) -> RoomModuleLighting?) -> [HouseRoom] {
+            rooms.map { r in HouseRoom(key: r.key, title: r.title, module: r.module, devices: r.devices, overflow: r.overflow, lighting: pick(r) ?? .allOff) }
+        }
+        let lamp = RoomModuleLighting(lampLevels: [1, 0], tv: 0, ac: 0, cozy: 0.4)
+        let oneLamp = only { $0.module == .living ? lamp : nil }
+        let twoLamps = only { $0.module == .living || $0.module == .bedroom ? lamp : nil }
+        let partial: [(String, HousePhase, [HouseRoom])] = [
+            ("house-night-partial", .night, rooms),   // 演示数据的真实状态：客厅落地灯 + 电视
+            ("house-day-partial", .day, rooms),
+            ("house-night-onelamp", .night, oneLamp),
+            ("house-night-twolamps", .night, twoLamps),
+        ]
+        for (name, phase, rs) in exports + partial {
             render(HouseCutawaySceneView(rooms: rs, phase: phase, showLabels: false), out.appendingPathComponent("\(name).png"),
                    size: CGSize(width: 960, height: 540))
         }

@@ -21,6 +21,8 @@
   "menubar": "Finder|File|Edit|View|Go|Window|Help",
   "alt_list": "MijiaBar open from the menu bar, with the house cutaway above the device list.",
   "alt_house": "Device list with the isometric house cutaway at the top; lights glow only where a device is on.",
+  "alt_cutaway": "Pixel-art isometric house cutaway at night: only the living-room floor lamp and TV are on, so only those spots glow; every other room stays dark.",
+  "house_caption": "At night with only the floor lamp and TV on — each fixture lights just its own corner. Tap one in the picture to switch it.",
 
   "house_eyebrow": "House cutaway",
   "house_title": "See the whole home. Tap what you want to change.",

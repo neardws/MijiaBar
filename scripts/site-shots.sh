@@ -1,6 +1,7 @@
 #!/bin/bash
 # 网站用图：每种语言的界面截图（浅色 / 深色）、设备插画（WebP）和分享图，放进 docs/assets/
 # 依赖：先 swift build；cwebp（brew install webp）
+# 主列表截图的小屋按本机时间显示白天或夜晚；list-night-* 和小屋大图固定用 MIJIABAR_HOUSE_PHASE / 固定状态
 # 只在界面外观或演示数据变了时重新生成；之后运行 python3 scripts/gen-site.py
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -30,6 +31,16 @@ for pair in en:en zh-Hans:zh-CN; do
     crop=(); [ "$s" = camera-live ] && crop=(-crop 0 0 720 860)
     webp "${crop[@]+"${crop[@]}"}" "$TMP/$web/$s-$t.png" -o "docs/assets/shots/$web/$s-$t.webp"
   done; done
+  # 小屋区块：夜晚的列表截图（小屋嵌在列表顶部，只亮开着的灯具）
+  MIJIABAR_HOUSE_PHASE=night MIJIABAR_LANG=$app "$APP" --snapshot "$TMP/night-$web" -AppleLanguages "($app)" >/dev/null
+  for t in light dark; do webp "$TMP/night-$web/list-$t.png" -o "docs/assets/shots/$web/list-night-$t.webp"; done
   echo "✅ $web"
+done
+# 小屋剖面大图（与语言无关，1920×1080 → 1440×810）
+"$APP" --house-snapshot "$TMP/house" >/dev/null
+mkdir -p docs/assets/shots/house
+for n in house-night-partial house-day-partial house-night-onelamp house-night-twolamps; do
+  sips -Z 1440 "$TMP/house/$n.png" --out "$TMP/house/$n-1440.png" >/dev/null
+  webp "$TMP/house/$n-1440.png" -o "docs/assets/shots/house/$n.webp"
 done
 du -sh docs/assets/shots docs/assets/art docs/assets/og.jpg
