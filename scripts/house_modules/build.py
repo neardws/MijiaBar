@@ -40,6 +40,7 @@ def main():
         fw, g, sp = spec(mid)
         raw = Path(a.raw) if a.raw else None
         variants = {}
+        shell = False
         if raw and (raw / f'{mid}-day-full.jpg').exists():
             styles.add('generated')
             imgs = {}
@@ -49,7 +50,7 @@ def main():
                 corners = json.loads(cj.read_text()) if cj.exists() else pl.detect_corners(np.asarray(Image.open(raw / f'{mid}-day-full.jpg').convert('RGB')))
                 imgs[cut] = pl.pixelize_rgba(pl.warp_to_canonical(src, corners, g, cut=cut))
         else:
-            styles.add('shell-standin')
+            styles.add('shell-standin'); shell = True
             imgs = {cut: pl.pixelize_rgba(render_shell(fw, TINTS[mid], cut=cut).resize((g['size'][0] * 2, g['size'][1] * 2), Image.NEAREST))
                     for cut in (False, True)}
         mod = dict(region=region_local(g, fw), **sp)
@@ -57,7 +58,7 @@ def main():
             im = imgs[cut]; alpha = im.getchannel('A'); day = to_np(im)
             night = pl.apply_night(day, lut)
             for phase, base in (('day', day), ('night', night)):
-                unlit, lit = pl.bake_module(base, phase, mod, cut)
+                unlit, lit = pl.bake_module(base, phase, mod, cut, bodies=not shell)
                 for kind, arr in (('unlit', unlit), ('lit', lit)):
                     name = f'module-{mid}-{phase}-{kind}{"-cut" if cut else ""}.png'
                     from_np(arr, alpha).save(out / name, optimize=True)

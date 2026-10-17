@@ -172,7 +172,7 @@ def warp_to_canonical(img: np.ndarray, corners: dict, g, cut=False, s=2) -> Imag
     return Image.fromarray(rgba, 'RGBA')
 
 # ---------- bake ----------
-def bake_module(base_rgb: np.ndarray, phase: str, mod: dict, cut: bool) -> tuple[np.ndarray, np.ndarray]:
+def bake_module(base_rgb: np.ndarray, phase: str, mod: dict, cut: bool, bodies: bool = True) -> tuple[np.ndarray, np.ndarray]:
     """与 gen-house-baked-lighting.bake 同参数，只是作用在单个模块上。"""
     h, w, _ = base_rgb.shape
     X, Y = bakelib.grid(w, h)
@@ -193,7 +193,7 @@ def bake_module(base_rgb: np.ndarray, phase: str, mod: dict, cut: bool) -> tuple
         else: gg = gain
         lit = lit * (1 + f[..., None] * gg * col) + (f ** 2)[..., None] * col * (0.38 if phase == 'night' else 0.12)
     lit = np.clip(lit, 0, 1)
-    for light in lights:
+    for light in (lights if bodies else []):
         if 'shade' in light: bakelib.paint_shade(lit, light['shade'], phase)
         if light['kind'] == 'screen': bakelib.paint_screen(lit, light['screen'], phase, light.get('style', 'tv'))
         if light['kind'] == 'ac': bakelib.paint_ac(lit, light, phase)
