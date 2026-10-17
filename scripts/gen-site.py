@@ -3,7 +3,7 @@
 
 模板：site/template.html；文案：i18n/site/<lang>.json（以 en.json 为准，缺键报错）。
 目前只发布英文和简体中文；繁体中文译稿在 i18n/site/drafts/zh-Hant.json，页面稳定后再加回 LANGS（加回前不用更新它）。
-Agent 安装提示直接取自 Sources/MijiaCore/AgentPrompt.swift，版本号取自 docs/appcast.xml。
+Agent 安装提示直接取自 Sources/MijiaCore/AgentPrompt.swift，版本号优先取自 docs/VERSION（无则 docs/appcast.xml）。
 截图和插画由 scripts/site-shots.sh 生成到 docs/assets/。
 
 用法：python3 scripts/gen-site.py          # 生成
@@ -52,6 +52,11 @@ def swift_prompts():
 
 
 def version():
+    vf = 'docs/VERSION'
+    if os.path.isfile(vf):
+        v = open(vf, encoding='utf-8').read().strip()
+        if v:
+            return v
     m = re.search(r'<sparkle:shortVersionString>([^<]+)<', open('docs/appcast.xml', encoding='utf-8').read())
     return m.group(1).strip() if m else ''
 
