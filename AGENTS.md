@@ -33,6 +33,7 @@ python3 scripts/gen-site.py                    # regenerate the website (docs/*.
 python3 -m http.server -d docs 8000            # preview the website at http://localhost:8000 (zh-CN.html is Simplified Chinese)
 scripts/site-shots.sh                          # re-render the website's screenshots, illustrations and share image (needs swift build + cwebp)
 .build/debug/MijiaBarApp --snapshot /tmp/shots -AppleLanguages "(zh-Hans)"   # every screen, light and dark (*-light.png / *-dark.png)
+.build/debug/MijiaBarApp --house-snapshot /tmp/house   # Metal HD-2D living-room pilot (house-hd2d-night.png / house-hd2d-off.png); SPM loads HouseMetal.metal from Bundle.module (runtime compile if default metallib missing)
 .build/debug/MijiaBarApp --gif /tmp/demo.gif -AppleLanguages "(zh-Hans)"     # record the AC card animation
 .build/debug/MijiaBarApp --art /tmp/art                                        # each illustration on its own, transparent (the website's device lineup)
 ```
