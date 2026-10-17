@@ -241,7 +241,7 @@ struct HouseRoomOverlays: View {
     }
 
     @ViewBuilder private func windowFill(_ light: HouseLightAnchor) {
-        guard let r = light.rect?.cgRect else { return }
+        if let r = light.rect?.cgRect {
         let w = r.width * artSize.width, h = r.height * artSize.height
         if phase == .day {
             let k = 0.42 + roomActive * 0.18
@@ -262,10 +262,11 @@ struct HouseRoomOverlays: View {
                 .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
                 .blendMode(.screen).opacity(k)
         }
+        }
     }
 
     @ViewBuilder private func acGlow(_ light: HouseLightAnchor) {
-        guard lighting.ac > 0, let r = light.rect?.cgRect else { return }
+        if lighting.ac > 0, let r = light.rect?.cgRect {
         let k = lighting.ac
         let w = r.width * artSize.width, h = r.height * artSize.height
         RoundedRectangle(cornerRadius: 3)
@@ -275,10 +276,11 @@ struct HouseRoomOverlays: View {
             .clipShape(RoundedRectangle(cornerRadius: 3))
             .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
             .blendMode(.screen)
+        }
     }
 
     @ViewBuilder private func screenGlow(_ light: HouseLightAnchor) {
-        guard lighting.tv > 0, let r = light.rect?.cgRect else { return }
+        if lighting.tv > 0, let r = light.rect?.cgRect {
         let k = lighting.tv
         let w = r.width * artSize.width, h = r.height * artSize.height
         RoundedRectangle(cornerRadius: 4)
@@ -292,11 +294,12 @@ struct HouseRoomOverlays: View {
             .clipShape(RoundedRectangle(cornerRadius: 4))
             .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
             .blendMode(.screen)
+        }
     }
 
     @ViewBuilder private func lampGlow(_ light: HouseLightAnchor) {
         let k = lampStrength(light)
-        guard k > 0, let p = light.at?.point else { return }
+        if k > 0, let p = light.at?.point {
         let inner: CGFloat = compactLamps ? 34 : 44
         let outer: CGFloat = compactLamps ? 72 : 100
         ZStack {
@@ -305,6 +308,7 @@ struct HouseRoomOverlays: View {
         }
         .position(x: p.x * artSize.width, y: p.y * artSize.height)
         .blendMode(.screen).opacity(0.85 * k)
+        }
     }
 }
 
