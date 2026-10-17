@@ -583,11 +583,14 @@ extension Snapshot {
             render(HousePilotHost(editing: true).environmentObject(m), out.appendingPathComponent("house-edit-undo-\(suffix).png"), size: HouseWindow.editSize)
         }
         // 房间布局标签
+        // 用解析出来的真实房间 key（标题跟语言走），再加两间没有经典美术的房间（厨房 / 浴室）
+        let key = { (mod: HouseModule) in m.houseResolved.rooms.first { $0.module == mod }?.key ?? "name:" + mod.title }
         let mix: [HouseLayoutCell] = [
-            .init(room: "name:主卧", module: "bedroom", col: 0, row: 0),
-            .init(room: "name:书房", module: "study", col: 1, row: 0),
-            .init(room: "name:客厅", module: "living", col: 0, row: 1),
-            .init(room: "name:厨房", module: "kitchen", col: 2, row: 1),
+            .init(room: key(.bedroom), module: "bedroom", col: 0, row: 0),
+            .init(room: key(.study), module: "study", col: 1, row: 0),
+            .init(room: "name:" + L("卫生间", "Bathroom"), module: "bathroom", col: 2, row: 0),
+            .init(room: key(.living), module: "living", col: 0, row: 1),
+            .init(room: "name:" + L("厨房", "Kitchen"), module: "kitchen", col: 2, row: 1),
         ]
         m.houseEdit("layout") { $0.setLayout(home: home, layout: mix) }
         for (suffix, name) in [("light", NSAppearance.Name.aqua), ("dark", NSAppearance.Name.darkAqua)] {

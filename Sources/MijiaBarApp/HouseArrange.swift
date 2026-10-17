@@ -10,6 +10,12 @@ struct HouseArrangeView: View {
     @State private var previewMs: Double = 0
     @State private var phase: HousePhase = .from()
 
+    static let cellW: CGFloat = 112
+    static let cellH: CGFloat = 76
+    static let gap: CGFloat = 8
+    /// 3 格 + 间距 + 两侧 16 内边距；HouseWindow.editSize 宽 1041 时预览仍有 ~640
+    static let panelWidth: CGFloat = 3 * cellW + 2 * gap + 32
+
     private var home: String { m.houseHomeKey }
     private var layout: [HouseLayoutCell] {
         m.house.homes[home]?.layout ?? HouseLayoutSolver.classicFour.enumerated().map { i, c in
@@ -29,8 +35,8 @@ struct HouseArrangeView: View {
                        "Drag room cards to swap. Living room takes two cells. Max 3×2. Classic four uses the single cutaway; custom layouts stitch modules."))
                     .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
-            .padding(14)
-            .frame(width: 420)
+            .padding(16)
+            .frame(width: Self.panelWidth, alignment: .topLeading)
             Divider()
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
@@ -45,7 +51,8 @@ struct HouseArrangeView: View {
                     }
                 }
                 if let preview {
-                    Image(nsImage: preview).resizable().interpolation(.high).aspectRatio(contentMode: .fit)
+                    Image(nsImage: preview).resizable().interpolation(.none).aspectRatio(contentMode: .fit)
+                        .padding(14)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(Theme.bg2, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 } else {
@@ -79,15 +86,21 @@ struct HouseArrangeView: View {
 
     private var grid: some View {
         let occ = occupancy()
-        return VStack(spacing: 6) {
+        return VStack(alignment: .leading, spacing: Self.gap) {
             ForEach(0..<HouseLayoutSolver.maxRows, id: \.self) { row in
-                HStack(spacing: 6) {
+                HStack(spacing: Self.gap) {
+                    // 被客厅第二格覆盖的格子不单独占位（否则这一行比别的行宽，整列被挤出左边）
                     ForEach(0..<HouseLayoutSolver.maxCols, id: \.self) { col in
-                        cellView(col: col, row: row, occ: occ)
+                        if let c = occ[SIMD2(col, row)], !(c.col == col && c.row == row) {
+                            EmptyView()
+                        } else {
+                            cellView(col: col, row: row, occ: occ)
+                        }
                     }
                 }
             }
         }
+        .frame(width: 3 * Self.cellW + 2 * Self.gap, alignment: .leading)
     }
 
     private func occupancy() -> [SIMD2<Int>: HouseLayoutCell] {
@@ -112,7 +125,7 @@ struct HouseArrangeView: View {
         if let c = occ[p], c.col == col && c.row == row {
             let (fw, _) = HouseLayoutSolver.defaultFootprint(c.module)
             roomCard(c)
-                .frame(width: CGFloat(fw) * 120 + CGFloat(fw - 1) * 6, height: 72)
+                .frame(width: CGFloat(fw) * Self.cellW + CGFloat(fw - 1) * Self.gap, height: Self.cellH)
                 .onDrag {
                     selected = c.room
                     return NSItemProvider(object: c.room as NSString)
@@ -125,14 +138,14 @@ struct HouseArrangeView: View {
                     return true
                 }
         } else if occ[p] != nil {
-            Color.clear.frame(width: 120, height: 72) // covered by living
+            EmptyView() // covered by living
         } else {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
                 .foregroundStyle(.secondary.opacity(0.5))
                 .background(Theme.tile.opacity(0.4), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                 .overlay(Image(systemName: "plus").foregroundStyle(.secondary))
-                .frame(width: 120, height: 72)
+                .frame(width: Self.cellW, height: Self.cellH)
                 .onDrop(of: [.plainText], isTargeted: nil) { providers in
                     HouseDropPayload.load(providers) { payload in
                         guard let from = payload, let src = layout.first(where: { $0.room == from }) else { return }
@@ -144,18 +157,26 @@ struct HouseArrangeView: View {
     }
 
     private func roomCard(_ c: HouseLayoutCell) -> some View {
-        let title = m.houseResolved.rooms.first { $0.key == c.room }?.title
-            ?? m.houseResolved.excluded.first { $0.key == c.room }?.title
-            ?? c.module
+        let title = roomTitle(c)
         return VStack(alignment: .leading, spacing: 2) {
             Text(title).font(.system(size: 12, weight: .semibold)).lineLimit(1)
-            Text(moduleTitle(c.module)).font(.system(size: 10)).foregroundStyle(.secondary)
+            if moduleTitle(c.module) != title {
+                Text(moduleTitle(c.module)).font(.system(size: 10)).foregroundStyle(.secondary)
+            }
             Text("(\(c.col),\(c.row))").font(.system(size: 9, design: .monospaced)).foregroundStyle(.tertiary)
         }
         .padding(8)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(selected == c.room ? Color.accentColor.opacity(0.18) : Theme.tile, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(selected == c.room ? Color.accentColor : Theme.stroke))
+    }
+
+    /// 房间名：已解析的房间 → 旧式 "name:<房间名>" key → 模块名（本地化）
+    private func roomTitle(_ c: HouseLayoutCell) -> String {
+        if let t = m.houseResolved.rooms.first(where: { $0.key == c.room })?.title
+            ?? m.houseResolved.excluded.first(where: { $0.key == c.room })?.title { return t }
+        if c.room.hasPrefix("name:"), c.room.count > 5 { return String(c.room.dropFirst(5)) }
+        return moduleTitle(c.module)
     }
 
     private func moduleTitle(_ raw: String) -> String {
@@ -221,24 +242,24 @@ enum HouseModuleAssets {
         let cat: HouseModuleCatalog
         do { cat = try HouseComposer.loadCatalog(from: url) }
         catch { fputs("HouseModuleAssets: catalog decode \(error)\n", stderr); return nil }
-        var images: [String: (unlit: CGImage, lit: CGImage)] = [:]
+        var images: [String: HouseModuleImages] = [:]
         let tag = phase == .day ? "day" : "night"
+        func load(_ variants: [String: String], _ key: String) -> CGImage? {
+            guard let name = variants[key] else { return nil }
+            let base = URL(fileURLWithPath: name).deletingPathExtension().lastPathComponent
+            return resourceURL(base, "png").flatMap(HouseComposer.loadCGImage(from:))
+        }
         for (id, art) in cat.modules {
-            guard let variants = art.variants,
-                  let uName = variants["\(tag)-unlit"], let lName = variants["\(tag)-lit"] else { continue }
-            let uBase = URL(fileURLWithPath: uName).deletingPathExtension().lastPathComponent
-            let lBase = URL(fileURLWithPath: lName).deletingPathExtension().lastPathComponent
-            guard let uURL = resourceURL(uBase, "png"), let lURL = resourceURL(lBase, "png"),
-                  let ui = HouseComposer.loadCGImage(from: uURL),
-                  let li = HouseComposer.loadCGImage(from: lURL) else {
+            guard let v = art.variants, let ui = load(v, "\(tag)-unlit"), let li = load(v, "\(tag)-lit") else {
                 fputs("HouseModuleAssets: missing png for \(id)\n", stderr); continue
             }
-            images[id] = (ui, li)
+            images[id] = HouseModuleImages(unlit: ui, lit: li, unlitCut: load(v, "\(tag)-unlit-cut"), litCut: load(v, "\(tag)-lit-cut"))
         }
         guard !images.isEmpty else { fputs("HouseModuleAssets: no images\n", stderr); return nil }
-        let r = HouseComposer.compose(.init(layout: layout, catalog: cat, images: images))
-        guard let lit = r.lit else { fputs("HouseModuleAssets: compose produced nil lit\n", stderr); return nil }
-        let ns = NSImage(cgImage: lit, size: NSSize(width: lit.width, height: lit.height))
+        let r = HouseComposer.compose(.init(layout: layout, catalog: cat, images: images, night: phase == .night))
+        // 预览：白天看关灯底图，夜间看开灯（暖光）版
+        guard let img = phase == .day ? r.unlit : r.lit else { fputs("HouseModuleAssets: compose produced nil\n", stderr); return nil }
+        let ns = NSImage(cgImage: img, size: NSSize(width: img.width, height: img.height))
         return (ns, r.milliseconds)
     }
 }
