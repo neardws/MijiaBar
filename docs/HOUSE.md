@@ -122,3 +122,20 @@ Open the house window (**Enlarge**) and click **Edit**. The window widens:
 Edits are written to `house.json` right away. Undo writes the previous values back with a fresh `updatedAt`, so it wins the merge on other Macs like any other edit. If the CLI, an agent or another Mac changes an entry that is in the undo history, the history is cleared with a notice, so undo never reverts someone else's change. External edits to other entries keep the history.
 
 Screenshots with demo data: `MijiaBar --house-window-snapshot <dir>` (set `MIJIABAR_LANG=en|zh-Hans` and `MIJIABAR_HOUSE_PHASE=day|night`). It renders the window, edit mode, two mid-drag states (`house-drag-valid`, `house-drag-invalid`, with the drag image drawn by the app because the system drag image can't be captured) and `house-edit-undo`.
+
+## Layout (Phase 2)
+
+`homes.<id>.layout` is an optional array of `{room, module, col, row}`. Max grid 3×2; living footprint is 2×1.
+
+- `null` / absent → classic four-room cutaway (Phase 1 single PNGs).
+- Non-classic geometry → modules are stitched by `HouseComposer` (see `docs/HOUSE_MODULES.md`).
+
+```
+mijiabar house layout [--json]
+mijiabar house layout set <room:module:col:row> ...
+mijiabar house layout auto [--home H]
+mijiabar house layout classic [--home H]
+mijiabar house reset --layout
+```
+
+MCP: `get_house_layout`, `set_house_layout`. Undo covers layout changes (same `updatedAt` merge via `layoutUpdatedAt`).

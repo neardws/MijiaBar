@@ -66,4 +66,25 @@ import CoreGraphics
         #expect(b.x > a.x && b.y > a.y)
         #expect(c.x < a.x && c.y > a.y)
     }
+
+    @Test func loadsCatalogAndComposesKitchenLayout() throws {
+        let (cat, images) = try load()
+        #expect(cat.modules["kitchen"] != nil)
+        #expect(images["kitchen"] != nil)
+        let layout = [
+            HouseLayoutCell(room: "a", module: "bedroom", col: 0, row: 0),
+            HouseLayoutCell(room: "b", module: "study", col: 1, row: 0),
+            HouseLayoutCell(room: "c", module: "living", col: 0, row: 1),
+            HouseLayoutCell(room: "d", module: "kitchen", col: 2, row: 1),
+        ]
+        let r = HouseComposer.compose(.init(layout: layout, catalog: cat, images: images))
+        #expect(r.lit != nil)
+        #expect(r.milliseconds < 30)
+        if let lit = r.lit, let data = r.pngData(lit) {
+            let out = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("hp2chk/compose-test.png")
+            try? FileManager.default.createDirectory(at: out.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try data.write(to: out)
+            print("wrote \(out.path)")
+        }
+    }
 }

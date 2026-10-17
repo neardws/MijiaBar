@@ -582,6 +582,18 @@ extension Snapshot {
             appearance = NSAppearance(named: name)
             render(HousePilotHost(editing: true).environmentObject(m), out.appendingPathComponent("house-edit-undo-\(suffix).png"), size: HouseWindow.editSize)
         }
+        // 房间布局标签
+        let mix: [HouseLayoutCell] = [
+            .init(room: "name:主卧", module: "bedroom", col: 0, row: 0),
+            .init(room: "name:书房", module: "study", col: 1, row: 0),
+            .init(room: "name:客厅", module: "living", col: 0, row: 1),
+            .init(room: "name:厨房", module: "kitchen", col: 2, row: 1),
+        ]
+        m.houseEdit("layout") { $0.setLayout(home: home, layout: mix) }
+        for (suffix, name) in [("light", NSAppearance.Name.aqua), ("dark", NSAppearance.Name.darkAqua)] {
+            appearance = NSAppearance(named: name)
+            render(HousePilotHost(editing: true, editTab: .arrange).environmentObject(m), out.appendingPathComponent("house-arrange-\(suffix).png"), size: HouseWindow.editSize)
+        }
         exit(0)
     }
 }

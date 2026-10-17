@@ -178,6 +178,13 @@ extension AppModel {
 
     var houseRooms: [HouseRoom] { houseResolved.rooms.map(houseRoom) }
 
+    /// 用户自定义布局（非经典四室）时用模块合成图
+    var houseLayoutCells: [HouseLayoutCell]? {
+        let L = house.homes[houseHomeKey]?.layout
+        return HouseLayoutSolver.isClassicGeometry(L) ? nil : L
+    }
+
+
     func houseRoom(_ r: ResolvedHouseRoom) -> HouseRoom {
         let ds = r.devices.map { x -> HouseDevice in
             let p = device(x.did).flatMap { powerInfo($0) }
@@ -680,31 +687,50 @@ enum HouseWindow {
     }
 }
 
+enum HouseEditTab: String, CaseIterable { case devices, arrange }
+
 struct HousePilotHost: View {
     @EnvironmentObject var m: AppModel
     @State var editing = false
     @State var selection: HouseSelection?
     @State var drag = HouseDragState()
+    @State var editTab: HouseEditTab = .devices
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { ctx in
             let rooms = m.houseRooms
             let phase = HousePhase.from(date: ctx.date)
             if editing {
-                let resolved = m.houseResolved
-                let edit = context(resolved)
-                HStack(alignment: .top, spacing: 0) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        HouseFullView(rooms: rooms, phase: phase, onToggle: nil, edit: edit, showStatus: false, accessory: AnyView(editButtons))
-                            .overlay(alignment: .bottom) { notice }
-                        Text(L("把右边的设备拖到虚线框上放置；拖动已放好的设备可移动或交换，拖回右边或空白处移出。也可以点虚线框再在右边选。眼睛按钮只控制小屋里显示与否（不影响设备列表）。改动立即保存并同步到其他 Mac，⌘Z 撤销。",
-                               "Drag a device from the right onto a dashed spot. Drag a placed device to move or swap it, or back to the list or an empty area to take it off. You can also click a spot and pick a device. The eye button shows or hides a device in the house only. Changes save right away and sync to your other Macs; ⌘Z undoes."))
-                            .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                            .padding(.horizontal, 14).padding(.bottom, 12)
+                VStack(spacing: 0) {
+                    HStack {
+                        Picker("", selection: $editTab) {
+                            Text(L("设备", "Devices")).tag(HouseEditTab.devices)
+                            Text(L("房间布局", "Room layout")).tag(HouseEditTab.arrange)
+                        }.pickerStyle(.segmented).frame(width: 240)
+                        Spacer()
+                        editButtons
                     }
-                    .frame(width: 684)
+                    .padding(.horizontal, 14).padding(.vertical, 8)
                     Divider()
-                    HouseEditPanel(selection: $selection, edit: edit).frame(width: 356)
+                    if editTab == .arrange {
+                        HouseArrangeView()
+                    } else {
+                        let resolved = m.houseResolved
+                        let edit = context(resolved)
+                        HStack(alignment: .top, spacing: 0) {
+                            VStack(alignment: .leading, spacing: 0) {
+                                HouseFullView(rooms: rooms, phase: phase, onToggle: nil, edit: edit, showStatus: false, accessory: nil)
+                                    .overlay(alignment: .bottom) { notice }
+                                Text(L("把右边的设备拖到虚线框上放置；拖动已放好的设备可移动或交换，拖回右边或空白处移出。也可以点虚线框再在右边选。眼睛按钮只控制小屋里显示与否（不影响设备列表）。改动立即保存并同步到其他 Mac，⌘Z 撤销。",
+                                       "Drag a device from the right onto a dashed spot. Drag a placed device to move or swap it, or back to the list or an empty area to take it off. You can also click a spot and pick a device. The eye button shows or hides a device in the house only. Changes save right away and sync to your other Macs; ⌘Z undoes."))
+                                    .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                                    .padding(.horizontal, 14).padding(.bottom, 12)
+                            }
+                            .frame(width: 684)
+                            Divider()
+                            HouseEditPanel(selection: $selection, edit: edit).frame(width: 356)
+                        }
+                    }
                 }
             } else {
                 HouseFullView(rooms: rooms, phase: phase, onToggle: { did in
@@ -783,8 +809,6 @@ struct HousePilotHost: View {
 
     private var editButtons: some View {
         HStack(spacing: 6) {
-            Text(L("编辑中", "Editing")).font(.system(size: 11, weight: .semibold)).foregroundStyle(Color.orange)
-                .padding(.horizontal, 8).padding(.vertical, 4).background(Color.orange.opacity(0.14), in: Capsule())
             Button { m.houseUndoStep(redo: false) } label: {
                 Label(L("撤销", "Undo"), systemImage: "arrow.uturn.backward").font(.system(size: 11, weight: .medium))
             }
