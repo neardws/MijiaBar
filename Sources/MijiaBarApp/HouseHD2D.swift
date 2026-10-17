@@ -18,7 +18,7 @@ extension AppModel {
         let hid = currentHomeId ?? ""
         let inHome = devices.filter { currentHomeId == nil || $0.homeId == currentHomeId }
         let groups = Dictionary(grouping: inHome) { $0.roomName ?? "" }
-        for k in prefs.orderedRooms(home: hid, roomKeys: groups.keys) {
+        for k in prefs.orderedRooms(home: hid, Array(groups.keys)) {
             guard HouseModule.from(roomName: k) == .living, let ds = groups[k] else { continue }
             let r = HouseLayout.assign(prefs.orderedDevices(home: hid, key: k, ds), in: .living)
             let placed = r.placed.map { d, s in
@@ -103,30 +103,28 @@ final class HouseHD2DScene: NSObject {
     private func buildRoomShell() {
         let floor = SCNBox(width: CGFloat(size), height: 0.08, length: CGFloat(size), chamferRadius: 0)
         let fm = HousePix.tiledMat(HousePix.woodFloorTile())
-        fm.diffuse.contentsTransform = SCNMatrix4MakeScale(Float(size) * 1.2, Float(size) * 1.2, 1)
+        fm.diffuse.contentsTransform = SCNMatrix4MakeScale(CGFloat(size) * 1.2, CGFloat(size) * 1.2, 1)
         floor.materials = [fm]
         let floorN = SCNNode(geometry: floor)
         floorN.position = SCNVector3(size / 2, -0.04, size / 2)
         floorN.castsShadow = false
-        floorN.receiveShadows = true
         roomRoot.addChildNode(floorN)
 
         let wallH: CGFloat = 2.4
         let wallM = HousePix.tiledMat(HousePix.plasterWall())
         wallM.diffuse.contentsTransform = SCNMatrix4MakeScale(3, 2, 1)
-        func wall(w: CGFloat, l: CGFloat, x: Float, z: Float, rotY: Float) {
-            let box = SCNBox(width: w, height: wallH, length: 0.12, chamferRadius: 0)
+        func addWall(w: CGFloat, l: CGFloat, x: Float, z: Float, rotY: Float) {
+            let box = SCNBox(width: w, height: wallH, length: l, chamferRadius: 0)
             box.materials = [wallM]
             let n = SCNNode(geometry: box)
             n.position = SCNVector3(x, Float(wallH / 2), z)
             n.eulerAngles.y = rotY
             n.castsShadow = true
-            n.receiveShadows = true
             roomRoot.addChildNode(n)
         }
-        wall(CGFloat(size), 0.12, size / 2, 0, 0)           // 后墙
-        wall(0.12, CGFloat(size), 0, size / 2, Float.pi / 2) // 左墙
-        wall(0.12, CGFloat(size), size, size / 2, Float.pi / 2) // 右墙（矮隔断感）
+        addWall(w: CGFloat(size), l: 0.12, x: size / 2, z: 0, rotY: 0)
+        addWall(w: 0.12, l: CGFloat(size), x: 0, z: size / 2, rotY: Float.pi / 2)
+        addWall(w: 0.12, l: CGFloat(size), x: size, z: size / 2, rotY: Float.pi / 2)
 
         // 地毯
         let rug = SCNBox(width: 2.6, height: 0.02, length: 2.4, chamferRadius: 0.02)
@@ -151,17 +149,17 @@ final class HouseHD2DScene: NSObject {
     }
 
     private func buildFurniture() {
-        let sofa = HousePix.spritePlane("sofa", HousePix.sofa, width: 2.2)
+        let sofa = HousePix.spritePlane("sofa", rows: HousePix.sofa, width: 2.2)
         sofa.position = SCNVector3(3.2, 0, 4.5)
         sofa.eulerAngles.y = Float.pi
         roomRoot.addChildNode(sofa)
 
-        let stand = HousePix.spritePlane("tvstand", HousePix.tvStand, width: 1.5)
+        let stand = HousePix.spritePlane("tvstand", rows: HousePix.tvStand, width: 1.5)
         stand.position = SCNVector3(0.55, 0, 2.5)
         stand.eulerAngles.y = Float.pi / 2
         roomRoot.addChildNode(stand)
 
-        let plant = HousePix.spritePlane("plant", HousePix.plant, width: 0.55)
+        let plant = HousePix.spritePlane("plant", rows: HousePix.plant, width: 0.55)
         plant.position = SCNVector3(5.3, 0, 0.75)
         roomRoot.addChildNode(plant)
     }
@@ -193,7 +191,7 @@ final class HouseHD2DScene: NSObject {
             case .light:
                 let art = d.on ? HousePix.floorLamp : HousePix.floorLampOff
                 let name = d.on ? "lamp-on" : "lamp-off"
-                let lamp = HousePix.spritePlane(name, art, width: 0.55, emissive: d.on ? 0.8 : 0)
+                let lamp = HousePix.spritePlane(name, rows: art, width: 0.55, emissive: d.on ? 0.8 : 0)
                 lamp.position = SCNVector3(0, 0, 0)
                 root.addChildNode(lamp)
                 if d.on {
@@ -223,7 +221,7 @@ final class HouseHD2DScene: NSObject {
                     root.addChildNode(poolN)
                 }
             case .ac:
-                let ac = HousePix.spritePlane("ac", HousePix.ac, width: 1.1)
+                let ac = HousePix.spritePlane("ac", rows: HousePix.ac, width: 1.1)
                 ac.eulerAngles.y = 0
                 root.addChildNode(ac)
                 if d.on {
@@ -257,7 +255,7 @@ final class HouseHD2DScene: NSObject {
                     lightNodes[d.did] = cn
                 }
             case .tv:
-                let tv = HousePix.spritePlane("tv", HousePix.tv, width: 1.05, emissive: d.on ? 1.2 : 0)
+                let tv = HousePix.spritePlane("tv", rows: HousePix.tv, width: 1.05, emissive: d.on ? 1.2 : 0)
                 tv.position = SCNVector3(0, 0.55, 0)
                 tv.eulerAngles.y = Float.pi / 2
                 root.addChildNode(tv)
@@ -361,6 +359,7 @@ struct HouseScene3DView: NSViewRepresentable {
         context.coordinator.refreshLabels(room: room)
     }
 
+    @MainActor
     final class Coordinator: NSObject, SCNSceneRendererDelegate {
         var holder: HouseHD2DScene?
         weak var view: SCNView?
