@@ -111,7 +111,7 @@ enum HousePix {
         (0..<12).map { y in
             (0..<20).map { x in
                 let star = (x * 7 + y * 11) % 23 == 0
-                star ? "c" : "b"
+                return star ? "c" : "b"
             }.joined()
         }
     }
