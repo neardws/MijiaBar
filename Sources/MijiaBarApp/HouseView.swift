@@ -46,6 +46,17 @@ struct HouseLightSpec: Decodable, Identifiable {
             return l.lampLevels[i]
         }
     }
+
+    /// 与 HouseDevice 的 slot / kind 对应（仅已放进小屋的位置）
+    func matchedDevice(in devices: [HouseDevice]) -> HouseDevice? {
+        switch role {
+        case "tv": return devices.first { $0.kind == .tv && $0.slot == (slot ?? 0) }
+        case "ac": return devices.first { $0.kind == .ac && $0.slot == (slot ?? 0) }
+        default:
+            guard let i = slot else { return nil }
+            return devices.first { $0.kind == .light && $0.slot == i }
+        }
+    }
 }
 
 struct HouseCutawayModule: Decodable {
@@ -170,6 +181,8 @@ struct HouseCutawaySceneView: View {
     var phase: HousePhase = .from()
     var showLabels = true
     var fitWidth: CGFloat?
+    /// 点剖面里的灯具切换设备；快照 CLI 传 nil
+    var onToggle: ((String) -> Void)? = nil
 
     private var cut: HouseCutawaySceneFile? { HouseAssets.cutawayScene() }
     private var artSize: CGSize { cut?.artSize ?? CGSize(width: 960, height: 540) }
@@ -185,7 +198,8 @@ struct HouseCutawaySceneView: View {
                 if let lit = HouseAssets.cutawayImage(phase: phase, lit: true) {
                     ForEach(rooms) { room in
                         if let m = cut?.modules[room.module.rawValue] {
-                            HouseRoomLightLayer(module: m, lighting: room.lighting, lit: lit, unlit: unlit, artSize: artSize)
+                            HouseRoomLightLayer(module: m, devices: room.devices, lighting: room.lighting,
+                                                lit: lit, unlit: unlit, artSize: artSize, onToggle: onToggle)
                         }
                     }
                 }
@@ -219,19 +233,23 @@ struct HouseCutawaySceneView: View {
 /// 单个房间：每盏开着的灯按「房间多边形 ∩ 灯具蒙版」露出 lit 底图；关着的灯具本体用 unlit 盖回去。
 private struct HouseRoomLightLayer: View {
     let module: HouseCutawayModule
+    let devices: [HouseDevice]
     let lighting: RoomModuleLighting
     let lit: NSImage
     let unlit: NSImage
     let artSize: CGSize
+    var onToggle: ((String) -> Void)?
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             ForEach(module.lights) { light in
                 let k = light.strength(lighting)
-                image(lit)
-                    .mask(revealMask(light.reveal ?? .room))
-                    .opacity(k)
-                    .animation(.easeInOut(duration: 0.35), value: k)
+                if let reveal = light.reveal {
+                    image(lit)
+                        .mask(revealMask(reveal))
+                        .opacity(k)
+                        .animation(.easeInOut(duration: 0.35), value: k)
+                }
             }
             ForEach(module.lights) { light in
                 if let core = light.corePolygon {
@@ -242,9 +260,23 @@ private struct HouseRoomLightLayer: View {
                         .animation(.easeInOut(duration: 0.35), value: k)
                 }
             }
+            if onToggle != nil {
+                ForEach(module.lights) { light in
+                    if let dev = light.matchedDevice(in: devices), let hit = HouseFixtureHit(light: light) {
+                        hit.shape
+                            .fill(Color.white.opacity(0.001))
+                            .contentShape(hit.shape)
+                            .onTapGesture { onToggle?(dev.did) }
+                            .accessibilityElement()
+                            .accessibilityAddTraits(.isButton)
+                            .accessibilityLabel(dev.name)
+                            .accessibilityValue(dev.on ? L("开", "On") : L("关", "Off"))
+                            .accessibilityHint(L("切换设备", "Toggle device"))
+                    }
+                }
+            }
         }
         .frame(width: artSize.width, height: artSize.height)
-        .allowsHitTesting(false)
     }
 
     private func image(_ img: NSImage) -> some View {
@@ -284,6 +316,28 @@ struct HousePolygon: Shape {
     }
 }
 
+/// 灯具点击区域：优先灯罩/屏幕/本体多边形，否则略放大的 reveal 椭圆
+private struct HouseFixtureHit {
+    let shape: AnyShape
+
+    init?(light: HouseLightSpec) {
+        if let poly = light.corePolygon, poly.count >= 3 {
+            shape = AnyShape(HousePolygon(points: poly))
+            return
+        }
+        guard case let .ellipse(cx, cy, rx, ry) = light.reveal else { return nil }
+        let pad = 1.12
+        shape = AnyShape(HouseRevealEllipse(cx: cx, cy: cy, rx: rx * pad, ry: ry * pad))
+    }
+}
+
+private struct HouseRevealEllipse: Shape {
+    let cx, cy, rx, ry: Double
+    func path(in _: CGRect) -> Path {
+        Path(ellipseIn: CGRect(x: cx - rx, y: cy - ry, width: rx * 2, height: ry * 2))
+    }
+}
+
 // MARK: - 整栋小屋
 
 struct HouseFullView: View {
@@ -301,7 +355,8 @@ struct HouseFullView: View {
                 Text(L("这个家里还没有能放进小屋的房间", "No rooms for the house view yet"))
                     .font(.system(size: 12)).foregroundStyle(.secondary).frame(width: sceneWidth, height: 200)
             } else {
-                HouseCutawaySceneView(rooms: rooms, phase: phase, showLabels: true, fitWidth: showChrome ? sceneWidth : nil)
+                HouseCutawaySceneView(rooms: rooms, phase: phase, showLabels: true, fitWidth: showChrome ? sceneWidth : nil,
+                                      onToggle: onToggle)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Theme.stroke))
             }
@@ -428,27 +483,26 @@ struct HouseListEmbed: View {
     }
 
     private func cutaway(rooms: [HouseRoom], phase: HousePhase, width: CGFloat) -> some View {
-        HouseCutawaySceneView(rooms: rooms, phase: phase, showLabels: false, fitWidth: width)
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.stroke))
-            .overlay(alignment: .topTrailing) {
-                Button { HouseWindow.open(model: m) } label: {
-                    Image(systemName: "arrow.up.left.and.arrow.down.right")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.92))
-                        .padding(6)
-                        .background(.black.opacity(0.45), in: Circle())
-                }
-                .buttonStyle(.plain).hoverHighlight()
-                .help(L("放大", "Enlarge"))
-                .padding(6)
+        HouseCutawaySceneView(rooms: rooms, phase: phase, showLabels: false, fitWidth: width) { did in
+            guard let d = m.device(did) else { return }
+            withoutAnimation { m.toggle(d) }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.stroke))
+        .overlay(alignment: .topTrailing) {
+            Button { HouseWindow.open(model: m) } label: {
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.92))
+                    .padding(6)
+                    .background(.black.opacity(0.45), in: Circle())
             }
-            .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .onTapGesture { HouseWindow.open(model: m) }
-            .accessibilityElement(children: .ignore)
-            .accessibilityAddTraits(.isButton)
+            .buttonStyle(.plain).hoverHighlight()
+            .help(L("放大", "Enlarge"))
             .accessibilityLabel(L("放大", "Enlarge"))
-            .accessibilityHint(L("在窗口中打开小屋", "Open house in a window"))
+            .padding(6)
+        }
+        .accessibilityElement(children: .contain)
     }
 }
 

@@ -21,8 +21,9 @@ Pixel coordinates on the 960×540 canvas. Per module (`living`, `bedroom`, `stud
 - `region`: room polygon (floor + walls); light never leaves it
 - `lights[]`:
   - `id`, `kind` (`lamp` | `sconce` | `ceiling` | `screen` | `ac`), `role` (`light` + `slot`, `tv`, `ac`)
-  - `reveal`: `"room"` or `[cx, cy, rx, ry]` ellipse (full to 0.55 radius, linear fade to 1.0). Same math in
-    Swift, in the bake script and in the preview script.
+  - `reveal`: `[cx, cy, rx, ry]` ellipse per fixture (full to 0.55 radius, linear fade to 1.0). Each device
+    uses its own mask so neighbors stay unlit. Same math in Swift, the bake script and the preview script.
+    (`"room"` is only for legacy previews — not used in `house-cutaway.json`.)
   - bake-only: `source`, `radius`, `pool` `[cx, cy, rx, ry]`, `strength`, `throw`, `vent`, `led`, `style`
   - fixture body: `shade` (lamp shade polygon), `screen` (TL, TR, BR, BL quad), `core` (any polygon)
 
