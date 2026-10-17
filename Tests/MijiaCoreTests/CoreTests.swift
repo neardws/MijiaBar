@@ -366,17 +366,6 @@ func acSpec() throws -> DeviceSpec {
         #expect(HouseModule.isEntryFoyer(roomName: "门口"))
         #expect(!HouseModule.isEntryFoyer(roomName: "厨房"))
     }
-    @Test func assignsLivingSlots() {
-        let ds = [
-            Device(did: "1", name: "Lamp", model: "yeelink.light.x", isOnline: true, homeId: "h", homeName: "", roomName: "客厅"),
-            Device(did: "2", name: "TV", model: "xiaomi.tv.x", isOnline: true, homeId: "h", homeName: "", roomName: "客厅"),
-            Device(did: "3", name: "AC", model: "lumi.acpartner.x", isOnline: true, homeId: "h", homeName: "", roomName: "客厅"),
-        ]
-        let r = HouseLayout.assign(ds, in: .living)
-        #expect(r.placed.count == 3)
-        #expect(r.placed.map(\.1.kind) == [.light, .tv, .ac])
-        #expect(r.overflow.isEmpty)
-    }
 }
 
 @Suite struct NotifyTests {

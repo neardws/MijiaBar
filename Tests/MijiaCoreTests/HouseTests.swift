@@ -172,6 +172,7 @@ private func resolve(_ ds: [Device], _ cfg: HomeHouse? = nil, hidden: Set<String
         for m in HouseCatalog.artModules {
             let lights = (modules[m.rawValue]?["lights"] as? [[String: Any]] ?? []).compactMap { $0["id"] as? String }
             #expect(Set(lights) == Set(HouseCatalog.fixtures(m).map(\.id)), "\(m)")
+            #expect((modules[m.rawValue]?["badges"] as? [[Double]])?.count == HouseCatalog.badgeCount(m), "\(m) badges")
         }
     }
 }

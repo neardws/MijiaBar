@@ -28,6 +28,9 @@ final class AppModel: ObservableObject {
     @Published var transports: [String: Transport] = [:]
     /// 是否在家庭局域网（nil = 未知）
     @Published var atHome: Bool?
+    /// 小屋配置（house.json，见 docs/HOUSE.md）；文件变了（命令行、Agent、另一台 Mac 同步过来）会自动刷新
+    @Published var house = HouseFile()
+    private var houseWatcher: HouseFileWatcher?
 
     let mock: Bool
     let controller = Controller(cloud: nil)
@@ -45,6 +48,11 @@ final class AppModel: ObservableObject {
         session = Session.load()
         if let s = session { controller.cloud = XiaomiCloud(session: s) }
         if let c = DeviceCache.load() { homes = c.homes; devices = c.devices }
+        house = HouseStore.load()
+        houseWatcher = HouseFileWatcher(url: HouseStore.url) { [weak self] in
+            let f = HouseStore.load()
+            Task { @MainActor in if let self, self.house != f { self.house = f } }
+        }
         controller.onNetworkChange = { [weak self] in Task { @MainActor in self?.updateHome() } }
         updateHome()
         if session != nil { Task { await refresh() } }

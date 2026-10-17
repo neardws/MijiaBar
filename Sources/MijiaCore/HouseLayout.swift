@@ -285,37 +285,3 @@ public enum HouseResolver {
     }
 }
 
-// MARK: - 旧接口（按类型 + 序号放位置）。App 改用 HouseResolver 后删除
-
-public enum HouseSlotKind: String, CaseIterable, Sendable {
-    case light, ac, tv
-    public static func of(_ c: DeviceCategory) -> HouseSlotKind? {
-        switch c { case .light: return .light; case .ac: return .ac; case .tv: return .tv; default: return nil }
-    }
-}
-
-public struct HouseSlot: Hashable, Sendable {
-    public let kind: HouseSlotKind
-    public let index: Int
-    public init(_ kind: HouseSlotKind, _ index: Int) { self.kind = kind; self.index = index }
-}
-
-public enum HouseLayout {
-    public static func capacity(_ m: HouseModule, _ k: HouseSlotKind) -> Int {
-        switch (m, k) {
-        case (.living, .light), (.bedroom, .light), (.study, .light): return 2
-        case (.living, .tv), (.bedroom, .tv), (.study, .tv): return 1
-        case (.generic, .light): return 1
-        case (.living, .ac), (.bedroom, .ac), (.study, .ac): return 1
-        default: return 0
-        }
-    }
-    public static func assign(_ ds: [Device], in m: HouseModule) -> (placed: [(Device, HouseSlot)], overflow: [Device]) {
-        var used: [HouseSlotKind: Int] = [:]; var placed: [(Device, HouseSlot)] = []; var over: [Device] = []
-        for d in ds {
-            guard let k = HouseSlotKind.of(d.category), used[k, default: 0] < capacity(m, k) else { over.append(d); continue }
-            placed.append((d, HouseSlot(k, used[k, default: 0]))); used[k, default: 0] += 1
-        }
-        return (placed, over)
-    }
-}
