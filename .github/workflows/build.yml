@@ -21,6 +21,12 @@ jobs:
         run: scripts/scan-secrets.sh
       - name: Test
         run: scripts/test.sh
+      - name: House Metal snapshot smoke
+        run: |
+          swift build -c release
+          .build/release/MijiaBarApp --house-snapshot /tmp/house-ci
+          test -f /tmp/house-ci/house-hd2d-night.png
+          test -f /tmp/house-ci/house-hd2d-off.png
       - name: Package
         run: |
           V="${GITHUB_REF_NAME#v}"; [[ "$GITHUB_REF" == refs/tags/* ]] || V="0.0.0-dev"

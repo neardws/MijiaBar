@@ -215,6 +215,9 @@ enum HouseLivingScene {
 
 @MainActor
 final class HouseMetalRenderer: NSObject, MTKViewDelegate {
+    /// 最近一次 `init` 失败原因（stderr 也会打印）
+    static var lastInitError: String?
+
     let device: MTLDevice
     let queue: MTLCommandQueue
     let textures: HouseTextureSet
@@ -237,20 +240,44 @@ final class HouseMetalRenderer: NSObject, MTKViewDelegate {
     private var bloomBlur: MTLTexture?
 
     init?(view: MTKView) {
-        guard let dev = view.device ?? MTLCreateSystemDefaultDevice(),
-              let q = dev.makeCommandQueue(),
-              let lib = dev.makeDefaultLibrary() else { return nil }
+        Self.lastInitError = nil
+        guard let dev = view.device ?? MTLCreateSystemDefaultDevice() else {
+            Self.fail("MTLCreateSystemDefaultDevice() returned nil")
+            return nil
+        }
+        guard let q = dev.makeCommandQueue() else {
+            Self.fail("makeCommandQueue() returned nil")
+            return nil
+        }
+        let lib: MTLLibrary
+        switch HouseMetalLibrary.load(device: dev) {
+        case .success(let l): lib = l
+        case .failure(let msg):
+            Self.fail(msg)
+            return nil
+        }
         device = dev; queue = q; view.device = dev
         textures = HouseTextureSet(device: dev)
 
         let sampDesc = MTLSamplerDescriptor()
         sampDesc.minFilter = .nearest; sampDesc.magFilter = .nearest
         sampDesc.sAddressMode = .repeat; sampDesc.tAddressMode = .repeat
-        sampler = dev.makeSamplerState(descriptor: sampDesc)!
+        guard let samp = dev.makeSamplerState(descriptor: sampDesc) else {
+            Self.fail("makeSamplerState(nearest) returned nil")
+            return nil
+        }
+        sampler = samp
 
         func pipe(_ frag: String, blend: Bool, fullscreen: Bool) -> MTLRenderPipelineState? {
-            guard let v = lib.makeFunction(name: fullscreen ? "fullscreen_vertex" : "house_vertex"),
-                  let f = lib.makeFunction(name: frag) else { return nil }
+            let vName = fullscreen ? "fullscreen_vertex" : "house_vertex"
+            guard let v = lib.makeFunction(name: vName) else {
+                Self.fail("Metal function missing: \(vName)")
+                return nil
+            }
+            guard let f = lib.makeFunction(name: frag) else {
+                Self.fail("Metal function missing: \(frag)")
+                return nil
+            }
             let d = MTLRenderPipelineDescriptor()
             d.vertexFunction = v; d.fragmentFunction = f
             d.colorAttachments[0].pixelFormat = .bgra8Unorm
@@ -263,7 +290,11 @@ final class HouseMetalRenderer: NSObject, MTKViewDelegate {
                 d.colorAttachments[0].sourceAlphaBlendFactor = .one
                 d.colorAttachments[0].destinationAlphaBlendFactor = .one
             }
-            return try? dev.makeRenderPipelineState(descriptor: d)
+            do { return try dev.makeRenderPipelineState(descriptor: d) }
+            catch {
+                Self.fail("makeRenderPipelineState(\(frag)): \(error)")
+                return nil
+            }
         }
 
         guard let main = pipe("house_fragment", blend: false, fullscreen: false),
@@ -281,6 +312,11 @@ final class HouseMetalRenderer: NSObject, MTKViewDelegate {
         view.isPaused = false
         view.enableSetNeedsDisplay = false
         rebuildTargets(size: view.drawableSize)
+    }
+
+    private static func fail(_ message: String) {
+        lastInitError = message
+        fputs("house-metal renderer init failed: \(message)\n", stderr)
     }
 
     func rebuildTargets(size: CGSize) {
@@ -553,19 +589,36 @@ struct HouseLivingMetalScreen: View {
 // MARK: - 截图 CLI
 
 enum HouseMetalSnapshot {
+    static var lastFailure: String?
+
     @MainActor static func render(state: HouseLivingDemo, size: CGSize = CGSize(width: 1200, height: 800)) -> CGImage? {
+        lastFailure = nil
         let view = MTKView(frame: CGRect(origin: .zero, size: size))
         view.drawableSize = size
-        guard let r = HouseMetalRenderer(view: view) else { return nil }
+        guard let r = HouseMetalRenderer(view: view) else {
+            lastFailure = HouseMetalRenderer.lastInitError ?? "HouseMetalRenderer init returned nil"
+            return nil
+        }
         r.state = state
         r.rebuildTargets(size: size)
         r.renderStillFrames(24)
-        guard let tex = r.sceneTex else { return nil }
-        return tex.cgImage(device: r.device, queue: r.queue)
+        guard let tex = r.sceneTex else {
+            lastFailure = "sceneTex nil after renderStillFrames"
+            return nil
+        }
+        guard let img = tex.cgImage(device: r.device, queue: r.queue) else {
+            lastFailure = "failed to read sceneTex bytes into CGImage"
+            return nil
+        }
+        return img
     }
 
     @MainActor static func write(_ img: CGImage?, _ url: URL) {
-        guard let img else { print("house-metal snapshot failed"); return }
+        guard let img else {
+            let reason = lastFailure ?? HouseMetalRenderer.lastInitError ?? "unknown"
+            fputs("house-metal snapshot failed (\(url.lastPathComponent)): \(reason)\n", stderr)
+            return
+        }
         try? NSBitmapImageRep(cgImage: img).representation(using: .png, properties: [:])?.write(to: url)
         print("wrote \(url.path)")
     }
@@ -577,10 +630,21 @@ extension Snapshot {
         NSApplication.shared.setActivationPolicy(.accessory)
         let out = URL(fileURLWithPath: dir)
         try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
+        var ok = true
         let night = HouseLivingDemo(lampOn: true, tvOn: true, acOn: true, acTemp: 26)
-        HouseMetalSnapshot.write(HouseMetalSnapshot.render(state: night), out.appendingPathComponent("house-hd2d-night.png"))
+        if let img = HouseMetalSnapshot.render(state: night) {
+            HouseMetalSnapshot.write(img, out.appendingPathComponent("house-hd2d-night.png"))
+        } else {
+            HouseMetalSnapshot.write(nil, out.appendingPathComponent("house-hd2d-night.png"))
+            ok = false
+        }
         let off = HouseLivingDemo(lampOn: false, tvOn: false, acOn: false, acTemp: 26)
-        HouseMetalSnapshot.write(HouseMetalSnapshot.render(state: off), out.appendingPathComponent("house-hd2d-off.png"))
-        exit(0)
+        if let img = HouseMetalSnapshot.render(state: off) {
+            HouseMetalSnapshot.write(img, out.appendingPathComponent("house-hd2d-off.png"))
+        } else {
+            HouseMetalSnapshot.write(nil, out.appendingPathComponent("house-hd2d-off.png"))
+            ok = false
+        }
+        exit(ok ? 0 : 1)
     }
 }
