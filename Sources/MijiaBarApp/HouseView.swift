@@ -224,11 +224,14 @@ struct HouseRoomOverlays: View {
     }
 
     @ViewBuilder private func lightLayer(_ light: HouseLightAnchor) -> some View {
-        switch light.kind {
-        case .window: windowFill(light)
-        case .ac: acGlow(light)
-        case .screen: screenGlow(light)
-        case .lamp, .sconce, .entry: lampGlow(light)
+        if light.kind == .window {
+            windowFill(light)
+        } else if light.kind == .ac {
+            acGlow(light)
+        } else if light.kind == .screen {
+            screenGlow(light)
+        } else {
+            lampGlow(light)
         }
     }
 
