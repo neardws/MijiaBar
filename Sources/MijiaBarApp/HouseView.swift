@@ -15,15 +15,35 @@ struct HouseAnchorPoint: Codable {
 }
 
 struct HouseAnchorFile: Codable {
-    let size: [Double]
+    let size: [Double]?
     var lamps: [HouseAnchorPoint]?
     var tv: HouseAnchorRect?
     var window: HouseAnchorRect?
     var ac: HouseAnchorRect?
+    var label: HouseAnchorPoint?
+}
+
+struct HouseCutawayAnchorsFile: Codable {
+    let size: [Double]
+    let modules: [String: HouseAnchorFile]
     var artSize: CGSize { CGSize(width: size[0], height: size[1]) }
 }
 
 enum HouseAssets {
+    static func cutawayImage() -> NSImage? {
+        let url = Bundle.module.url(forResource: "house-cutaway-base", withExtension: "png", subdirectory: "House")
+            ?? Bundle.module.url(forResource: "house-cutaway-base", withExtension: "png")
+        guard let url else { return nil }
+        return NSImage(contentsOf: url)
+    }
+
+    static func cutawayAnchors() -> HouseCutawayAnchorsFile? {
+        guard let url = Bundle.module.url(forResource: "house-cutaway-anchors", withExtension: "json", subdirectory: "House")
+            ?? Bundle.module.url(forResource: "house-cutaway-anchors", withExtension: "json"),
+            let data = try? Data(contentsOf: url) else { return nil }
+        return try? JSONDecoder().decode(HouseCutawayAnchorsFile.self, from: data)
+    }
+
     static func baseImage(_ module: HouseModule) -> NSImage? {
         let name = "\(module.assetPrefix)-base"
         let url = Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "House")
@@ -33,11 +53,18 @@ enum HouseAssets {
     }
 
     static func anchors(_ module: HouseModule) -> HouseAnchorFile? {
+        if let cut = cutawayAnchors()?.modules[module.rawValue] { return cut }
         let name = "\(module.assetPrefix)-anchors"
         guard let url = Bundle.module.url(forResource: name, withExtension: "json", subdirectory: "House")
             ?? Bundle.module.url(forResource: name, withExtension: "json"),
             let data = try? Data(contentsOf: url) else { return nil }
         return try? JSONDecoder().decode(HouseAnchorFile.self, from: data)
+    }
+
+    static func moduleArtSize(_ module: HouseModule) -> CGSize {
+        if let s = cutawayAnchors()?.artSize { return s }
+        if let a = anchors(module), let sz = a.size, sz.count >= 2 { return CGSize(width: sz[0], height: sz[1]) }
+        return CGSize(width: 640, height: 359)
     }
 }
 
@@ -113,56 +140,37 @@ struct LivingRoomLighting: Equatable {
     static let allOff = LivingRoomLighting(lamp: 0, tv: 0, cozy: 0.1)
 }
 
-// MARK: - 单房间瓦片
+// MARK: - 叠光层（单模块锚点）
 
-struct HouseRoomTileView: View {
-    let module: HouseModule
+struct HouseRoomOverlays: View {
+    let anchors: HouseAnchorFile
     let lighting: RoomModuleLighting
-    var scale: CGFloat = 1
-
-    private var meta: HouseAnchorFile? { HouseAssets.anchors(module) }
-    private var artSize: CGSize { meta?.artSize ?? CGSize(width: 640, height: 359) }
+    let artSize: CGSize
 
     var body: some View {
         ZStack {
-            baseArt
-            nightDim
             windowMoon
             acGlow
             tvGlow
             lampGlows
             warmWash
         }
-        .frame(width: artSize.width, height: artSize.height)
-        .scaleEffect(scale)
-        .frame(width: artSize.width * scale, height: artSize.height * scale)
-    }
-
-    @ViewBuilder private var baseArt: some View {
-        if let img = HouseAssets.baseImage(module) {
-            Image(nsImage: img).interpolation(.none).resizable().aspectRatio(contentMode: .fill)
-        } else {
-            Theme.bg2.overlay(Text(module.rawValue).font(.caption2).foregroundStyle(.tertiary))
-        }
-    }
-
-    private var nightDim: some View {
-        Color.black.opacity((1 - lighting.cozy) * 0.78).blendMode(.multiply).allowsHitTesting(false)
+        .allowsHitTesting(false)
     }
 
     @ViewBuilder private var windowMoon: some View {
-        if let r = meta?.window?.cgRect {
+        if let r = anchors.window?.cgRect {
             let k = 0.3 + lighting.cozy * 0.35
             Ellipse()
                 .fill(RadialGradient(colors: [Color(red: 0.55, green: 0.72, blue: 0.9).opacity(0.5 * k), .clear], center: .center, startRadius: 0, endRadius: 110))
                 .frame(width: r.width * artSize.width, height: r.height * artSize.height * 0.75)
                 .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
-                .blendMode(.screen).opacity(k).allowsHitTesting(false)
+                .blendMode(.screen).opacity(k)
         }
     }
 
     @ViewBuilder private var acGlow: some View {
-        if lighting.ac > 0, let r = meta?.ac?.cgRect {
+        if lighting.ac > 0, let r = anchors.ac?.cgRect {
             ZStack {
                 RoundedRectangle(cornerRadius: 4)
                     .fill(LinearGradient(colors: [Theme.cool.opacity(0.9), Theme.cool.opacity(0.5)], startPoint: .top, endPoint: .bottom))
@@ -170,12 +178,12 @@ struct HouseRoomTileView: View {
             }
             .frame(width: r.width * artSize.width, height: r.height * artSize.height)
             .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
-            .blendMode(.screen).opacity(lighting.ac).allowsHitTesting(false)
+            .blendMode(.screen).opacity(lighting.ac)
         }
     }
 
     @ViewBuilder private var tvGlow: some View {
-        if lighting.tv > 0, let r = meta?.tv?.cgRect {
+        if lighting.tv > 0, let r = anchors.tv?.cgRect {
             ZStack {
                 Rectangle()
                     .fill(LinearGradient(colors: [Color(red: 0.25, green: 0.58, blue: 0.98), Color(red: 0.12, green: 0.38, blue: 0.72)], startPoint: .topLeading, endPoint: .bottomTrailing))
@@ -184,12 +192,12 @@ struct HouseRoomTileView: View {
             }
             .frame(width: r.width * artSize.width, height: r.height * artSize.height)
             .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
-            .blendMode(.screen).opacity(lighting.tv).allowsHitTesting(false)
+            .blendMode(.screen).opacity(lighting.tv)
         }
     }
 
     @ViewBuilder private var lampGlows: some View {
-        let lamps = meta?.lamps ?? []
+        let lamps = anchors.lamps ?? []
         ForEach(lamps.indices, id: \.self) { i in
             let k = i < lighting.lampLevels.count ? lighting.lampLevels[i] : 0
             if k > 0 {
@@ -199,16 +207,87 @@ struct HouseRoomTileView: View {
                     Glow(Color(red: 1, green: 0.9, blue: 0.65), 0.5 * k, diameter: 200, softness: 64)
                 }
                 .position(x: p.x * artSize.width, y: p.y * artSize.height)
-                .blendMode(.screen).opacity(k).allowsHitTesting(false)
+                .blendMode(.screen).opacity(k)
             }
         }
     }
 
     private var warmWash: some View {
         let k = max(lighting.lampLevels.max() ?? 0, lighting.tv * 0.65, lighting.ac * 0.4)
-        return LinearGradient(colors: [Color(red: 1, green: 0.72, blue: 0.38).opacity(0.4 * k), .clear], startPoint: .bottom, endPoint: .top)
-            .frame(height: artSize.height * 0.5).frame(maxHeight: .infinity, alignment: .bottom)
-            .blendMode(.screen).allowsHitTesting(false)
+        return LinearGradient(colors: [Color(red: 1, green: 0.72, blue: 0.38).opacity(0.35 * k), .clear], startPoint: .bottom, endPoint: .top)
+            .frame(height: artSize.height * 0.22).frame(maxHeight: .infinity, alignment: .bottom)
+            .blendMode(.screen)
+    }
+}
+
+// MARK: - 连通剖面整栋
+
+struct HouseCutawaySceneView: View {
+    var rooms: [HouseRoom]
+    var showLabels = true
+    var fitWidth: CGFloat?
+
+    private var cut: HouseCutawayAnchorsFile? { HouseAssets.cutawayAnchors() }
+    private var artSize: CGSize { cut?.artSize ?? CGSize(width: 960, height: 540) }
+    private var cozy: Double { rooms.map(\.lighting.cozy).max() ?? 0.1 }
+    private var displayScale: CGFloat {
+        guard let fitWidth else { return 1 }
+        return fitWidth / artSize.width
+    }
+
+    var body: some View {
+        ZStack {
+            baseArt
+            Color.black.opacity((1 - cozy) * 0.78).blendMode(.multiply)
+            ForEach(rooms) { room in
+                if let anchors = cut?.modules[room.module.rawValue] ?? HouseAssets.anchors(room.module) {
+                    HouseRoomOverlays(anchors: anchors, lighting: room.lighting, artSize: artSize)
+                }
+            }
+            if showLabels {
+                ForEach(rooms) { room in
+                    if let p = cut?.modules[room.module.rawValue]?.label?.point ?? HouseAssets.anchors(room.module)?.label?.point {
+                        Text(room.title).font(.system(size: 10, weight: .semibold, design: .rounded))
+                            .padding(.horizontal, 7).padding(.vertical, 3)
+                            .background(.black.opacity(0.5), in: Capsule()).foregroundStyle(.white.opacity(0.92))
+                            .position(x: p.x * artSize.width, y: p.y * artSize.height)
+                    }
+                }
+            }
+        }
+        .frame(width: artSize.width, height: artSize.height)
+        .scaleEffect(displayScale, anchor: .top)
+        .frame(width: artSize.width * displayScale, height: artSize.height * displayScale)
+    }
+
+    @ViewBuilder private var baseArt: some View {
+        if let img = HouseAssets.cutawayImage() {
+            Image(nsImage: img).interpolation(.none).resizable().aspectRatio(contentMode: .fill)
+        } else {
+            Theme.bg2.overlay(Text("house-cutaway").font(.caption).foregroundStyle(.tertiary))
+        }
+    }
+}
+
+struct HouseRoomTileView: View {
+    let module: HouseModule
+    let lighting: RoomModuleLighting
+    var scale: CGFloat = 1
+
+    private var meta: HouseAnchorFile? { HouseAssets.anchors(module) }
+    private var artSize: CGSize { HouseAssets.moduleArtSize(module) }
+
+    var body: some View {
+        ZStack {
+            if let img = HouseAssets.baseImage(module) {
+                Image(nsImage: img).interpolation(.none).resizable().aspectRatio(contentMode: .fill)
+            }
+            Color.black.opacity((1 - lighting.cozy) * 0.78).blendMode(.multiply)
+            if let meta { HouseRoomOverlays(anchors: meta, lighting: lighting, artSize: artSize) }
+        }
+        .frame(width: artSize.width, height: artSize.height)
+        .scaleEffect(scale)
+        .frame(width: artSize.width * scale, height: artSize.height * scale)
     }
 }
 
@@ -219,41 +298,19 @@ struct HouseFullView: View {
     var showChrome = true
     var onToggle: ((String) -> Void)? = nil
 
-    private let tileScale: CGFloat = 0.5
-    private let tileW: CGFloat = 640 * 0.5
-    private let tileH: CGFloat = 359 * 0.5
-    private let cols = 2
-
-    private var rows: Int { max(1, (rooms.count + cols - 1) / cols) }
-    private var canvasW: CGFloat { tileW * CGFloat(cols) - 10 }
-    private var canvasH: CGFloat { tileH * CGFloat(rows) - CGFloat(max(0, rows - 1)) * 8 }
+    private let sceneWidth: CGFloat = 660
 
     var body: some View {
         VStack(spacing: 0) {
             if showChrome { header }
-            ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color(red: 0.06, green: 0.07, blue: 0.11))
-                if rooms.isEmpty {
-                    Text(L("这个家里还没有能放进小屋的房间", "No rooms for the house view yet"))
-                        .font(.system(size: 12)).foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-                ForEach(Array(rooms.enumerated()), id: \.element.id) { i, room in
-                    let cell = HouseLayout.cell(i)
-                    HouseRoomTileView(module: room.module, lighting: room.lighting, scale: tileScale)
-                        .overlay(alignment: .topLeading) {
-                            Text(room.title).font(.system(size: 9, weight: .semibold, design: .rounded))
-                                .padding(.horizontal, 6).padding(.vertical, 3)
-                                .background(.black.opacity(0.45), in: Capsule()).foregroundStyle(.white.opacity(0.9))
-                                .padding(6)
-                        }
-                        .offset(x: CGFloat(cell.col) * (tileW - 12) + (cell.row == 1 ? 4 : 0),
-                                y: CGFloat(cell.row) * (tileH - 10))
-                        .zIndex(Double(i))
-                }
+            if rooms.isEmpty {
+                Text(L("这个家里还没有能放进小屋的房间", "No rooms for the house view yet"))
+                    .font(.system(size: 12)).foregroundStyle(.secondary).frame(width: sceneWidth, height: 200)
+            } else {
+                HouseCutawaySceneView(rooms: rooms, showLabels: true, fitWidth: showChrome ? sceneWidth : nil)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Theme.stroke))
             }
-            .frame(width: canvasW, height: canvasH)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Theme.stroke))
             if showChrome, let onToggle { deviceChips(onToggle) }
         }
         .padding(showChrome ? 12 : 0)
@@ -350,7 +407,7 @@ enum HouseWindow {
     static func open(model: AppModel) {
         if let w = window { w.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true); return }
         let root = HousePilotHost().environmentObject(model)
-        let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 700, height: 520),
+        let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 720, height: 560),
                          styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView], backing: .buffered, defer: false)
         w.title = L("小屋", "House")
         w.titlebarAppearsTransparent = true
@@ -399,9 +456,8 @@ extension Snapshot {
         }
         self.appearance = NSAppearance(named: .darkAqua)
         for (name, rs) in [("house-night", nightRooms), ("house-off", offRooms)] {
-            let rows = max(1, (rs.count + 1) / 2)
-            render(HouseFullView(rooms: rs, showChrome: false), out.appendingPathComponent("\(name).png"),
-                   size: CGSize(width: 630, height: CGFloat(rows) * 175 + 8))
+            render(HouseCutawaySceneView(rooms: rs, showLabels: false), out.appendingPathComponent("\(name).png"),
+                   size: CGSize(width: 960, height: 540))
         }
         render(LivingRoomHouseView(lighting: .nightOn, showChrome: false), out.appendingPathComponent("living-room-night.png"), size: CGSize(width: 640, height: 359))
         render(LivingRoomHouseView(lighting: .allOff, showChrome: false), out.appendingPathComponent("living-room-off.png"), size: CGSize(width: 640, height: 359))
