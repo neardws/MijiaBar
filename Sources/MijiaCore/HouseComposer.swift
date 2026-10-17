@@ -97,18 +97,23 @@ public enum HouseComposer {
             var lights: [[String: Any]] = []
             for L in it.art.lights {
                 var d: [String: Any] = ["id": L.id, "kind": L.kind ?? "lamp", "role": L.role ?? "light"]
+                var hidden = false
                 if let wall = L.wall {
-                    let side: HouseWallSegment.Side = wall == "nw" ? .nw : .ne
-                    let hidden = it.placed.segments.contains { $0.side == side && $0.height < HouseGrid.wallH }
+                    hidden = isHidden(L, wall: wall, segments: it.placed.segments)
                     d["wall"] = wall
-                    if hidden { d["hidden"] = true }
+                    if hidden {
+                        // 本体随墙一起被切掉：不再给本体多边形（App 不画开关灯本体、点击区退回 reveal 椭圆）；
+                        // 灯光本身照旧（光池在地面上，来自全高版 lit 图）；空调这类没有光池的给 alt 徽章位
+                        d["hidden"] = true
+                        if let a = L.alt, a.count >= 2 { d["alt"] = tx(a) }
+                    }
                 }
                 switch L.reveal {
                 case .ellipse(let cx, let cy, let rx, let ry): d["reveal"] = [cx + dx, cy + dy, rx, ry]
                 case .room: d["reveal"] = "room"
                 case nil: break
                 }
-                for (k, poly) in [("shade", L.shade), ("screen", L.screen), ("core", L.core)] {
+                for (k, poly) in [("shade", L.shade), ("screen", L.screen), ("core", L.core)] where !hidden {
                     if let poly { d[k] = poly.map(tx) }
                 }
                 lights.append(d)
@@ -232,6 +237,17 @@ public enum HouseComposer {
     }
 
     /// 模块图：全高版为底，被切的墙段上方竖条换成切墙版（两版像素对齐）
+    /// 墙挂灯具是否被切掉：找到 anchor 所在的那一段墙（按 x 范围）；没有 anchor 时看这一侧任一段。
+    static func isHidden(_ L: HouseModuleLight, wall: String, segments: [HouseWallSegment]) -> Bool {
+        let side: HouseWallSegment.Side = wall == "nw" ? .nw : .ne
+        let segs = segments.filter { $0.side == side }
+        if let a = L.anchor, a.count >= 2,
+           let s = segs.first(where: { Double(min($0.a.x, $0.b.x)) <= a[0] && a[0] <= Double(max($0.a.x, $0.b.x)) }) {
+            return s.height < HouseGrid.wallH
+        }
+        return segs.contains { $0.height < HouseGrid.wallH }
+    }
+
     static func moduleImage(_ it: Item, _ imgs: HouseModuleImages, lit: Bool) -> CGImage {
         let full = lit ? imgs.lit : imgs.unlit
         guard let cut = lit ? imgs.litCut : imgs.unlitCut,
@@ -270,10 +286,9 @@ public enum HouseComposer {
         for it in items {
             let ox = it.ox - originX, oy = it.oy - originY
             func o(_ p: (x: Int, y: Int)) -> (x: Int, y: Int) { (p.x + ox, p.y + oy) }
-            if let imgs = images[it.placed.cell.module] {
-                c.image(moduleImage(it, imgs, lit: lit), x: ox, y: oy)
-            }
             let p = it.placed, T = p.tip
+            // 墙顶厚度条 / 端面 / 壁柱都在墙面“后方”（沿墙顶厚度方向偏移），先画，再盖模块图：
+            // 靠墙摆的高家具（书架、落地灯、冰箱）自然挡住它们，不会被一条墙顶横杠切过去
             let col = p.cell.col, row = p.cell.row, fw = p.fw
             // 墙顶厚度条
             for s in p.segments {
@@ -308,6 +323,9 @@ public enum HouseComposer {
             if occ.contains([col - 1, row]) || occ.contains([col, row - 1]) {
                 let x = T.x + ox, y = T.y + oy
                 c.poly([(x - 3, y - hc), (x + 3, y - hc), (x + 3, y), (x - 3, y)], fill: pal.pilaster, stroke: pal.capEdge)
+            }
+            if let imgs = images[it.placed.cell.module] {
+                c.image(moduleImage(it, imgs, lit: lit), x: ox, y: oy)
             }
         }
         return c.ctx.makeImage()

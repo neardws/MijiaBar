@@ -93,9 +93,7 @@ def compose(layout, modules, pad=24):
     items.sort(key=lambda it: (it['row'], it['col']))
     for it in items:
         mod = modules[it['key']]
-        img = module_image(it, mod)
-        # 剪影外的像素不要（cut 版墙上方是透明的）
-        canvas.alpha_composite(img, (it['ox'] - minx, it['oy'] - miny))
+        # 墙顶 / 端面 / 壁柱在墙面后方，先画；模块图最后盖上（靠墙的高家具挡住它们）
         d = ImageDraw.Draw(canvas)
         col, row, fw, g = it['col'], it['row'], it['fw'], it['g']
         for name, a, b, hh in it['segs']:
@@ -137,4 +135,5 @@ def compose(layout, modules, pad=24):
         if (col - 1, row) in cells or (col, row - 1) in cells:
             x, y = off([T], it)[0]
             d.rectangle([x - 3, y - hc, x + 2, y], fill=(66, 38, 22, 255), outline=CAP_EDGE)
+        canvas.alpha_composite(module_image(it, mod), (it['ox'] - minx, it['oy'] - miny))
     return canvas
