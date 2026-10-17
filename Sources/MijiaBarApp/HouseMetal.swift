@@ -117,11 +117,11 @@ enum HouseLivingScene {
             let s = shade * d
             draws.append(quad(a, b, topB, topA, tex: "plaster", tint: SIMD4(s, s, s * 0.98, 1), depth: a.z, uRepeat: 4))
         }
-        wall(iso(0, 0), iso(N, 0), wallH, shade: 0.88)
-        wall(iso(0, 0), iso(0, N), wallH, shade: 0.72)
+        wall(iso(0, 0), iso(N, 0), h: wallH, shade: 0.88)
+        wall(iso(0, 0), iso(0, N), h: wallH, shade: 0.72)
         // 矮隔断（敞口娃娃屋）
-        wall(iso(N, 0), iso(N, N), 18, shade: 0.8)
-        wall(iso(0, N), iso(N, N), 18, shade: 0.76)
+        wall(iso(N, 0), iso(N, N), h: 18, shade: 0.8)
+        wall(iso(0, N), iso(N, N), h: 18, shade: 0.76)
 
         // 窗 + 夜空
         let wa = iso(3.6, 0, 52), wb = iso(5.2, 0, 52)
@@ -527,7 +527,7 @@ struct HousePill: View {
             Text(label).font(.system(size: 11, weight: .semibold)).foregroundStyle(.white)
         }
         .padding(.horizontal, 10).padding(.vertical, 5)
-        .background(Color(red: 0.08, green: 0.08, blue: 0.12, opacity: 0.85), in: Capsule())
+        .background(.black.opacity(0.82), in: Capsule())
         .overlay(Capsule().stroke(tint.opacity(0.55), lineWidth: 1))
     }
 }
@@ -541,10 +541,12 @@ struct HouseLivingMetalScreen: View {
         ZStack {
             HouseMetalView(state: state, anchors: $anchors) { renderer = $0 }
             if let r = renderer {
-                HousePillOverlay(anchors: anchors) { r.project($0, viewSize: CGSize(width: r.viewportSize.x, height: r.viewportSize.y)) }
+                HousePillOverlay(anchors: anchors) {
+                    r.project($0, viewSize: CGSize(width: CGFloat(r.viewportSize.x), height: CGFloat(r.viewportSize.y)))
+                }
             }
         }
-        .background(Color(red: 0.04, green: 0.05, blue: 0.09))
+        .background(Theme.bg)
     }
 }
 
