@@ -113,7 +113,7 @@ final class HouseHD2DScene: NSObject {
         let wallH: CGFloat = 2.4
         let wallM = HousePix.tiledMat(HousePix.plasterWall())
         wallM.diffuse.contentsTransform = SCNMatrix4MakeScale(3, 2, 1)
-        func addWall(w: CGFloat, l: CGFloat, x: Float, z: Float, rotY: Float) {
+        func addWall(w: CGFloat, l: CGFloat, x: Float, z: Float, rotY: CGFloat) {
             let box = SCNBox(width: w, height: wallH, length: l, chamferRadius: 0)
             box.materials = [wallM]
             let n = SCNNode(geometry: box)
@@ -123,8 +123,8 @@ final class HouseHD2DScene: NSObject {
             roomRoot.addChildNode(n)
         }
         addWall(w: CGFloat(size), l: 0.12, x: size / 2, z: 0, rotY: 0)
-        addWall(w: 0.12, l: CGFloat(size), x: 0, z: size / 2, rotY: Float.pi / 2)
-        addWall(w: 0.12, l: CGFloat(size), x: size, z: size / 2, rotY: Float.pi / 2)
+        addWall(w: 0.12, l: CGFloat(size), x: 0, z: size / 2, rotY: .pi / 2)
+        addWall(w: 0.12, l: CGFloat(size), x: size, z: size / 2, rotY: .pi / 2)
 
         // 地毯
         let rug = SCNBox(width: 2.6, height: 0.02, length: 2.4, chamferRadius: 0.02)
@@ -151,12 +151,12 @@ final class HouseHD2DScene: NSObject {
     private func buildFurniture() {
         let sofa = HousePix.spritePlane("sofa", rows: HousePix.sofa, width: 2.2)
         sofa.position = SCNVector3(3.2, 0, 4.5)
-        sofa.eulerAngles.y = Float.pi
+        sofa.eulerAngles.y = .pi
         roomRoot.addChildNode(sofa)
 
         let stand = HousePix.spritePlane("tvstand", rows: HousePix.tvStand, width: 1.5)
         stand.position = SCNVector3(0.55, 0, 2.5)
-        stand.eulerAngles.y = Float.pi / 2
+        stand.eulerAngles.y = .pi / 2
         roomRoot.addChildNode(stand)
 
         let plant = HousePix.spritePlane("plant", rows: HousePix.plant, width: 0.55)
@@ -216,7 +216,7 @@ final class HouseHD2DScene: NSObject {
                     pm.isDoubleSided = true
                     pool.materials = [pm]
                     let poolN = SCNNode(geometry: pool)
-                    poolN.eulerAngles.x = -Float.pi / 2
+                    poolN.eulerAngles.x = -.pi / 2
                     poolN.position = SCNVector3(0, 0.02, 0)
                     root.addChildNode(poolN)
                 }
@@ -257,7 +257,7 @@ final class HouseHD2DScene: NSObject {
             case .tv:
                 let tv = HousePix.spritePlane("tv", rows: HousePix.tv, width: 1.05, emissive: d.on ? 1.2 : 0)
                 tv.position = SCNVector3(0, 0.55, 0)
-                tv.eulerAngles.y = Float.pi / 2
+                tv.eulerAngles.y = .pi / 2
                 root.addChildNode(tv)
                 tvScreen = tv
                 if d.on {
