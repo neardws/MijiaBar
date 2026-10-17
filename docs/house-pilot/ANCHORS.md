@@ -34,6 +34,9 @@ Regenerate cutaway **base PNGs** separately: `python3 scripts/gen-house-cutaway-
     - **`role`**: maps to device slots — `light` (use **`slot`** index), `tv`, `ac`, or `window` (ambient / phase)
     - **`at`**: `{x,y}` for point glows (lamps)
     - **`rect`**: `{x,y,w,h}` top-left normalized box for screens, AC, windows
+    - **`overlay`**: static alpha PNG in `Resources/House/glows/` — `image` (or `imageDay` / `imageNight` for windows), optional `w`/`h` for point lights
+
+Regenerate glow PNGs: `python3 scripts/gen-house-light-overlays.py` (also runs from `sync-house-lights.py`). Swift draws overlays with **opacity = device/phase strength**; no procedural `Glow` blobs.
 
 ## Verifying alignment
 

@@ -21,6 +21,11 @@
         "at": {
           "x": 0.22,
           "y": 0.34
+        },
+        "overlay": {
+          "image": "bedroom-glow-bedside-tile",
+          "w": 0.125,
+          "h": 0.24
         }
       },
       {
@@ -33,6 +38,9 @@
           "y": 0.12,
           "w": 0.18,
           "h": 0.12
+        },
+        "overlay": {
+          "image": "bedroom-glow-ac-tile"
         }
       },
       {
@@ -44,6 +52,10 @@
           "y": 0.05,
           "w": 0.22,
           "h": 0.28
+        },
+        "overlay": {
+          "imageDay": "bedroom-glow-window-tile-day",
+          "imageNight": "bedroom-glow-window-tile-night"
         }
       }
     ]
@@ -68,6 +80,11 @@
         "at": {
           "x": 0.112,
           "y": 0.278
+        },
+        "overlay": {
+          "image": "bedroom-glow-bedside-cutaway",
+          "w": 0.125,
+          "h": 0.24
         }
       },
       {
@@ -80,6 +97,9 @@
           "y": 0.082,
           "w": 0.058,
           "h": 0.04
+        },
+        "overlay": {
+          "image": "bedroom-glow-ac-cutaway"
         }
       },
       {
@@ -91,6 +111,10 @@
           "y": 0.108,
           "w": 0.054,
           "h": 0.085
+        },
+        "overlay": {
+          "imageDay": "bedroom-glow-window-cutaway-day",
+          "imageNight": "bedroom-glow-window-cutaway-night"
         }
       }
     ],

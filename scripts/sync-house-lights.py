@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -46,6 +47,7 @@ def legacy_anchors(layout: dict) -> dict:
 
 
 def main() -> None:
+    subprocess.run(["python3", str(ROOT / "scripts/gen-house-light-overlays.py")], check=True)
     data = json.loads(SRC.read_text(encoding="utf-8"))
     OUT.mkdir(parents=True, exist_ok=True)
     cut_size = data.get("cutawaySize", [960, 540])

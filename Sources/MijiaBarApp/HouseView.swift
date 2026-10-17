@@ -18,6 +18,14 @@ enum HouseLightKind: String, Codable {
     case lamp, sconce, screen, ac, window, entry
 }
 
+struct HouseLightOverlay: Codable {
+    let image: String?
+    let imageDay: String?
+    let imageNight: String?
+    let w: Double?
+    let h: Double?
+}
+
 struct HouseLightAnchor: Codable, Identifiable {
     let id: String
     let kind: HouseLightKind
@@ -25,6 +33,7 @@ struct HouseLightAnchor: Codable, Identifiable {
     let slot: Int?
     let at: HouseAnchorPoint?
     let rect: HouseAnchorRect?
+    let overlay: HouseLightOverlay?
 }
 
 struct HouseModuleLayout: Codable {
@@ -114,6 +123,13 @@ enum HouseAssets {
         return try? JSONDecoder().decode(HouseAnchorFile.self, from: data)
     }
 
+    static func glowImage(_ name: String) -> NSImage? {
+        let url = Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "House/glows")
+            ?? Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "glows")
+        guard let url else { return nil }
+        return NSImage(contentsOf: url)
+    }
+
     static func moduleArtSize(_ module: HouseModule, cutaway: Bool = false) -> CGSize {
         if cutaway, let s = cutawayScene()?.artSize { return s }
         if let t = moduleLights(module)?.tile.size, t.count >= 2 { return CGSize(width: t[0], height: t[1]) }
@@ -201,7 +217,6 @@ struct HouseRoomOverlays: View {
     let lighting: RoomModuleLighting
     let artSize: CGSize
     var phase: HousePhase = .night
-    var compactLamps = false
 
     private var roomActive: Double { max(lighting.lampLevels.max() ?? 0, lighting.tv, lighting.ac) }
 
@@ -209,7 +224,7 @@ struct HouseRoomOverlays: View {
         ZStack {
             ForEach(layout.lights) { light in
                 HouseLightGlowLayer(light: light, lighting: lighting, artSize: artSize, phase: phase,
-                                    roomActive: roomActive, compactLamps: compactLamps)
+                                    roomActive: roomActive)
             }
         }
         .frame(width: artSize.width, height: artSize.height)
@@ -231,90 +246,56 @@ private struct HouseLightGlowLayer: View {
     let artSize: CGSize
     let phase: HousePhase
     let roomActive: Double
-    var compactLamps = false
 
     private var lampK: Double {
         guard light.role == "light", let i = light.slot, i < lighting.lampLevels.count else { return 0 }
         return lighting.lampLevels[i]
     }
 
-    var body: some View {
+    private var strength: Double {
         switch light.kind {
-        case .window: windowFill
-        case .ac: acGlow
-        case .screen: screenGlow
-        case .lamp, .sconce, .entry: lampGlow
+        case .window:
+            if phase == .day { return 0.42 + roomActive * 0.18 }
+            return roomActive > 0.01 ? min(0.22, 0.06 + roomActive * 0.14) : 0
+        case .ac: return lighting.ac
+        case .screen: return lighting.tv
+        case .lamp, .sconce, .entry: return lampK
         }
     }
 
-    @ViewBuilder private var windowFill: some View {
+    var body: some View {
+        if strength > 0.001 { pngOverlay.opacity(strength) }
+    }
+
+    @ViewBuilder private var pngOverlay: some View {
+        if let name = overlayImageName(), let img = HouseAssets.glowImage(name) {
+            let (w, h, px, py) = frameOnCanvas()
+            Image(nsImage: img)
+                .interpolation(.none)
+                .resizable()
+                .frame(width: w, height: h)
+                .position(x: px, y: py)
+                .blendMode(.screen)
+        }
+    }
+
+    private func overlayImageName() -> String? {
+        guard let ov = light.overlay else { return nil }
+        if light.kind == .window {
+            return phase == .day ? (ov.imageDay ?? ov.image) : (ov.imageNight ?? ov.image)
+        }
+        return ov.image
+    }
+
+    private func frameOnCanvas() -> (CGFloat, CGFloat, CGFloat, CGFloat) {
         if let r = light.rect?.cgRect {
             let w = r.width * artSize.width, h = r.height * artSize.height
-            if phase == .day {
-                let k = 0.42 + roomActive * 0.18
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(LinearGradient(colors: [
-                        Color(red: 0.82, green: 0.92, blue: 1).opacity(0.55),
-                        Color(red: 0.58, green: 0.78, blue: 0.98).opacity(0.28),
-                    ], startPoint: .top, endPoint: .bottom))
-                    .frame(width: w, height: h)
-                    .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
-                    .blendMode(.screen).opacity(k)
-            } else if roomActive > 0.01 {
-                let k = min(0.22, 0.06 + roomActive * 0.14)
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(RadialGradient(colors: [Color(red: 0.62, green: 0.78, blue: 0.92).opacity(0.22), .clear],
-                                         center: .center, startRadius: 0, endRadius: max(w, h) * 0.48))
-                    .frame(width: w, height: h)
-                    .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
-                    .blendMode(.screen).opacity(k)
-            }
+            return (w, h, r.midX * artSize.width, r.midY * artSize.height)
         }
-    }
-
-    @ViewBuilder private var acGlow: some View {
-        if lighting.ac > 0, let r = light.rect?.cgRect {
-            let k = lighting.ac
-            let w = r.width * artSize.width, h = r.height * artSize.height
-            RoundedRectangle(cornerRadius: 3)
-                .fill(RadialGradient(colors: [Theme.cool.opacity(0.32 * k), Theme.cool.opacity(0.12 * k), .clear],
-                                     center: .top, startRadius: 0, endRadius: h * 1.2))
-                .frame(width: w, height: h)
-                .clipShape(RoundedRectangle(cornerRadius: 3))
-                .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
-                .blendMode(.screen)
-        }
-    }
-
-    @ViewBuilder private var screenGlow: some View {
-        if lighting.tv > 0, let r = light.rect?.cgRect {
-            let k = lighting.tv
-            let w = r.width * artSize.width, h = r.height * artSize.height
-            RoundedRectangle(cornerRadius: 4)
-                .fill(RadialGradient(colors: [
-                    Color(red: 0.48, green: 0.72, blue: 0.96).opacity(0.38 * k),
-                    Color(red: 0.22, green: 0.48, blue: 0.78).opacity(0.2 * k),
-                    Color(red: 0.12, green: 0.32, blue: 0.62).opacity(0.08 * k),
-                ], center: .center, startRadius: 0, endRadius: max(w, h) * 0.58))
-                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white.opacity(0.1 * k), lineWidth: 0.5))
-                .frame(width: w, height: h)
-                .clipShape(RoundedRectangle(cornerRadius: 4))
-                .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
-                .blendMode(.screen)
-        }
-    }
-
-    @ViewBuilder private var lampGlow: some View {
-        if lampK > 0, let p = light.at?.point {
-            let inner: CGFloat = compactLamps ? 34 : 44
-            let outer: CGFloat = compactLamps ? 72 : 100
-            ZStack {
-                Glow(Color(red: 1, green: 0.78, blue: 0.42), 0.48 * lampK, diameter: inner, softness: 26)
-                Glow(Color(red: 1, green: 0.9, blue: 0.65), 0.24 * lampK, diameter: outer, softness: 40)
-            }
-            .position(x: p.x * artSize.width, y: p.y * artSize.height)
-            .blendMode(.screen).opacity(0.85 * lampK)
-        }
+        let ow = light.overlay?.w ?? 0.1, oh = light.overlay?.h ?? 0.18
+        let w = CGFloat(ow) * artSize.width, h = CGFloat(oh) * artSize.height
+        let p = light.at?.point ?? .zero
+        return (w, h, CGFloat(p.x) * artSize.width, CGFloat(p.y) * artSize.height)
     }
 }
 

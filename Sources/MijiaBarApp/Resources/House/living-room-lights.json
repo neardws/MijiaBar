@@ -21,6 +21,11 @@
         "at": {
           "x": 0.178,
           "y": 0.31
+        },
+        "overlay": {
+          "image": "living-room-glow-floor_lamp-tile",
+          "w": 0.125,
+          "h": 0.24
         }
       },
       {
@@ -31,6 +36,11 @@
         "at": {
           "x": 0.548,
           "y": 0.268
+        },
+        "overlay": {
+          "image": "living-room-glow-sconce-tile",
+          "w": 0.07,
+          "h": 0.16
         }
       },
       {
@@ -43,6 +53,9 @@
           "y": 0.295,
           "w": 0.21,
           "h": 0.245
+        },
+        "overlay": {
+          "image": "living-room-glow-tv-tile"
         }
       },
       {
@@ -54,6 +67,10 @@
           "y": 0.038,
           "w": 0.26,
           "h": 0.31
+        },
+        "overlay": {
+          "imageDay": "living-room-glow-window-tile-day",
+          "imageNight": "living-room-glow-window-tile-night"
         }
       }
     ]
@@ -78,6 +95,11 @@
         "at": {
           "x": 0.282,
           "y": 0.448
+        },
+        "overlay": {
+          "image": "living-room-glow-floor_lamp-cutaway",
+          "w": 0.125,
+          "h": 0.24
         }
       },
       {
@@ -88,6 +110,11 @@
         "at": {
           "x": 0.522,
           "y": 0.402
+        },
+        "overlay": {
+          "image": "living-room-glow-sconce-cutaway",
+          "w": 0.07,
+          "h": 0.16
         }
       },
       {
@@ -100,6 +127,9 @@
           "y": 0.358,
           "w": 0.076,
           "h": 0.058
+        },
+        "overlay": {
+          "image": "living-room-glow-tv-cutaway"
         }
       },
       {
@@ -111,6 +141,10 @@
           "y": 0.385,
           "w": 0.062,
           "h": 0.095
+        },
+        "overlay": {
+          "imageDay": "living-room-glow-window-cutaway-day",
+          "imageNight": "living-room-glow-window-cutaway-night"
         }
       }
     ],
