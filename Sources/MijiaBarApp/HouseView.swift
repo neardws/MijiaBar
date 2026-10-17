@@ -4,17 +4,17 @@ import MijiaCore
 
 // MARK: - 锚点 / 素材
 
-private struct HouseAnchorRect: Codable {
+struct HouseAnchorRect: Codable {
     let x, y, w, h: Double
     var cgRect: CGRect { CGRect(x: x, y: y, width: w, height: h) }
 }
 
-private struct HouseAnchorPoint: Codable {
+struct HouseAnchorPoint: Codable {
     let x, y: Double
     var point: CGPoint { CGPoint(x: x, y: y) }
 }
 
-private struct HouseAnchorFile: Codable {
+struct HouseAnchorFile: Codable {
     let size: [Double]
     var lamps: [HouseAnchorPoint]?
     var tv: HouseAnchorRect?
@@ -52,11 +52,11 @@ struct RoomModuleLighting: Equatable {
     static let demoNight = RoomModuleLighting(lampLevels: [1, 0.6], tv: 1, ac: 1, cozy: 1)
     static let allOff = RoomModuleLighting(lampLevels: [0, 0], tv: 0, ac: 0, cozy: 0.1)
 
-    static func from(placed: [(Device, HouseSlot)], power: (Device) -> (isOn: Bool)?) -> RoomModuleLighting {
+    static func from(placed: [(Device, HouseSlot)], isOn: (Device) -> Bool?) -> RoomModuleLighting {
         var lamps = [0.0, 0.0]
         var tv = 0.0, ac = 0.0
         for (d, slot) in placed {
-            guard d.isOnline, power(d)?.isOn == true else { continue }
+            guard d.isOnline, isOn(d) == true else { continue }
             switch slot.kind {
             case .light where slot.index < lamps.count: lamps[slot.index] = 1
             case .tv: tv = 1
@@ -95,7 +95,7 @@ extension AppModel {
             let ds = r.placed.map { d, s in
                 HouseDevice(did: d.did, name: displayName(d), kind: s.kind, slot: s.index, on: d.isOnline && (housePower(d) == true))
             }
-            let light = RoomModuleLighting.from(placed: r.placed, power: { housePower($0) })
+            let light = RoomModuleLighting.from(placed: r.placed, isOn: { housePower($0) })
             return HouseRoom(key: k, title: k.isEmpty ? L("未分配房间", "Unassigned") : k, module: mod, devices: ds, overflow: r.overflow.count, lighting: light)
         }
     }
