@@ -109,9 +109,7 @@ LAYOUTS = {
 
 
 def main():
-    # 需要 generic 也生成
-    from .paint import generate_all
-    generate_all(MOD, ["living", "bedroom", "study", "generic", "kitchen", "bathroom", "balcony"])
+    # 不重画经典房间（extract_classic 的产物）；只合成
     out = ROOT / "assets/house/spike"
     out.mkdir(parents=True, exist_ok=True)
     cat = load_catalog()
