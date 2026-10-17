@@ -31,6 +31,9 @@ final class AppModel: ObservableObject {
     /// 小屋配置（house.json，见 docs/HOUSE.md）；文件变了（命令行、Agent、另一台 Mac 同步过来）会自动刷新
     @Published var house = HouseFile()
     private var houseWatcher: HouseFileWatcher?
+    /// HouseWindow 本次打开期间的撤销 / 重做（关窗清空）
+    @Published var houseUndo = HouseUndoStack()
+    @Published var houseNotice: String?
 
     let mock: Bool
     let controller = Controller(cloud: nil)
@@ -51,7 +54,14 @@ final class AppModel: ObservableObject {
         house = HouseStore.load()
         houseWatcher = HouseFileWatcher(url: HouseStore.url) { [weak self] in
             let f = HouseStore.load()
-            Task { @MainActor in if let self, self.house != f { self.house = f } }
+            Task { @MainActor in
+                guard let self, self.house != f else { return }
+                self.house = f
+                // 外部改动碰到了撤销记录里的条目：清空，避免撤销时把别人的改动改回去
+                if self.houseUndo.rebase(on: f) {
+                    self.houseFlash(L("house.json 在别处被改过，撤销记录已清空", "house.json changed elsewhere; undo history cleared"))
+                }
+            }
         }
         controller.onNetworkChange = { [weak self] in Task { @MainActor in self?.updateHome() } }
         updateHome()

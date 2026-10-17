@@ -16,7 +16,7 @@ public struct HouseRoomOverride: Codable, Equatable, Sendable {
 public struct HouseDeviceOverride: Codable, Equatable, Sendable {
     /// false = 小屋里不显示；true = 即使列表里隐藏也显示；nil = 跟随列表
     public var visible: Bool?
-    /// "fixture:<id>" | "badge" | "none"（只在按钮行）| nil = 自动
+    /// "fixture:<id>" | "badge" | "badge:<id>"（指定徽章位）| "none"（只在按钮行）| nil = 自动
     public var place: String?
     public var updatedAt: Date
     public init(visible: Bool? = nil, place: String? = nil, updatedAt: Date = Date()) { self.visible = visible; self.place = place; self.updatedAt = updatedAt }
