@@ -587,7 +587,7 @@ struct HouseLivingMetalScreen: View {
 // MARK: - 截图 CLI
 
 enum HouseMetalSnapshot {
-    static var lastFailure: String?
+    @MainActor static var lastFailure: String?
 
     @MainActor static func render(state: HouseLivingDemo, size: CGSize = CGSize(width: 1200, height: 800)) -> CGImage? {
         lastFailure = nil
