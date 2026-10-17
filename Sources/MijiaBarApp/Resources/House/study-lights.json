@@ -1,0 +1,102 @@
+{
+  "module": "study",
+  "tile": {
+    "size": [
+      640,
+      359
+    ],
+    "clip": {
+      "x": 0,
+      "y": 0,
+      "w": 1,
+      "h": 1
+    },
+    "label": null,
+    "lights": [
+      {
+        "id": "desk_lamp",
+        "kind": "lamp",
+        "role": "light",
+        "slot": 0,
+        "at": {
+          "x": 0.62,
+          "y": 0.38
+        }
+      },
+      {
+        "id": "monitor",
+        "kind": "screen",
+        "role": "tv",
+        "slot": 0,
+        "rect": {
+          "x": 0.38,
+          "y": 0.32,
+          "w": 0.22,
+          "h": 0.18
+        }
+      },
+      {
+        "id": "window",
+        "kind": "window",
+        "role": "window",
+        "rect": {
+          "x": 0.72,
+          "y": 0.06,
+          "w": 0.22,
+          "h": 0.26
+        }
+      }
+    ]
+  },
+  "cutaway": {
+    "clip": {
+      "x": 0.48,
+      "y": 0.02,
+      "w": 0.5,
+      "h": 0.5
+    },
+    "label": {
+      "x": 0.52,
+      "y": 0.04
+    },
+    "lights": [
+      {
+        "id": "desk_lamp",
+        "kind": "lamp",
+        "role": "light",
+        "slot": 0,
+        "at": {
+          "x": 0.675,
+          "y": 0.315
+        }
+      },
+      {
+        "id": "monitor",
+        "kind": "screen",
+        "role": "tv",
+        "slot": 0,
+        "rect": {
+          "x": 0.693,
+          "y": 0.284,
+          "w": 0.07,
+          "h": 0.05
+        }
+      },
+      {
+        "id": "window",
+        "kind": "window",
+        "role": "window",
+        "rect": {
+          "x": 0.745,
+          "y": 0.108,
+          "w": 0.065,
+          "h": 0.195
+        }
+      }
+    ],
+    "size": [
+      960,
+      540
+    ]
+  }
+}

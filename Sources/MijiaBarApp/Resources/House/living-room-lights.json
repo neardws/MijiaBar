@@ -1,0 +1,122 @@
+{
+  "module": "living",
+  "tile": {
+    "size": [
+      640,
+      359
+    ],
+    "clip": {
+      "x": 0,
+      "y": 0,
+      "w": 1,
+      "h": 1
+    },
+    "label": null,
+    "lights": [
+      {
+        "id": "floor_lamp",
+        "kind": "lamp",
+        "role": "light",
+        "slot": 0,
+        "at": {
+          "x": 0.178,
+          "y": 0.31
+        }
+      },
+      {
+        "id": "sconce",
+        "kind": "sconce",
+        "role": "light",
+        "slot": 1,
+        "at": {
+          "x": 0.548,
+          "y": 0.268
+        }
+      },
+      {
+        "id": "tv",
+        "kind": "screen",
+        "role": "tv",
+        "slot": 0,
+        "rect": {
+          "x": 0.628,
+          "y": 0.295,
+          "w": 0.21,
+          "h": 0.245
+        }
+      },
+      {
+        "id": "window",
+        "kind": "window",
+        "role": "window",
+        "rect": {
+          "x": 0.43,
+          "y": 0.038,
+          "w": 0.26,
+          "h": 0.31
+        }
+      }
+    ]
+  },
+  "cutaway": {
+    "clip": {
+      "x": 0.04,
+      "y": 0.33,
+      "w": 0.5,
+      "h": 0.64
+    },
+    "label": {
+      "x": 0.06,
+      "y": 0.54
+    },
+    "lights": [
+      {
+        "id": "floor_lamp",
+        "kind": "lamp",
+        "role": "light",
+        "slot": 0,
+        "at": {
+          "x": 0.245,
+          "y": 0.452
+        }
+      },
+      {
+        "id": "sconce",
+        "kind": "sconce",
+        "role": "light",
+        "slot": 1,
+        "at": {
+          "x": 0.508,
+          "y": 0.405
+        }
+      },
+      {
+        "id": "tv",
+        "kind": "screen",
+        "role": "tv",
+        "slot": 0,
+        "rect": {
+          "x": 0.565,
+          "y": 0.358,
+          "w": 0.076,
+          "h": 0.058
+        }
+      },
+      {
+        "id": "window",
+        "kind": "window",
+        "role": "window",
+        "rect": {
+          "x": 0.328,
+          "y": 0.385,
+          "w": 0.062,
+          "h": 0.095
+        }
+      }
+    ],
+    "size": [
+      960,
+      540
+    ]
+  }
+}

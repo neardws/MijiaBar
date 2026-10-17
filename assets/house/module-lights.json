@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "cutawaySize": [960, 540],
+  "modules": {
+    "living": {
+      "tile": {
+        "size": [640, 359],
+        "clip": { "x": 0, "y": 0, "w": 1, "h": 1 },
+        "label": null,
+        "lights": [
+          { "id": "floor_lamp", "kind": "lamp", "role": "light", "slot": 0, "at": { "x": 0.178, "y": 0.31 } },
+          { "id": "sconce", "kind": "sconce", "role": "light", "slot": 1, "at": { "x": 0.548, "y": 0.268 } },
+          { "id": "tv", "kind": "screen", "role": "tv", "slot": 0, "rect": { "x": 0.628, "y": 0.295, "w": 0.21, "h": 0.245 } },
+          { "id": "window", "kind": "window", "role": "window", "rect": { "x": 0.43, "y": 0.038, "w": 0.26, "h": 0.31 } }
+        ]
+      },
+      "cutaway": {
+        "clip": { "x": 0.04, "y": 0.33, "w": 0.5, "h": 0.64 },
+        "label": { "x": 0.06, "y": 0.54 },
+        "lights": [
+          { "id": "floor_lamp", "kind": "lamp", "role": "light", "slot": 0, "at": { "x": 0.245, "y": 0.452 } },
+          { "id": "sconce", "kind": "sconce", "role": "light", "slot": 1, "at": { "x": 0.508, "y": 0.405 } },
+          { "id": "tv", "kind": "screen", "role": "tv", "slot": 0, "rect": { "x": 0.565, "y": 0.358, "w": 0.076, "h": 0.058 } },
+          { "id": "window", "kind": "window", "role": "window", "rect": { "x": 0.328, "y": 0.385, "w": 0.062, "h": 0.095 } }
+        ]
+      }
+    },
+    "bedroom": {
+      "tile": {
+        "size": [640, 359],
+        "clip": { "x": 0, "y": 0, "w": 1, "h": 1 },
+        "label": null,
+        "lights": [
+          { "id": "bedside", "kind": "lamp", "role": "light", "slot": 0, "at": { "x": 0.22, "y": 0.34 } },
+          { "id": "ac", "kind": "ac", "role": "ac", "slot": 0, "rect": { "x": 0.52, "y": 0.12, "w": 0.18, "h": 0.12 } },
+          { "id": "window", "kind": "window", "role": "window", "rect": { "x": 0.08, "y": 0.05, "w": 0.22, "h": 0.28 } }
+        ]
+      },
+      "cutaway": {
+        "clip": { "x": 0.02, "y": 0.02, "w": 0.56, "h": 0.5 },
+        "label": { "x": 0.04, "y": 0.04 },
+        "lights": [
+          { "id": "bedside", "kind": "lamp", "role": "light", "slot": 0, "at": { "x": 0.112, "y": 0.278 } },
+          { "id": "ac", "kind": "ac", "role": "ac", "slot": 0, "rect": { "x": 0.055, "y": 0.082, "w": 0.058, "h": 0.04 } },
+          { "id": "window", "kind": "window", "role": "window", "rect": { "x": 0.518, "y": 0.108, "w": 0.054, "h": 0.085 } }
+        ]
+      }
+    },
+    "study": {
+      "tile": {
+        "size": [640, 359],
+        "clip": { "x": 0, "y": 0, "w": 1, "h": 1 },
+        "label": null,
+        "lights": [
+          { "id": "desk_lamp", "kind": "lamp", "role": "light", "slot": 0, "at": { "x": 0.62, "y": 0.38 } },
+          { "id": "monitor", "kind": "screen", "role": "tv", "slot": 0, "rect": { "x": 0.38, "y": 0.32, "w": 0.22, "h": 0.18 } },
+          { "id": "window", "kind": "window", "role": "window", "rect": { "x": 0.72, "y": 0.06, "w": 0.22, "h": 0.26 } }
+        ]
+      },
+      "cutaway": {
+        "clip": { "x": 0.48, "y": 0.02, "w": 0.5, "h": 0.5 },
+        "label": { "x": 0.52, "y": 0.04 },
+        "lights": [
+          { "id": "desk_lamp", "kind": "lamp", "role": "light", "slot": 0, "at": { "x": 0.675, "y": 0.315 } },
+          { "id": "monitor", "kind": "screen", "role": "tv", "slot": 0, "rect": { "x": 0.693, "y": 0.284, "w": 0.07, "h": 0.05 } },
+          { "id": "window", "kind": "window", "role": "window", "rect": { "x": 0.745, "y": 0.108, "w": 0.065, "h": 0.195 } }
+        ]
+      }
+    },
+    "generic": {
+      "tile": {
+        "size": [640, 359],
+        "clip": { "x": 0, "y": 0, "w": 1, "h": 1 },
+        "label": null,
+        "lights": [
+          { "id": "entry_light", "kind": "entry", "role": "light", "slot": 0, "at": { "x": 0.55, "y": 0.28 } },
+          { "id": "window", "kind": "window", "role": "window", "rect": { "x": 0.78, "y": 0.1, "w": 0.14, "h": 0.22 } }
+        ]
+      },
+      "cutaway": {
+        "clip": { "x": 0.5, "y": 0.48, "w": 0.48, "h": 0.5 },
+        "label": { "x": 0.54, "y": 0.54 },
+        "lights": [
+          { "id": "entry_light", "kind": "entry", "role": "light", "slot": 0, "at": { "x": 0.722, "y": 0.648 } },
+          { "id": "window", "kind": "window", "role": "window", "rect": { "x": 0.718, "y": 0.588, "w": 0.042, "h": 0.068 } }
+        ]
+      }
+    }
+  }
+}

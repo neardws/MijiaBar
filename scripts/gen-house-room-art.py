@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 from PIL import Image, ImageEnhance, ImageFilter
@@ -12,28 +13,7 @@ ASSETS = ROOT / "assets/house"
 OUT_DIR = ROOT / "Sources/MijiaBarApp/Resources/House"
 TARGET_W = 640
 
-# 归一化锚点（换构图后在此改）
-ANCHORS: dict[str, dict] = {
-    "living-room": {
-        "lamps": [{"x": 0.178, "y": 0.31}],
-        "tv": {"x": 0.628, "y": 0.295, "w": 0.21, "h": 0.245},
-        "window": {"x": 0.43, "y": 0.038, "w": 0.26, "h": 0.31},
-    },
-    "bedroom": {
-        "lamps": [{"x": 0.22, "y": 0.34}, {"x": 0.72, "y": 0.42}],
-        "ac": {"x": 0.52, "y": 0.12, "w": 0.18, "h": 0.12},
-        "window": {"x": 0.08, "y": 0.05, "w": 0.22, "h": 0.28},
-    },
-    "study": {
-        "lamps": [{"x": 0.62, "y": 0.38}],
-        "tv": {"x": 0.38, "y": 0.32, "w": 0.22, "h": 0.18},
-        "window": {"x": 0.72, "y": 0.06, "w": 0.22, "h": 0.26},
-    },
-    "generic": {
-        "lamps": [{"x": 0.55, "y": 0.28}],
-        "window": {"x": 0.78, "y": 0.1, "w": 0.14, "h": 0.22},
-    },
-}
+# 锚点由 assets/house/module-lights.json + scripts/sync-house-lights.py 维护
 
 ROOMS = [
     ("living-room", "living-room-base-src.jpg"),
@@ -66,9 +46,8 @@ def main() -> None:
             raise SystemExit(f"missing {src}")
         im = pixelize(load_source(src), TARGET_W)
         im.save(OUT_DIR / f"{prefix}-base.png", optimize=True)
-        meta = {"size": [im.width, im.height], **ANCHORS[prefix]}
-        (OUT_DIR / f"{prefix}-anchors.json").write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
         print(f"{prefix}: {im.width}x{im.height}")
+    subprocess.run([str(ROOT / "scripts/sync-house-lights.py")], check=True)
 
 
 if __name__ == "__main__":

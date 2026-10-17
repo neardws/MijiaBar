@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""预览连通剖面小屋 day/night × on/off → docs/house-pilot/（近似 Swift 叠光强度）"""
+"""预览连通剖面小屋 day/night × on/off → docs/house-pilot/（读取 house-cutaway.json）"""
 from __future__ import annotations
 
 import json
@@ -11,7 +11,7 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter
 ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / "Sources/MijiaBarApp/Resources/House"
 OUT = ROOT / "docs/house-pilot"
-ANCHORS = RES / "house-cutaway-anchors.json"
+SCENE = RES / "house-cutaway.json"
 
 
 def radial(w: int, h: int, cx: float, cy: float, r: float, color: tuple[int, int, int, int]) -> Image.Image:
@@ -24,6 +24,17 @@ def radial(w: int, h: int, cx: float, cy: float, r: float, color: tuple[int, int
                 a = int(color[3] * (1 - d) ** 2.2)
                 px[x, y] = (color[0], color[1], color[2], a)
     return layer.filter(ImageFilter.GaussianBlur(3))
+
+
+def clip_layer(layer: Image.Image, clip: dict) -> Image.Image:
+    w, h = layer.size
+    x0, y0 = int(clip["x"] * w), int(clip["y"] * h)
+    x1, y1 = int((clip["x"] + clip["w"]) * w), int((clip["y"] + clip["h"]) * h)
+    mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mask).rectangle((x0, y0, x1, y1), fill=255)
+    out = layer.copy()
+    out.putalpha(mask)
+    return out
 
 
 def window_day(out: Image.Image, win: dict, strength: float) -> Image.Image:
@@ -53,35 +64,39 @@ def screen_bloom(out: Image.Image, rect: dict, alpha: int) -> Image.Image:
     return ImageChops.screen(out, layer.filter(ImageFilter.GaussianBlur(1)))
 
 
-def apply_module(out: Image.Image, mod: dict, phase: str, devices_on: bool) -> Image.Image:
+def apply_lights(layer: Image.Image, lights: list, phase: str, devices_on: bool) -> Image.Image:
     active = 1.0 if devices_on else 0.0
-    win = mod.get("window")
-    if win:
-        if phase == "day":
-            out = window_day(out, win, 0.42 + active * 0.18)
-        elif active > 0:
-            out = window_night(out, win, min(0.22, 0.06 + active * 0.14))
-    if not devices_on:
-        return out
-    tv = mod.get("tv")
-    if tv:
-        out = screen_bloom(out, tv, 72)
-    ac = mod.get("ac")
-    if ac:
-        out = screen_bloom(out, ac, 48)
-    for lamp in mod.get("lamps", []):
-        w, h = out.size
-        out.alpha_composite(radial(w, h, lamp["x"] * w, lamp["y"] * h, 62, (255, 205, 140, 75)))
-        out.alpha_composite(radial(w, h, lamp["x"] * w, lamp["y"] * h, 110, (255, 225, 170, 35)))
-    return out
+    w, h = layer.size
+    for L in lights:
+        kind = L["kind"]
+        if kind == "window" and L.get("rect"):
+            if phase == "day":
+                layer = window_day(layer, L["rect"], 0.42 + active * 0.18)
+            elif active > 0:
+                layer = window_night(layer, L["rect"], min(0.22, 0.06 + active * 0.14))
+        elif not devices_on:
+            continue
+        elif kind == "screen" and L.get("rect"):
+            layer = screen_bloom(layer, L["rect"], 72)
+        elif kind == "ac" and L.get("rect"):
+            layer = screen_bloom(layer, L["rect"], 48)
+        elif kind in ("lamp", "sconce", "entry") and L.get("at"):
+            p = L["at"]
+            layer.alpha_composite(radial(w, h, p["x"] * w, p["y"] * h, 52, (255, 205, 140, 75)))
+            layer.alpha_composite(radial(w, h, p["x"] * w, p["y"] * h, 88, (255, 225, 170, 35)))
+    return layer
 
 
 def compose(phase: str, devices_on: bool) -> Image.Image:
-    meta = json.loads(ANCHORS.read_text())
+    meta = json.loads(SCENE.read_text())
     base_name = "house-cutaway-day-base.png" if phase == "day" else "house-cutaway-night-base.png"
     out = Image.open(RES / base_name).convert("RGBA")
+    w, h = out.size
     for mod in meta["modules"].values():
-        out = apply_module(out, mod, phase, devices_on)
+        layer = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        layer = apply_lights(layer, mod["lights"], phase, devices_on)
+        layer = clip_layer(layer, mod["clip"])
+        out = Image.alpha_composite(out, layer)
     device_cozy = 1.0 if devices_on else 0.0
     floor = 0.64 if phase == "day" else 0.38
     ambient = min(1.0, max(device_cozy, floor))

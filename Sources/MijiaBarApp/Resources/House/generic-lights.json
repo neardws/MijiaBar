@@ -1,0 +1,78 @@
+{
+  "module": "generic",
+  "tile": {
+    "size": [
+      640,
+      359
+    ],
+    "clip": {
+      "x": 0,
+      "y": 0,
+      "w": 1,
+      "h": 1
+    },
+    "label": null,
+    "lights": [
+      {
+        "id": "entry_light",
+        "kind": "entry",
+        "role": "light",
+        "slot": 0,
+        "at": {
+          "x": 0.55,
+          "y": 0.28
+        }
+      },
+      {
+        "id": "window",
+        "kind": "window",
+        "role": "window",
+        "rect": {
+          "x": 0.78,
+          "y": 0.1,
+          "w": 0.14,
+          "h": 0.22
+        }
+      }
+    ]
+  },
+  "cutaway": {
+    "clip": {
+      "x": 0.5,
+      "y": 0.48,
+      "w": 0.48,
+      "h": 0.5
+    },
+    "label": {
+      "x": 0.54,
+      "y": 0.54
+    },
+    "lights": [
+      {
+        "id": "entry_light",
+        "kind": "entry",
+        "role": "light",
+        "slot": 0,
+        "at": {
+          "x": 0.722,
+          "y": 0.648
+        }
+      },
+      {
+        "id": "window",
+        "kind": "window",
+        "role": "window",
+        "rect": {
+          "x": 0.718,
+          "y": 0.588,
+          "w": 0.042,
+          "h": 0.068
+        }
+      }
+    ],
+    "size": [
+      960,
+      540
+    ]
+  }
+}

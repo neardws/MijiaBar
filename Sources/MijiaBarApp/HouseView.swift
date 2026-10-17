@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 import MijiaCore
 
-// MARK: - 锚点 / 素材
+// MARK: - 锚点 / 素材（每房间 module-lights.json，见 docs/house-pilot/ANCHORS.md）
 
 struct HouseAnchorRect: Codable {
     let x, y, w, h: Double
@@ -14,6 +14,45 @@ struct HouseAnchorPoint: Codable {
     var point: CGPoint { CGPoint(x: x, y: y) }
 }
 
+enum HouseLightKind: String, Codable {
+    case lamp, sconce, screen, ac, window, entry
+}
+
+struct HouseLightAnchor: Codable, Identifiable {
+    let id: String
+    let kind: HouseLightKind
+    let role: String
+    let slot: Int?
+    let at: HouseAnchorPoint?
+    let rect: HouseAnchorRect?
+}
+
+struct HouseModuleLayout: Codable {
+    var size: [Double]?
+    let clip: HouseAnchorRect
+    var label: HouseAnchorPoint?
+    let lights: [HouseLightAnchor]
+}
+
+struct HouseModuleLightsFile: Codable {
+    let module: String
+    let tile: HouseModuleLayout
+    let cutaway: HouseModuleLayout
+}
+
+struct HouseCutawayModule: Codable {
+    let clip: HouseAnchorRect
+    let label: HouseAnchorPoint?
+    let lights: [HouseLightAnchor]
+}
+
+struct HouseCutawaySceneFile: Codable {
+    let size: [Double]
+    let modules: [String: HouseCutawayModule]
+    var artSize: CGSize { CGSize(width: size[0], height: size[1]) }
+}
+
+/// 旧 tile 锚点文件（由 sync-house-lights.py 生成）
 struct HouseAnchorFile: Codable {
     let size: [Double]?
     var lamps: [HouseAnchorPoint]?
@@ -21,12 +60,6 @@ struct HouseAnchorFile: Codable {
     var window: HouseAnchorRect?
     var ac: HouseAnchorRect?
     var label: HouseAnchorPoint?
-}
-
-struct HouseCutawayAnchorsFile: Codable {
-    let size: [Double]
-    let modules: [String: HouseAnchorFile]
-    var artSize: CGSize { CGSize(width: size[0], height: size[1]) }
 }
 
 /// 剖面底图时段：本地 6:00–18:00 为白天，其余为夜间（与系统时区一致）。
@@ -50,11 +83,19 @@ enum HouseAssets {
         return NSImage(contentsOf: url)
     }
 
-    static func cutawayAnchors() -> HouseCutawayAnchorsFile? {
-        guard let url = Bundle.module.url(forResource: "house-cutaway-anchors", withExtension: "json", subdirectory: "House")
-            ?? Bundle.module.url(forResource: "house-cutaway-anchors", withExtension: "json"),
-            let data = try? Data(contentsOf: url) else { return nil }
-        return try? JSONDecoder().decode(HouseCutawayAnchorsFile.self, from: data)
+    static func cutawayScene() -> HouseCutawaySceneFile? {
+        guard let url = Bundle.module.url(forResource: "house-cutaway", withExtension: "json", subdirectory: "House")
+            ?? Bundle.module.url(forResource: "house-cutaway", withExtension: "json"),
+              let data = try? Data(contentsOf: url) else { return nil }
+        return try? JSONDecoder().decode(HouseCutawaySceneFile.self, from: data)
+    }
+
+    static func moduleLights(_ module: HouseModule) -> HouseModuleLightsFile? {
+        let name = "\(module.assetPrefix)-lights"
+        guard let url = Bundle.module.url(forResource: name, withExtension: "json", subdirectory: "House")
+            ?? Bundle.module.url(forResource: name, withExtension: "json"),
+              let data = try? Data(contentsOf: url) else { return nil }
+        return try? JSONDecoder().decode(HouseModuleLightsFile.self, from: data)
     }
 
     static func baseImage(_ module: HouseModule) -> NSImage? {
@@ -66,7 +107,6 @@ enum HouseAssets {
     }
 
     static func anchors(_ module: HouseModule) -> HouseAnchorFile? {
-        if let cut = cutawayAnchors()?.modules[module.rawValue] { return cut }
         let name = "\(module.assetPrefix)-anchors"
         guard let url = Bundle.module.url(forResource: name, withExtension: "json", subdirectory: "House")
             ?? Bundle.module.url(forResource: name, withExtension: "json"),
@@ -74,8 +114,9 @@ enum HouseAssets {
         return try? JSONDecoder().decode(HouseAnchorFile.self, from: data)
     }
 
-    static func moduleArtSize(_ module: HouseModule) -> CGSize {
-        if let s = cutawayAnchors()?.artSize { return s }
+    static func moduleArtSize(_ module: HouseModule, cutaway: Bool = false) -> CGSize {
+        if cutaway, let s = cutawayScene()?.artSize { return s }
+        if let t = moduleLights(module)?.tile.size, t.count >= 2 { return CGSize(width: t[0], height: t[1]) }
         if let a = anchors(module), let sz = a.size, sz.count >= 2 { return CGSize(width: sz[0], height: sz[1]) }
         return CGSize(width: 640, height: 359)
     }
@@ -153,107 +194,114 @@ struct LivingRoomLighting: Equatable {
     static let allOff = LivingRoomLighting(lamp: 0, tv: 0, cozy: 0.1)
 }
 
-// MARK: - 叠光层（单模块锚点）
+// MARK: - 叠光层（module lights 表驱动）
 
 struct HouseRoomOverlays: View {
-    let anchors: HouseAnchorFile
+    let layout: HouseModuleLayout
     let lighting: RoomModuleLighting
     let artSize: CGSize
     var phase: HousePhase = .night
+    var compactLamps = false
 
     private var roomActive: Double { max(lighting.lampLevels.max() ?? 0, lighting.tv, lighting.ac) }
 
     var body: some View {
         ZStack {
-            windowFill
-            acGlow
-            tvGlow
-            lampGlows
-            warmWash
+            ForEach(layout.lights) { light in
+                lightLayer(light)
+            }
         }
         .frame(width: artSize.width, height: artSize.height)
-        .clipped()
+        .mask(clipMask)
         .allowsHitTesting(false)
     }
 
-    @ViewBuilder private var windowFill: some View {
-        if let r = anchors.window?.cgRect {
-            let w = r.width * artSize.width, h = r.height * artSize.height
-            if phase == .day {
-                let k = 0.42 + roomActive * 0.18
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(LinearGradient(colors: [
-                        Color(red: 0.82, green: 0.92, blue: 1).opacity(0.55),
-                        Color(red: 0.58, green: 0.78, blue: 0.98).opacity(0.28),
-                    ], startPoint: .top, endPoint: .bottom))
-                    .frame(width: w, height: h)
-                    .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
-                    .blendMode(.screen).opacity(k)
-            } else if roomActive > 0.01 {
-                let k = min(0.22, 0.06 + roomActive * 0.14)
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(RadialGradient(colors: [Color(red: 0.62, green: 0.78, blue: 0.92).opacity(0.22), .clear],
-                                         center: .center, startRadius: 0, endRadius: max(w, h) * 0.48))
-                    .frame(width: w, height: h)
-                    .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
-                    .blendMode(.screen).opacity(k)
-            }
+    private var clipMask: some View {
+        let r = layout.clip.cgRect
+        return Rectangle()
+            .frame(width: r.width * artSize.width, height: r.height * artSize.height)
+            .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
+    }
+
+    @ViewBuilder private func lightLayer(_ light: HouseLightAnchor) -> some View {
+        switch light.kind {
+        case .window: windowFill(light)
+        case .ac: acGlow(light)
+        case .screen: screenGlow(light)
+        case .lamp, .sconce, .entry: lampGlow(light)
         }
     }
 
-    @ViewBuilder private var acGlow: some View {
-        if lighting.ac > 0, let r = anchors.ac?.cgRect {
-            let k = lighting.ac
-            let w = r.width * artSize.width, h = r.height * artSize.height
-            RoundedRectangle(cornerRadius: 3)
-                .fill(RadialGradient(colors: [Theme.cool.opacity(0.32 * k), Theme.cool.opacity(0.12 * k), .clear],
-                                     center: .top, startRadius: 0, endRadius: h * 1.2))
+    private func lampStrength(_ light: HouseLightAnchor) -> Double {
+        guard light.role == "light", let i = light.slot, i < lighting.lampLevels.count else { return 0 }
+        return lighting.lampLevels[i]
+    }
+
+    @ViewBuilder private func windowFill(_ light: HouseLightAnchor) {
+        guard let r = light.rect?.cgRect else { return }
+        let w = r.width * artSize.width, h = r.height * artSize.height
+        if phase == .day {
+            let k = 0.42 + roomActive * 0.18
+            RoundedRectangle(cornerRadius: 2)
+                .fill(LinearGradient(colors: [
+                    Color(red: 0.82, green: 0.92, blue: 1).opacity(0.55),
+                    Color(red: 0.58, green: 0.78, blue: 0.98).opacity(0.28),
+                ], startPoint: .top, endPoint: .bottom))
                 .frame(width: w, height: h)
-                .clipShape(RoundedRectangle(cornerRadius: 3))
                 .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
-                .blendMode(.screen)
-        }
-    }
-
-    @ViewBuilder private var tvGlow: some View {
-        if lighting.tv > 0, let r = anchors.tv?.cgRect {
-            let k = lighting.tv
-            let w = r.width * artSize.width, h = r.height * artSize.height
-            RoundedRectangle(cornerRadius: 4)
-                .fill(RadialGradient(colors: [
-                    Color(red: 0.48, green: 0.72, blue: 0.96).opacity(0.38 * k),
-                    Color(red: 0.22, green: 0.48, blue: 0.78).opacity(0.2 * k),
-                    Color(red: 0.12, green: 0.32, blue: 0.62).opacity(0.08 * k),
-                ], center: .center, startRadius: 0, endRadius: max(w, h) * 0.58))
-                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white.opacity(0.1 * k), lineWidth: 0.5))
+                .blendMode(.screen).opacity(k)
+        } else if roomActive > 0.01 {
+            let k = min(0.22, 0.06 + roomActive * 0.14)
+            RoundedRectangle(cornerRadius: 2)
+                .fill(RadialGradient(colors: [Color(red: 0.62, green: 0.78, blue: 0.92).opacity(0.22), .clear],
+                                     center: .center, startRadius: 0, endRadius: max(w, h) * 0.48))
                 .frame(width: w, height: h)
-                .clipShape(RoundedRectangle(cornerRadius: 4))
                 .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
-                .blendMode(.screen)
+                .blendMode(.screen).opacity(k)
         }
     }
 
-    @ViewBuilder private var lampGlows: some View {
-        let lamps = anchors.lamps ?? []
-        ForEach(lamps.indices, id: \.self) { i in
-            let k = i < lighting.lampLevels.count ? lighting.lampLevels[i] : 0
-            if k > 0 {
-                let p = lamps[i].point
-                ZStack {
-                    Glow(Color(red: 1, green: 0.78, blue: 0.42), 0.48 * k, diameter: 44, softness: 30)
-                    Glow(Color(red: 1, green: 0.9, blue: 0.65), 0.26 * k, diameter: 130, softness: 52)
-                }
-                .position(x: p.x * artSize.width, y: p.y * artSize.height)
-                .blendMode(.screen).opacity(0.85 * k)
-            }
-        }
-    }
-
-    private var warmWash: some View {
-        let k = lighting.lampLevels.max() ?? 0
-        return LinearGradient(colors: [Color(red: 1, green: 0.72, blue: 0.38).opacity(0.18 * k), .clear], startPoint: .bottom, endPoint: .top)
-            .frame(height: artSize.height * 0.18).frame(maxHeight: .infinity, alignment: .bottom)
+    @ViewBuilder private func acGlow(_ light: HouseLightAnchor) {
+        guard lighting.ac > 0, let r = light.rect?.cgRect else { return }
+        let k = lighting.ac
+        let w = r.width * artSize.width, h = r.height * artSize.height
+        RoundedRectangle(cornerRadius: 3)
+            .fill(RadialGradient(colors: [Theme.cool.opacity(0.32 * k), Theme.cool.opacity(0.12 * k), .clear],
+                                 center: .top, startRadius: 0, endRadius: h * 1.2))
+            .frame(width: w, height: h)
+            .clipShape(RoundedRectangle(cornerRadius: 3))
+            .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
             .blendMode(.screen)
+    }
+
+    @ViewBuilder private func screenGlow(_ light: HouseLightAnchor) {
+        guard lighting.tv > 0, let r = light.rect?.cgRect else { return }
+        let k = lighting.tv
+        let w = r.width * artSize.width, h = r.height * artSize.height
+        RoundedRectangle(cornerRadius: 4)
+            .fill(RadialGradient(colors: [
+                Color(red: 0.48, green: 0.72, blue: 0.96).opacity(0.38 * k),
+                Color(red: 0.22, green: 0.48, blue: 0.78).opacity(0.2 * k),
+                Color(red: 0.12, green: 0.32, blue: 0.62).opacity(0.08 * k),
+            ], center: .center, startRadius: 0, endRadius: max(w, h) * 0.58))
+            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white.opacity(0.1 * k), lineWidth: 0.5))
+            .frame(width: w, height: h)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .position(x: r.midX * artSize.width, y: r.midY * artSize.height)
+            .blendMode(.screen)
+    }
+
+    @ViewBuilder private func lampGlow(_ light: HouseLightAnchor) {
+        let k = lampStrength(light)
+        guard k > 0, let p = light.at?.point else { return }
+        let inner: CGFloat = compactLamps ? 34 : 44
+        let outer: CGFloat = compactLamps ? 72 : 100
+        ZStack {
+            Glow(Color(red: 1, green: 0.78, blue: 0.42), 0.48 * k, diameter: inner, softness: 26)
+            Glow(Color(red: 1, green: 0.9, blue: 0.65), 0.24 * k, diameter: outer, softness: 40)
+        }
+        .position(x: p.x * artSize.width, y: p.y * artSize.height)
+        .blendMode(.screen).opacity(0.85 * k)
     }
 }
 
@@ -265,7 +313,7 @@ struct HouseCutawaySceneView: View {
     var showLabels = true
     var fitWidth: CGFloat?
 
-    private var cut: HouseCutawayAnchorsFile? { HouseAssets.cutawayAnchors() }
+    private var cut: HouseCutawaySceneFile? { HouseAssets.cutawayScene() }
     private var artSize: CGSize { cut?.artSize ?? CGSize(width: 960, height: 540) }
     private var deviceCozy: Double { rooms.map(\.lighting.cozy).max() ?? 0 }
     /// 关灯时仍保留可读环境光（白天底图更亮、乘暗更轻）。
@@ -284,13 +332,14 @@ struct HouseCutawaySceneView: View {
             baseArt
             Color.black.opacity((1 - ambient) * dimStrength).blendMode(.multiply)
             ForEach(rooms) { room in
-                if let anchors = cut?.modules[room.module.rawValue] ?? HouseAssets.anchors(room.module) {
-                    HouseRoomOverlays(anchors: anchors, lighting: room.lighting, artSize: artSize, phase: phase)
+                if let layout = cutawayLayout(for: room.module) {
+                    HouseRoomOverlays(layout: layout, lighting: room.lighting, artSize: artSize, phase: phase, compactLamps: true)
                 }
             }
             if showLabels {
                 ForEach(rooms) { room in
-                    if let p = cut?.modules[room.module.rawValue]?.label?.point ?? HouseAssets.anchors(room.module)?.label?.point {
+                    if let p = cut?.modules[room.module.rawValue]?.label?.point
+                        ?? HouseAssets.moduleLights(room.module)?.cutaway.label?.point {
                         Text(room.title).font(.system(size: 10, weight: .semibold, design: .rounded))
                             .padding(.horizontal, 7).padding(.vertical, 3)
                             .background(.black.opacity(0.5), in: Capsule()).foregroundStyle(.white.opacity(0.92))
@@ -313,6 +362,13 @@ struct HouseCutawaySceneView: View {
             Theme.bg2.overlay(Text("house-cutaway").font(.caption).foregroundStyle(.tertiary))
         }
     }
+
+    private func cutawayLayout(for module: HouseModule) -> HouseModuleLayout? {
+        if let m = cut?.modules[module.rawValue] {
+            return HouseModuleLayout(size: [artSize.width, artSize.height], clip: m.clip, label: m.label, lights: m.lights)
+        }
+        return HouseAssets.moduleLights(module)?.cutaway
+    }
 }
 
 struct HouseRoomTileView: View {
@@ -320,7 +376,7 @@ struct HouseRoomTileView: View {
     let lighting: RoomModuleLighting
     var scale: CGFloat = 1
 
-    private var meta: HouseAnchorFile? { HouseAssets.anchors(module) }
+    private var tileLayout: HouseModuleLayout? { HouseAssets.moduleLights(module)?.tile }
     private var artSize: CGSize { HouseAssets.moduleArtSize(module) }
 
     var body: some View {
@@ -329,7 +385,7 @@ struct HouseRoomTileView: View {
                 Image(nsImage: img).interpolation(.none).resizable().aspectRatio(contentMode: .fill)
             }
             Color.black.opacity((1 - lighting.cozy) * 0.78).blendMode(.multiply)
-            if let meta { HouseRoomOverlays(anchors: meta, lighting: lighting, artSize: artSize) }
+            if let tileLayout { HouseRoomOverlays(layout: tileLayout, lighting: lighting, artSize: artSize) }
         }
         .frame(width: artSize.width, height: artSize.height)
         .scaleEffect(scale)
