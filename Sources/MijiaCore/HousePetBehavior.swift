@@ -48,6 +48,7 @@ public final class HousePetBehavior: @unchecked Sendable {
         var rest: HousePetWorld.Spot
     }
     private struct Plan { var segments: [Segment] }
+    private struct Route: Hashable { var from: Int; var to: Int }
     private let rig: HousePetRig
     private let lock = NSLock()
     private var plans: [String: Plan] = [:]
@@ -85,6 +86,7 @@ public final class HousePetBehavior: @unchecked Sendable {
         }
         func build() -> Plan {
             let spots = reservedSpots()
+            var routes: [Route: [Int]] = [:]
             var state = Self.seed("\(calendar.component(.year, from: day))-\(calendar.component(.month, from: day))-\(calendar.component(.day, from: day))|\(pet.id)")
             func random(_ count: Int) -> Int { state = state &* 6364136223846793005 &+ 1442695040888963407; return Int((state >> 32) % UInt64(max(1, count))) }
             var segments: [Segment] = [], time = 0.0, current = spots[random(spots.count)]
@@ -94,7 +96,11 @@ public final class HousePetBehavior: @unchecked Sendable {
             while time < 90000 {
                 let action = ["idle", "sit", "groom", "lookup", "stretch", "sleep"][random(6)]
                 append(current.point, current.point, current.node, current.facing, action, Double(8 + random(53)), rest: current)
-                let next = spots[random(spots.count)], path = world.path(from: current.node, to: next.node, room: pet.homeRoom, allowedRooms: rooms)
+                let next = spots[random(spots.count)], route = Route(from: current.node, to: next.node)
+                let path: [Int]
+                if let cached = routes[route] { path = cached } else {
+                    path = world.path(from: current.node, to: next.node, room: pet.homeRoom, allowedRooms: rooms); routes[route] = path
+                }
                 guard !path.isEmpty else { continue }
                 Self.travel(path: path, from: current.point, target: next, world: world) { from, to, node, facing, action, duration in
                     append(from, to, node, facing, action, duration, rest: next)
