@@ -33,7 +33,7 @@ def lamp(g, id, u, v, z, slot=0, wall=None, kind='lamp'):
 def ceiling(g, id, u, v, slot=0):
     # alt = 编辑模式里灯具位的落点：光斑中心往上一点（“天花板上”），不和地板中部的徽章位叠在一起
     return {"id": id, "kind": "ceiling", "role": "light", "slot": slot,
-            "pool": ell(g, u, v, 120, 48), "reveal": ell(g, u, v, 160, 80), "alt": P(g, u, v, 16)}
+            "pool": ell(g, u, v, 120, 48), "reveal": ell(g, u, v, 160, 80), "alt": P(g, u, v, 40)}
 
 # 1x1 模块的徽章位：地板中心周围三点（左、右、前），彼此 ≥ 60px，离相邻房间的徽章位也够远
 SPREAD = [(0.28, 0.66), (0.66, 0.28), (0.74, 0.74)]
@@ -53,6 +53,7 @@ def spec(module):
                    "screen": [[372, 153], [419, 173], [419, 209], [372, 190]], "throw": [-40, 40], "radius": 85,
                    "reveal": ell(g, 1.35, 0.6, 120, 85)}]
         badges = b([(0.5, 0.75), (1.0, 0.8), (1.5, 0.75), (1.2, 0.5)])
+        floor_label = P(g, 0.35, 0.3, 0)   # 两面后墙都被切时：沙发前的空地（避开徽章位）
     elif module == 'bedroom':
         lights = [dict(lamp(g, 'bedside', 0.07, 0.09, 44), pool=ell(g, 0.2, 0.3, 100, 40)),
                   {"id": "ac", "kind": "ac", "role": "ac", "slot": 0, "wall": "nw",
