@@ -90,9 +90,11 @@ final class HousePetPainter {
               byRoom: Bool = true, context state: HousePetContext, date: Date,
               unlit: CGImage?, lit: CGImage?, poses: [String: HousePetPose] = [:]) {
         guard state.enabled, let rig, let behavior else { return }
+        let active = pets.filter { $0.enabled && !$0.deleted }
+        let resolved = behavior.poses(active, world: world, context: state, at: date, overrides: poses)
         var ordered: [(HousePet, HousePetPose)] = []
-        for pet in pets where pet.enabled && !pet.deleted {
-            let pose = poses[pet.id] ?? behavior.pose(pet, world: world, context: state, at: date)
+        for pet in active {
+            guard let pose = resolved[pet.id] else { continue }
             ordered.append((pet, pose))
         }
         ordered.sort { left, right in
