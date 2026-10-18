@@ -31,8 +31,13 @@ struct HouseArrangeView: View {
             VStack(alignment: .leading, spacing: 12) {
                 toolbar
                 grid
-                Text(L("拖动房间卡片交换位置；客厅占两格。最多 3×2。经典四室走整图，自定义布局才拼模块。",
-                       "Drag room cards to swap. Living room takes two cells. Max 3×2. Classic four uses the single cutaway; custom layouts stitch modules."))
+                Toggle(isOn: staggerBinding) {
+                    Text(L("错层（房间高低错落）", "Split levels (rooms at staggered heights)")).font(.system(size: 12))
+                }
+                .toggleStyle(.checkbox)
+                .disabled(m.house.homes[home]?.layout == nil)
+                Text(L("拖动房间卡片交换位置；客厅占两格。最多 3×2。经典四室走整图，自定义布局才拼模块。卡片上的 ▲▼ 把房间地面抬高 / 降低一级（默认自动：后排两角高、前排右格低）。",
+                       "Drag room cards to swap. Living room takes two cells. Max 3×2. Classic four uses the single cutaway; custom layouts stitch modules. ▲▼ on a card raises / lowers that room's floor one step (default: back corners up, front right down)."))
                     .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             .padding(16)
@@ -158,12 +163,30 @@ struct HouseArrangeView: View {
 
     private func roomCard(_ c: HouseLayoutCell) -> some View {
         let title = roomTitle(c)
+        let classic = HouseLayoutSolver.isClassicGeometry(m.house.homes[home]?.layout)
+        let lv = classic ? 0 : HouseLevels.effective(c)
         return VStack(alignment: .leading, spacing: 2) {
             Text(title).font(.system(size: 12, weight: .semibold)).lineLimit(1)
             if moduleTitle(c.module) != title {
                 Text(moduleTitle(c.module)).font(.system(size: 10)).foregroundStyle(.secondary)
             }
-            Text("(\(c.col),\(c.row))").font(.system(size: 9, design: .monospaced)).foregroundStyle(.tertiary)
+            Spacer(minLength: 0)
+            HStack(spacing: 4) {
+                Text("(\(c.col),\(c.row))").font(.system(size: 9, design: .monospaced)).foregroundStyle(.tertiary)
+                Spacer(minLength: 0)
+                // 错层：▼ 层 ▲（层后面的 · = 自动图案）
+                Button { setLevel(c, lv - 1) } label: { Image(systemName: "chevron.down").font(.system(size: 9, weight: .bold)) }
+                    .buttonStyle(.borderless).disabled(lv <= HouseGrid.levelRange.lowerBound)
+                    .help(L("降低一级", "Lower one step"))
+                Text((lv > 0 ? "+\(lv)" : "\(lv)") + (c.level == nil && !classic ? "·" : ""))
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(lv == 0 ? Color.secondary : Color.accentColor)
+                    .frame(minWidth: 18)
+                    .help(c.level == nil ? L("自动错层", "Automatic level") : L("手动设置的层", "Level set by you"))
+                Button { setLevel(c, lv + 1) } label: { Image(systemName: "chevron.up").font(.system(size: 9, weight: .bold)) }
+                    .buttonStyle(.borderless).disabled(lv >= HouseGrid.levelRange.upperBound)
+                    .help(L("抬高一级", "Raise one step"))
+            }
         }
         .padding(8)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -188,8 +211,9 @@ struct HouseArrangeView: View {
         guard let i = next.firstIndex(where: { $0.room == fromRoom }),
               let j = next.firstIndex(where: { $0.room == to.room }), i != j else { return }
         let a = next[i], b = next[j]
-        next[i] = HouseLayoutCell(room: a.room, module: a.module, col: b.col, row: b.row)
-        next[j] = HouseLayoutCell(room: b.room, module: b.module, col: a.col, row: a.row)
+        // 手动设的错层跟着房间走；自动的按新位置重新取图案
+        next[i] = HouseLayoutCell(room: a.room, module: a.module, col: b.col, row: b.row, level: a.level)
+        next[j] = HouseLayoutCell(room: b.room, module: b.module, col: a.col, row: a.row, level: b.level)
         guard HouseLayoutSolver.validate(next).isEmpty else {
             m.houseFlash(L("这样会重叠或越界", "That would overlap or go out of bounds"))
             return
@@ -199,7 +223,7 @@ struct HouseArrangeView: View {
 
     private func move(_ src: HouseLayoutCell, toCol: Int, toRow: Int) {
         var next = layout.filter { $0.room != src.room }
-        next.append(HouseLayoutCell(room: src.room, module: src.module, col: toCol, row: toRow))
+        next.append(HouseLayoutCell(room: src.room, module: src.module, col: toCol, row: toRow, level: src.level))
         guard HouseLayoutSolver.validate(next).isEmpty else {
             m.houseFlash(L("这样会重叠或越界", "That would overlap or go out of bounds"))
             return
@@ -207,9 +231,28 @@ struct HouseArrangeView: View {
         m.houseEdit(L("移动房间", "Move room")) { $0.setLayout(home: home, layout: next) }
     }
 
+    /// 错层开关：开 = 自动图案（清掉手动层），关 = 全部平铺
+    private var staggerBinding: Binding<Bool> {
+        Binding(
+            get: { (m.house.homes[home]?.layout).map { !$0.allSatisfy { $0.level == 0 } } ?? false },
+            set: { on in
+                guard let cur = m.house.homes[home]?.layout else { return }
+                let next = HouseLayoutSolver.setAllLevels(cur, flat: !on)
+                m.houseEdit(on ? L("错层", "Split levels") : L("平铺", "Flat floors")) { $0.setLayout(home: home, layout: next) }
+            })
+    }
+
+    private func setLevel(_ c: HouseLayoutCell, _ level: Int) {
+        // 经典四室（layout 为空）：先把经典几何绑到房间上，其余格子自动
+        guard let next = HouseLayoutSolver.setLevel(layout, room: c.room, level: level) else { return }
+        m.houseEdit(L("调整房间高度", "Change room level")) { $0.setLayout(home: home, layout: next) }
+    }
+
     private func refreshPreview() {
         // 同步合成：截图 CLI 的 RunLoop 等待很短，异步 Task 来不及
-        if let result = HouseModuleAssets.compose(layout: layout, phase: phase) {
+        // 经典四室实际走整图（平地），预览也按平地合成，避免和真实小屋不一致
+        let shown = HouseLayoutSolver.isClassicGeometry(m.house.homes[home]?.layout) ? HouseLayoutSolver.setAllLevels(layout, flat: true) : layout
+        if let result = HouseModuleAssets.compose(layout: shown, phase: phase) {
             previewMs = result.ms
             preview = result.image
         } else {
@@ -267,7 +310,7 @@ enum HouseModuleAssets {
 
     /// 自定义布局的整屋场景：合成 unlit / lit + 场景 JSON（按布局 + 时段缓存，布局不变不重算）
     @MainActor static func composedScene(layout: [HouseLayoutCell], phase: HousePhase) -> HouseSceneSource? {
-        let key = "\(phase.assetName)|" + layout.map { "\($0.room)=\($0.module)@\($0.col),\($0.row)" }.joined(separator: ";")
+        let key = "\(phase.assetName)|" + layout.map { "\($0.room)=\($0.module)@\($0.col),\($0.row)^\(HouseLevels.effective($0))" }.joined(separator: ";")
         if let s = scenes[key] { return s }
         guard let (cat, images) = load(phase: phase) else { return nil }
         let r = HouseComposer.compose(.init(layout: layout, catalog: cat, images: images, night: phase == .night))

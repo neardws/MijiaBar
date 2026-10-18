@@ -61,6 +61,10 @@ struct HouseEditSlots: View {
     let room: HouseRoom
     let artSize: CGSize
     let edit: HouseEditContext
+    /// 全场景统一排好的标签中心（labelPositions）；没有就按 labelAbove 放在框上 / 下
+    var labelAt: [HouseSelection: CGPoint] = [:]
+    /// 位置框和标签分两层画（场景里所有房间的框都在下，标签都在上），标签不会被隔壁房间的框压住
+    var labelsLayer = false
 
     /// 一个房间里所有可放置的位置（剖面原图坐标），点选和拖放命中测试共用
     static func targets(module: HouseCutawayModule, room: HouseRoom) -> [(sel: HouseSelection, rect: CGRect, round: Bool, labelAbove: Bool, fixture: String?)] {
@@ -90,6 +94,46 @@ struct HouseEditSlots: View {
             }
         }
         .frame(width: artSize.width, height: artSize.height, alignment: .topLeading)
+    }
+
+    /// 估算标签胶囊大小（14pt semibold + 左右 8 / 上下 3 内边距）
+    static func labelSize(_ text: String, fontSize: CGFloat = 14) -> CGSize {
+        let w = text.reduce(CGFloat(0)) { $0 + ($1.unicodeScalars.first!.value > 0x2E80 ? fontSize : fontSize * 0.56) }
+        return CGSize(width: w + 16, height: fontSize + 8)
+    }
+
+    /// 跨房间统一摆放灯具位标签：依次试 默认侧 / 另一侧 / 右 / 左，挑和已放标签、其他位置框、
+    /// 房间名牌重叠最少且不出画面的位置。房间之间的标签以前各排各的，会叠在一起（r4 审查：卧室空调 × 床头灯）。
+    static func labelPositions(_ items: [(sel: HouseSelection, rect: CGRect, labelAbove: Bool, text: String)],
+                               obstacles: [CGRect], fixedLabels: [CGRect] = [], bounds: CGSize) -> [HouseSelection: CGPoint] {
+        func area(_ a: CGRect, _ b: CGRect) -> CGFloat { let i = a.intersection(b); return i.isNull ? 0 : i.width * i.height }
+        var placed: [CGRect] = fixedLabels, out: [HouseSelection: CGPoint] = [:]
+        let slots = items.map(\.rect) + obstacles
+        // 先排上下文最挤的（周围位置框多的），它们选择少
+        let order = items.indices.sorted { i, j in
+            let ci = slots.filter { $0.insetBy(dx: -60, dy: -40).intersects(items[i].rect) }.count
+            let cj = slots.filter { $0.insetBy(dx: -60, dy: -40).intersects(items[j].rect) }.count
+            return ci != cj ? ci > cj : (items[i].rect.minY, items[i].rect.minX) < (items[j].rect.minY, items[j].rect.minX)
+        }
+        for i in order {
+            let it = items[i], r = it.rect, sz = labelSize(it.text)
+            let below = CGPoint(x: r.midX, y: r.maxY + 16), above = CGPoint(x: r.midX, y: r.minY - 14)
+            var cands = it.labelAbove ? [above, below] : [below, above]
+            cands += [CGPoint(x: r.maxX + sz.width / 2 + 4, y: r.midY), CGPoint(x: r.minX - sz.width / 2 - 4, y: r.midY)]
+            var best = cands[0], bestScore = CGFloat.infinity
+            for (k, c) in cands.enumerated() {
+                let lr = CGRect(x: c.x - sz.width / 2, y: c.y - sz.height / 2, width: sz.width, height: sz.height)
+                var score = CGFloat(k) * 40
+                score += placed.reduce(0) { $0 + area($1, lr) * 12 }
+                score += slots.reduce(0) { $0 + ($1 == r ? 0 : area($1, lr)) * 2 }
+                let inside = lr.intersection(CGRect(origin: .zero, size: bounds))
+                score += (lr.width * lr.height - (inside.isNull ? 0 : inside.width * inside.height)) * 20
+                if score < bestScore { bestScore = score; best = c }
+            }
+            placed.append(CGRect(x: best.x - sz.width / 2, y: best.y - sz.height / 2, width: sz.width, height: sz.height))
+            out[it.sel] = best
+        }
+        return out
     }
 
     private static func rect(_ l: HouseLightSpec) -> CGRect? {
@@ -134,52 +178,57 @@ struct HouseEditSlots: View {
         let solid: Bool = { switch lk { case .hoverOK, .hoverBad: return true; default: return selected } }()
         let isDragged = edit.drag.session?.did == device?.did && device != nil && edit.drag.session != nil
         let shape = RoundedRectangle(cornerRadius: round ? min(r.width, r.height) / 2 : 10, style: .continuous)
-        ZStack {
-            shape.fill(color.opacity(solid ? 0.28 : (lk.isCandidate ? 0.14 : 0.06)))
-            shape.strokeBorder(color.opacity(solid ? 1 : 0.9), style: StrokeStyle(lineWidth: solid ? 4 : (lk.isCandidate ? 2.5 : 2), dash: solid ? [] : [7, 5]))
-            if case .hoverBad = lk {
-                Image(systemName: "nosign").font(.system(size: 18, weight: .bold)).foregroundStyle(red).shadow(color: .black.opacity(0.6), radius: 2)
-            } else if case .hoverOK = lk {
-                Image(systemName: device == nil ? "arrow.down.circle.fill" : "arrow.left.arrow.right.circle.fill")
-                    .font(.system(size: 18, weight: .bold)).foregroundStyle(green).shadow(color: .black.opacity(0.6), radius: 2)
-            } else if device == nil {
-                Image(systemName: "plus").font(.system(size: 16, weight: .bold)).foregroundStyle(color.opacity(0.9))
-                    .shadow(color: .black.opacity(0.6), radius: 2)
-            }
-        }
-        .frame(width: r.width, height: r.height)
-        .scaleEffect(lk.isHover ? 1.1 : 1)
-        .opacity(lk.isInvalid ? 0.3 : (isDragged ? 0.5 : 1))
-        .contentShape(shape)
-        .onTapGesture { edit.onSelect(sel) }
-        .modifier(HouseSlotDrag(enabled: device != nil) { edit.beginDrag(device?.did ?? "", sel) })
-        .position(x: r.midX, y: r.midY)
-        if case .hoverBad(let why) = lk {
-            hoverTag(why, color: red, at: CGPoint(x: r.midX, y: r.maxY + 18))
-        } else if case .hoverOK = lk, let s = edit.drag.session {
-            hoverTag(device == nil || device?.did == s.did ? L("放到这里", "Drop here") : L("和 ", "Swap with ") + (device?.name ?? "") + L(" 交换", ""),
-                     color: green, at: CGPoint(x: r.midX, y: r.maxY + 18))
-        } else if let label, !lk.isInvalid {
-            Text(label)
-                .font(.system(size: 14, weight: .semibold)).lineLimit(1)
-                .foregroundStyle(device != nil ? Color.white : Color.black.opacity(0.8))
-                .padding(.horizontal, 8).padding(.vertical, 3)
-                .background(Capsule().fill(device != nil ? Color.black.opacity(0.72) : Color.white.opacity(0.85)))
-                .overlay(Capsule().stroke(selected ? Color.accentColor : .clear, lineWidth: 2))
-                .fixedSize()
-                .position(x: r.midX, y: labelAbove ? r.minY - 14 : r.maxY + 16)
-                .allowsHitTesting(false)
-        }
-        if lk.isHover, edit.drag.showPreview, let s = edit.drag.session {
-            // 截图模式：系统拖动图像不会进 cacheDisplay，这里画一个同样的拖动标签 + 指针
-            HouseDragChip(name: s.name, category: s.category)
-                .overlay(alignment: .topLeading) {
-                    Image(systemName: "cursorarrow").font(.system(size: 22)).foregroundStyle(.white)
-                        .shadow(color: .black, radius: 1).offset(x: -10, y: -14)
+        let fallback = CGPoint(x: r.midX, y: labelAbove ? r.minY - 14 : r.maxY + 16)
+        let labelPoint: CGPoint = labelAt[sel] ?? fallback
+        if !labelsLayer {
+            ZStack {
+                shape.fill(color.opacity(solid ? 0.28 : (lk.isCandidate ? 0.14 : 0.06)))
+                shape.strokeBorder(color.opacity(solid ? 1 : 0.9), style: StrokeStyle(lineWidth: solid ? 4 : (lk.isCandidate ? 2.5 : 2), dash: solid ? [] : [7, 5]))
+                if case .hoverBad = lk {
+                    Image(systemName: "nosign").font(.system(size: 18, weight: .bold)).foregroundStyle(red).shadow(color: .black.opacity(0.6), radius: 2)
+                } else if case .hoverOK = lk {
+                    Image(systemName: device == nil ? "arrow.down.circle.fill" : "arrow.left.arrow.right.circle.fill")
+                        .font(.system(size: 18, weight: .bold)).foregroundStyle(green).shadow(color: .black.opacity(0.6), radius: 2)
+                } else if device == nil {
+                    Image(systemName: "plus").font(.system(size: 16, weight: .bold)).foregroundStyle(color.opacity(0.9))
+                        .shadow(color: .black.opacity(0.6), radius: 2)
                 }
-                .fixedSize()
-                .position(x: r.midX + 70, y: r.midY + 6)
-                .allowsHitTesting(false)
+            }
+            .frame(width: r.width, height: r.height)
+            .scaleEffect(lk.isHover ? 1.1 : 1)
+            .opacity(lk.isInvalid ? 0.3 : (isDragged ? 0.5 : 1))
+            .contentShape(shape)
+            .onTapGesture { edit.onSelect(sel) }
+            .modifier(HouseSlotDrag(enabled: device != nil) { edit.beginDrag(device?.did ?? "", sel) })
+            .position(x: r.midX, y: r.midY)
+        } else {
+            if case .hoverBad(let why) = lk {
+                hoverTag(why, color: red, at: CGPoint(x: r.midX, y: r.maxY + 18))
+            } else if case .hoverOK = lk, let s = edit.drag.session {
+                hoverTag(device == nil || device?.did == s.did ? L("放到这里", "Drop here") : L("和 ", "Swap with ") + (device?.name ?? "") + L(" 交换", ""),
+                         color: green, at: CGPoint(x: r.midX, y: r.maxY + 18))
+            } else if let label, !lk.isInvalid {
+                Text(label)
+                    .font(.system(size: 14, weight: .semibold)).lineLimit(1)
+                    .foregroundStyle(device != nil ? Color.white : Color.black.opacity(0.8))
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(Capsule().fill(device != nil ? Color.black.opacity(0.72) : Color.white.opacity(0.85)))
+                    .overlay(Capsule().stroke(selected ? Color.accentColor : .clear, lineWidth: 2))
+                    .fixedSize()
+                    .position(labelPoint)
+                    .allowsHitTesting(false)
+            }
+            if lk.isHover, edit.drag.showPreview, let s = edit.drag.session {
+                // 截图模式：系统拖动图像不会进 cacheDisplay，这里画一个同样的拖动标签 + 指针
+                HouseDragChip(name: s.name, category: s.category)
+                    .overlay(alignment: .topLeading) {
+                        Image(systemName: "cursorarrow").font(.system(size: 22)).foregroundStyle(.white)
+                            .shadow(color: .black, radius: 1).offset(x: -10, y: -14)
+                    }
+                    .fixedSize()
+                    .position(x: r.midX + 70, y: r.midY + 6)
+                    .allowsHitTesting(false)
+            }
         }
     }
 

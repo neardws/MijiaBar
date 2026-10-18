@@ -19,7 +19,8 @@ public struct HouseModuleImages {
 /// - 绘制顺序 (row, col) 升序；
 /// - 每面共享墙只由前/右格子画，且切到 cutH（模块的切墙版），外墙全高；
 /// - 墙顶厚度条、露出的墙端面、相邻模块接缝处的壁柱由合成器统一画（不同模块的墙纸接缝被盖住）；
-/// - 整屋外轮廓描边；画布透明（不再铺底色）。
+/// - 整屋外轮廓描边；画布透明（不再铺底色）；
+/// - 错层：每格按 `HouseLevels` 整体上移 elev 像素，地台加厚到全屋最低一格的底面；露出的墙端面按绝对高度算。
 public enum HouseComposer {
     public struct Input {
         public var layout: [HouseLayoutCell]
@@ -45,8 +46,10 @@ public enum HouseComposer {
     struct Item {
         var placed: HouseWallPlanner.Placed
         var art: HouseModuleArt
-        var ox: Int   // 模块 PNG 左上角在画布中的位置
+        var ox: Int   // 模块 PNG 左上角在画布中的位置（已含错层上移）
         var oy: Int
+        /// 地台在模块自带的 slab 之下再加厚多少（= 本格 elev − 全屋最低 elev）
+        var ext: Int = 0
     }
 
     public static func compose(_ input: Input) -> HouseComposeResult {
@@ -60,6 +63,8 @@ public enum HouseComposer {
             tips[c.module] = (art.tip[0], art.tip[1])
         }
         let occ = HouseWallPlanner.occupancy(cells)
+        let elev = HouseLevels.elevations(cells)
+        let base = elev.values.min() ?? 0
         let placed = HouseWallPlanner.plan(cells, tips: tips)
             .sorted { HouseGrid.painterKey(col: $0.cell.col, row: $0.cell.row) < HouseGrid.painterKey(col: $1.cell.col, row: $1.cell.row) }
 
@@ -69,8 +74,8 @@ public enum HouseComposer {
         for p in placed {
             guard let art = arts[p.cell.module] else { continue }
             let w = HouseGrid.tip(col: p.cell.col, row: p.cell.row)
-            let it = Item(placed: p, art: art, ox: w.x - p.tip.x, oy: w.y - p.tip.y)
-            for q in silhouette(p) {
+            let it = Item(placed: p, art: art, ox: w.x - p.tip.x, oy: w.y - p.tip.y - p.elev, ext: p.elev - base)
+            for q in silhouette(p, ext: it.ext) {
                 minX = min(minX, q.x + it.ox); maxX = max(maxX, q.x + it.ox)
                 minY = min(minY, q.y + it.oy); maxY = max(maxY, q.y + it.oy)
             }
@@ -86,8 +91,8 @@ public enum HouseComposer {
         width += width % 2; height += height % 2
 
         let pal = Palette(night: input.night)
-        let unlit = render(items, occ: occ, images: input.images, lit: false, pal: pal, originX: originX, originY: originY, width: width, height: height)
-        let lit = render(items, occ: occ, images: input.images, lit: true, pal: pal, originX: originX, originY: originY, width: width, height: height)
+        let unlit = render(items, occ: occ, elev: elev, images: input.images, lit: false, pal: pal, originX: originX, originY: originY, width: width, height: height)
+        let lit = render(items, occ: occ, elev: elev, images: input.images, lit: true, pal: pal, originX: originX, originY: originY, width: width, height: height)
 
         // 场景：锚点转画布坐标；visible = 本模块剪影减去后画模块的剪影（灯光蒙版用，避免透过前屋墙体）
         var sceneMods: [String: Any] = [:]
@@ -119,16 +124,17 @@ public enum HouseComposer {
                 }
                 lights.append(d)
             }
-            let mine = path(silhouette(it.placed), dx: it.ox - originX, dy: it.oy - originY)
+            let mine = path(silhouette(it.placed, ext: it.ext), dx: it.ox - originX, dy: it.oy - originY)
             var visible = mine
             for later in items[(i + 1)...] {
-                visible = visible.subtracting(path(silhouette(later.placed), dx: later.ox - originX, dy: later.oy - originY))
+                visible = visible.subtracting(path(silhouette(later.placed, ext: later.ext), dx: later.ox - originX, dy: later.oy - originY))
             }
             let key = it.placed.cell.room.isEmpty ? it.placed.cell.module : it.placed.cell.room
             sceneMods[key] = [
                 "module": it.placed.cell.module,
                 "label": tx(labelPoint(it.art, segments: it.placed.segments)),
-                "region": silhouette(it.placed).map { [Double($0.x) + dx, Double($0.y) + dy] },
+                "region": silhouette(it.placed, ext: it.ext).map { [Double($0.x) + dx, Double($0.y) + dy] },
+                "level": HouseLevels.effective(it.placed.cell), "elevation": it.placed.elev,
                 "visible": polygons(visible),
                 "badges": it.art.badges.map(tx),
                 "lights": lights,
@@ -145,10 +151,10 @@ public enum HouseComposer {
 
     // MARK: - 几何
 
-    /// 模块剪影（模块内坐标，左上原点）：两面后墙按实际高度 + 地板 + 前沿地台
-    static func silhouette(_ p: HouseWallPlanner.Placed) -> [(x: Int, y: Int)] {
+    /// 模块剪影（模块内坐标，左上原点）：两面后墙按实际高度 + 地板 + 前沿地台（错层时再加厚 ext）
+    static func silhouette(_ p: HouseWallPlanner.Placed, ext: Int = 0) -> [(x: Int, y: Int)] {
         let T = p.tip, fw = p.fw
-        let W = HouseGrid.W, FH = HouseGrid.floorH, S = HouseGrid.slab
+        let W = HouseGrid.W, FH = HouseGrid.floorH, S = HouseGrid.slab + max(0, ext)
         let R = (x: T.x + fw * W / 2, y: T.y + fw * FH / 2)
         let F = (x: T.x + (fw - 1) * W / 2, y: T.y + (fw + 1) * FH / 2)
         let L = (x: T.x - W / 2, y: T.y + FH / 2)
@@ -199,13 +205,15 @@ public enum HouseComposer {
 
     /// 墙顶 / 端面 / 壁柱的木色（取自经典整图的深色木饰条）；夜景按经典 day→night 的平均比例压暗
     struct Palette {
-        let capTop, capEdge, endFace, pilaster, outline: CGColor
+        let capTop, capEdge, endFace, pilaster, outline, slabSW, slabSE, slabLine: CGColor
         init(night: Bool) {
             func c(_ r: Double, _ g: Double, _ b: Double) -> CGColor {
                 let k = night ? (0.46, 0.42, 0.44) : (1.0, 1.0, 1.0)
                 return CGColor(red: r * k.0 / 255, green: g * k.1 / 255, blue: b * k.2 / 255, alpha: 1)
             }
             capTop = c(108, 66, 38); capEdge = c(38, 20, 11); endFace = c(72, 42, 24); pilaster = c(62, 36, 20)
+            // 错层加厚的地台：和模块自带前沿地台同色系（取自模块图地台中段），SW 面亮一点、SE 面暗一点
+            slabSW = c(46, 25, 10); slabSE = c(33, 18, 7); slabLine = c(66, 38, 18)
             outline = CGColor(red: 10 / 255, green: 7 / 255, blue: 5 / 255, alpha: 0.92)
         }
     }
@@ -292,14 +300,14 @@ public enum HouseComposer {
         return c.ctx.makeImage() ?? full
     }
 
-    static func render(_ items: [Item], occ: Set<[Int]>, images: [String: HouseModuleImages], lit: Bool, pal: Palette,
+    static func render(_ items: [Item], occ: Set<[Int]>, elev: [[Int]: Int] = [:], images: [String: HouseModuleImages], lit: Bool, pal: Palette,
                        originX: Int, originY: Int, width: Int, height: Int) -> CGImage? {
         guard let c = Canvas(width: width, height: height) else { return nil }
         func add(_ p: (x: Int, y: Int), _ q: (x: Int, y: Int)) -> (x: Int, y: Int) { (p.x + q.x, p.y + q.y) }
 
         // 外轮廓（所有剪影外扩描边）
         for it in items {
-            let pts = silhouette(it.placed).map { (x: $0.x + it.ox - originX, y: $0.y + it.oy - originY) }
+            let pts = silhouette(it.placed, ext: it.ext).map { (x: $0.x + it.ox - originX, y: $0.y + it.oy - originY) }
             c.poly(pts, fill: pal.outline, stroke: pal.outline, lineWidth: 5)
         }
         for it in items {
@@ -330,14 +338,36 @@ public enum HouseComposer {
             }
             let L = (x: T.x - HouseGrid.W / 2, y: T.y + HouseGrid.floorH / 2)
             let R = (x: T.x + fw * HouseGrid.W / 2, y: T.y + fw * HouseGrid.floorH / 2)
-            endFace(L, from: HouseWallPlanner.nwHeight(occ, col, row + 1), to: hn, HouseGrid.capNW)
-            endFace(R, from: HouseWallPlanner.neHeight(occ, col + fw, row), to: ne.last?.height ?? HouseGrid.wallH, HouseGrid.capNE)
+            // 邻格的墙顶换算到本格地面坐标（错层：绝对高度 = 墙高 + 那格的 elev）；邻格不存在 → 本格地面
+            let e = p.elev
+            func nwTop(_ c: Int, _ r: Int) -> Int {
+                let h = HouseWallPlanner.nwHeight(occ, c, r)
+                return h > 0 ? max(0, h + (elev[[c, r]] ?? 0) - e) : 0
+            }
+            func neTop(_ c: Int, _ r: Int) -> Int {
+                let h = HouseWallPlanner.neHeight(occ, c, r)
+                return h > 0 ? max(0, h + (elev[[c, r]] ?? 0) - e) : 0
+            }
+            endFace(L, from: nwTop(col, row + 1), to: hn, HouseGrid.capNW)
+            endFace(R, from: neTop(col + fw, row), to: ne.last?.height ?? HouseGrid.wallH, HouseGrid.capNE)
             for (s0, s1) in zip(ne, ne.dropFirst()) where s0.height > s1.height {
                 endFace(s0.b, from: s1.height, to: s0.height, HouseGrid.capNE)
             }
-            // 后方邻居的墙在本格后角结束且比本墙高 → 它的端面朝前露出
-            endFace(T, from: hn, to: HouseWallPlanner.nwHeight(occ, col, row - 1), HouseGrid.capNW)
-            endFace(T, from: he, to: HouseWallPlanner.neHeight(occ, col - 1, row), HouseGrid.capNE)
+            // 后方邻居的墙在本格后角结束且比本墙高（墙更高或地面更高）→ 它的端面朝前露出
+            endFace(T, from: hn, to: nwTop(col, row - 1), HouseGrid.capNW)
+            endFace(T, from: he, to: neTop(col - 1, row), HouseGrid.capNE)
+            // 错层加厚的地台（模块图自带 slab 之下）：前沿两面，先画，被前面的格子盖住的部分自然看不见
+            if it.ext > 0 {
+                let F = (x: T.x + (fw - 1) * HouseGrid.W / 2, y: T.y + (fw + 1) * HouseGrid.floorH / 2)
+                let s0 = HouseGrid.slab - 1, s1 = HouseGrid.slab + it.ext
+                func dn(_ q: (x: Int, y: Int), _ d: Int) -> (x: Int, y: Int) { (q.x, q.y + d) }
+                c.poly([o(dn(L, s0)), o(dn(F, s0)), o(dn(F, s1)), o(dn(L, s1))], fill: pal.slabSW)
+                c.poly([o(dn(F, s0)), o(dn(R, s0)), o(dn(R, s1)), o(dn(F, s1))], fill: pal.slabSE)
+                // 和模块地台的接缝处一条浅色压线（像一层台阶的边），底边由外轮廓描边收口
+                let l0 = HouseGrid.slab, l1 = HouseGrid.slab + 1
+                c.poly([o(dn(L, l0)), o(dn(F, l0)), o(dn(F, l1)), o(dn(L, l1))], fill: pal.slabLine)
+                c.poly([o(dn(F, l0)), o(dn(R, l0)), o(dn(R, l1)), o(dn(F, l1))], fill: pal.slabLine)
+            }
             // 和邻居墙相接：壁柱盖住两张图的接缝
             if occ.contains([col - 1, row]) || occ.contains([col, row - 1]) {
                 let x = T.x + ox, y = T.y + oy

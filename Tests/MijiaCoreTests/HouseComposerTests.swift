@@ -144,6 +144,56 @@ import CoreGraphics
         #expect(c.x < a.x && c.y > a.y)
     }
 
+    /// 错层：抬高的格子整体上移 elev，地台加厚到最低一格的底面；剪影 / 场景坐标跟着走
+    @Test func splitLevelsShiftModulesAndThickenSlabs() throws {
+        let (cat, images) = try Self.load()
+        func scene(_ layout: [HouseLayoutCell]) throws -> [String: [String: Any]] {
+            let r = HouseComposer.compose(.init(layout: layout, catalog: cat, images: images))
+            let j = try #require(try JSONSerialization.jsonObject(with: r.sceneJSON) as? [String: Any])
+            return try #require(j["modules"] as? [String: [String: Any]])
+        }
+        func top(_ m: [String: Any]) -> Double { (m["region"] as! [[Double]]).map { $0[1] }.min()! }
+        func bottom(_ m: [String: Any]) -> Double { (m["region"] as! [[Double]]).map { $0[1] }.max()! }
+        func label(_ m: [String: Any]) -> [Double] { m["label"] as! [Double] }
+        let flat = try scene([.init(room: "a", module: "bedroom", col: 0, row: 0, level: 0),
+                              .init(room: "l", module: "living", col: 0, row: 1, level: 0)])
+        let up = try scene([.init(room: "a", module: "bedroom", col: 0, row: 0, level: 1),
+                            .init(room: "l", module: "living", col: 0, row: 1, level: 0)])
+        #expect(up["a"]?["elevation"] as? Int == HouseGrid.levelStep)
+        #expect(up["a"]?["level"] as? Int == 1 && up["l"]?["level"] as? Int == 0)
+        // 卧室相对客厅上移一级：墙顶、标签都高 16px；底边（加厚的地台）和客厅一样落到同一个地面
+        let dTop = (top(flat["a"]!) - top(flat["l"]!)) - (top(up["a"]!) - top(up["l"]!))
+        #expect(abs(dTop - Double(HouseGrid.levelStep)) < 0.5)
+        let dLab = (label(flat["a"]!)[1] - label(flat["l"]!)[1]) - (label(up["a"]!)[1] - label(up["l"]!)[1])
+        #expect(abs(dLab - Double(HouseGrid.levelStep)) < 0.5)
+        #expect(abs((bottom(up["a"]!) - top(up["a"]!)) - (bottom(flat["a"]!) - top(flat["a"]!)) - Double(HouseGrid.levelStep)) < 0.5)
+        // 自动图案：level 为空 → 后排左格 +1、前排左格 0
+        let auto = try scene([.init(room: "a", module: "bedroom", col: 0, row: 0), .init(room: "l", module: "living", col: 0, row: 1)])
+        #expect(auto["a"]?["level"] as? Int == 1 && auto["l"]?["level"] as? Int == 0)
+    }
+
+    @Test func levelPatternAndClamp() {
+        #expect(HouseLevels.auto(col: 0, row: 0) == 1 && HouseLevels.auto(col: 2, row: 1) == -1 && HouseLevels.auto(col: 5, row: 5) == 0)
+        #expect(HouseLevels.effective(.init(room: "x", module: "generic", col: 0, row: 0, level: 7)) == HouseGrid.levelRange.upperBound)
+        // 任意相邻两格（自动图案）最多差两级，且两级的高差小于切墙高度
+        for r in 0..<2 { for c in 0..<3 {
+            for (dc, dr) in [(1, 0), (0, 1)] where c + dc < 3 && r + dr < 2 {
+                #expect(abs(HouseLevels.auto(col: c, row: r) - HouseLevels.auto(col: c + dc, row: r + dr)) <= 2)
+            }
+        } }
+        #expect((HouseGrid.levelRange.upperBound - HouseGrid.levelRange.lowerBound) * HouseGrid.levelStep < HouseGrid.cutH)
+    }
+
+    @Test func layoutCellLevelIsOptionalInJSON() throws {
+        let old = try JSONDecoder().decode(HouseLayoutCell.self, from: Data(#"{"room":"a","module":"bedroom","col":0,"row":0}"#.utf8))
+        #expect(old.level == nil)
+        let enc = String(decoding: try JSONEncoder().encode(old), as: UTF8.self)
+        #expect(!enc.contains("level"))
+        var c = old; c.level = -1
+        let back = try JSONDecoder().decode(HouseLayoutCell.self, from: try JSONEncoder().encode(c))
+        #expect(back.level == -1)
+    }
+
     /// HOUSE_COMPOSE_OUT=/path swift test --filter writesSpikeImages → 各布局 day/night × unlit/lit PNG
     @Test func writesSpikeImages() throws {
         guard let out = ProcessInfo.processInfo.environment["HOUSE_COMPOSE_OUT"] else { return }
@@ -152,7 +202,11 @@ import CoreGraphics
         var lines: [String] = []
         for phase in ["day", "night"] {
             let (cat, images) = try Self.load(phase)
-            for (name, layout) in Self.layouts {
+            // 默认（自动错层）+ 平铺对照（-flat）
+            let all = Self.layouts.flatMap { name, layout in
+                [(name, layout), (name + "-flat", layout.map { var c = $0; c.level = 0; return c })]
+            }
+            for (name, layout) in all {
                 _ = HouseComposer.compose(.init(layout: layout, catalog: cat, images: images, night: phase == "night"))
                 let r = HouseComposer.compose(.init(layout: layout, catalog: cat, images: images, night: phase == "night"))
                 lines.append("\(name) \(phase) \(r.width)x\(r.height) \(String(format: "%.2f", r.milliseconds)) ms")

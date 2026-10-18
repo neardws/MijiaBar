@@ -57,4 +57,22 @@ import Testing
         // 满格时把一间 1x1 换成客厅：原地放不下也没有空位 → nil
         #expect(HouseLayoutSolver.setModule(full, room: "r2", module: "living") == nil)
     }
+
+    @Test func levelsValidateAndToggle() {
+        var cells = HouseLayoutSolver.classicFour.enumerated().map { i, c in
+            HouseLayoutCell(room: "r\(i)", module: c.module, col: c.col, row: c.row)
+        }
+        // 自动错层（level 为空）的经典几何仍走整图；显式抬高一格就改走合成
+        #expect(HouseLayoutSolver.isClassicGeometry(cells))
+        let raised = HouseLayoutSolver.setLevel(cells, room: "r0", level: 1)!
+        #expect(raised[0].level == 1 && raised[1].level == nil)
+        #expect(!HouseLayoutSolver.isClassicGeometry(raised))
+        #expect(HouseLayoutSolver.isClassicGeometry(HouseLayoutSolver.setAllLevels(raised, flat: true)))
+        #expect(HouseLayoutSolver.setAllLevels(raised, flat: false).allSatisfy { $0.level == nil })
+        #expect(HouseLayoutSolver.setLevel(cells, room: "nope", level: 1) == nil)
+        // 越界的级数：setLevel 夹住，validate 报错
+        #expect(HouseLayoutSolver.setLevel(cells, room: "r0", level: 9)![0].level == HouseGrid.levelRange.upperBound)
+        cells[0].level = 3
+        #expect(HouseLayoutSolver.validate(cells).contains(.levelOutOfRange))
+    }
 }

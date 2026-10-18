@@ -271,9 +271,16 @@ struct HouseCutawaySceneView: View {
                     }
                 }
                 if let edit {
+                    let labelAt = editLabelPositions(src)
                     ForEach(rooms) { room in
                         if let m = src.module(for: room) {
-                            HouseEditSlots(module: m, room: room, artSize: artSize, edit: edit)
+                            HouseEditSlots(module: m, room: room, artSize: artSize, edit: edit, labelAt: labelAt)
+                        }
+                    }
+                    ForEach(rooms) { room in
+                        if let m = src.module(for: room) {
+                            HouseEditSlots(module: m, room: room, artSize: artSize, edit: edit, labelAt: labelAt, labelsLayer: true)
+                                .allowsHitTesting(false)
                         }
                     }
                 }
@@ -306,6 +313,27 @@ struct HouseCutawaySceneView: View {
             guard let m = src.module(for: room) else { return [] }
             return HouseEditSlots.targets(module: m, room: room).map { (sel: $0.sel, rect: $0.rect) }
         }
+    }
+
+    private func editLabelPositions(_ src: HouseSceneSource) -> [HouseSelection: CGPoint] {
+        var items: [(sel: HouseSelection, rect: CGRect, labelAbove: Bool, text: String)] = []
+        var obstacles: [CGRect] = [], roomLabels: [CGRect] = []
+        for room in rooms {
+            guard let m = src.module(for: room) else { continue }
+            for t in HouseEditSlots.targets(module: m, room: room) {
+                if let f = t.fixture {
+                    let d = room.devices.first { $0.spot == t.sel.spot }
+                    items.append((t.sel, t.rect, t.labelAbove, d?.name ?? HouseFixtureNames.title(f)))
+                } else {
+                    obstacles.append(t.rect)
+                }
+            }
+            if showLabels, let p = m.label, p.count >= 2 {
+                let sz = HouseEditSlots.labelSize(room.title, fontSize: 10)
+                roomLabels.append(CGRect(x: p[0] - sz.width / 2, y: p[1] - sz.height / 2, width: sz.width, height: sz.height))
+            }
+        }
+        return HouseEditSlots.labelPositions(items, obstacles: obstacles, fixedLabels: roomLabels, bounds: artSize)
     }
 
     private func art(_ img: NSImage) -> some View {

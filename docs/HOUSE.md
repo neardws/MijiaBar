@@ -125,17 +125,29 @@ Screenshots with demo data: `MijiaBar --house-window-snapshot <dir>` (set `MIJIA
 
 ## Layout (Phase 2)
 
-`homes.<id>.layout` is an optional array of `{room, module, col, row}`. Max grid 3×2; living footprint is 2×1.
+`homes.<id>.layout` is an optional array of `{room, module, col, row, level?}`. Max grid 3×2; living footprint is 2×1.
 
 - `null` / absent → classic four-room cutaway (Phase 1 single PNGs).
 - Non-classic geometry → modules are stitched by `HouseComposer` (see `docs/HOUSE_MODULES.md`).
 
 ```
 mijiabar house layout [--json]
-mijiabar house layout set <room:module:col:row> ...
+mijiabar house layout set <room:module:col:row[@level]> ...
+mijiabar house layout level <room> <-1|0|1|auto>
+mijiabar house layout flat | stagger [--home H]
 mijiabar house layout auto [--home H]
 mijiabar house layout classic [--home H]
 mijiabar house reset --layout
 ```
 
-MCP: `get_house_layout`, `set_house_layout`. Undo covers layout changes (same `updatedAt` merge via `layoutUpdatedAt`).
+MCP: `get_house_layout`, `set_house_layout` (`mode`: classic / auto / flat / stagger, cells may carry `level`), `set_house_room_level` (`room`, `level`). Undo covers layout changes (same `updatedAt` merge via `layoutUpdatedAt`).
+
+### Split levels (staggered heights)
+
+Composed layouts are drawn with rooms at different floor heights, like the original concept art. Each cell has an optional `level` of -1, 0 or +1. Each step moves the room's floor, walls and furniture by `HouseGrid.levelStep` (16 px at 1×).
+
+- `level` absent → automatic pattern: back row `+1 0 +1`, front row `0 0 -1` (so the back corners are high and the front-right cell is low). `house layout stagger` clears all explicit levels back to this.
+- `house layout flat` sets every cell to 0. The House window → Room layout has a "Split levels" checkbox and ▼/▲ on each card. A "·" after the number means the level is automatic.
+- Classic four (layout `null`, or classic geometry with no explicit non-zero level) stays the single hand-drawn cutaway. An explicit non-zero level on classic geometry switches it to the composed renderer.
+- The largest difference between neighbours is 2 steps (32 px), which is less than the cut-wall height (40 px). The floor step between two rooms is therefore always hidden behind the owning room's cut wall. Shared and cut walls, end faces and the outline are computed from absolute heights. The base slab under a raised room is extended down to the lowest floor. Light masks, badges, edit spots and room labels are shifted with their room (`elevation` in the scene JSON).
+- `house layout --json` reports `level` (or `"auto"`), `effective_level` and `level_step_px`. Out-of-range levels are rejected by validation (`levelOutOfRange`).

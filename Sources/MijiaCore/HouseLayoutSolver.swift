@@ -13,6 +13,7 @@ public enum HouseLayoutSolver {
         case holeOrNonRect  // spike: only reject overlap/bounds; L-shape allowed later
         case unknownModule
         case livingNeedsTwo
+        case levelOutOfRange
     }
 
     /// 每个格子占用的 (col,row) 集合（客厅占 col..col+1）
@@ -47,6 +48,7 @@ public enum HouseLayoutSolver {
                 }
             }
             if HouseModule(rawValue: c.module) == nil { problems.append(.unknownModule) }
+            if let l = c.level, !HouseGrid.levelRange.contains(l) { problems.append(.levelOutOfRange) }
         }
         return Array(Set(problems.map(\.rawValue))).compactMap(Problem.init(rawValue:))
     }
@@ -68,6 +70,21 @@ public enum HouseLayoutSolver {
         return rest
     }
 
+    /// 设一个房间的错层级数（nil = 回到自动图案）。房间不在布局里返回 nil。
+    public static func setLevel(_ layout: [HouseLayoutCell], room: String, level: Int?) -> [HouseLayoutCell]? {
+        guard layout.contains(where: { $0.room == room }) else { return nil }
+        return layout.map { c in
+            guard c.room == room else { return c }
+            var n = c; n.level = level.map { min(max($0, HouseGrid.levelRange.lowerBound), HouseGrid.levelRange.upperBound) }
+            return n
+        }
+    }
+
+    /// 整屋错层：flat = 全部显式 0（平铺）；auto = 清掉显式级数，回到自动图案
+    public static func setAllLevels(_ layout: [HouseLayoutCell], flat: Bool) -> [HouseLayoutCell] {
+        layout.map { var n = $0; n.level = flat ? 0 : nil; return n }
+    }
+
     /// 第一个能放下这个模块的空位（行优先）
     public static func firstFree(_ layout: [HouseLayoutCell], module: String, room: String) -> HouseLayoutCell? {
         for row in 0..<maxRows {
@@ -87,9 +104,11 @@ public enum HouseLayoutSolver {
         .init(room: "", module: "generic", col: 2, row: 1),
     ]
 
-    /// 布局的模块几何是否就是经典四室（忽略 room id）——是则走整图回退
+    /// 布局的模块几何是否就是经典四室（忽略 room id）——是则走整图回退。
+    /// 显式设了非 0 错层的不算（用户要的是错落的合成图，整图画不出来）；自动错层（level 为空）照旧走整图。
     public static func isClassicGeometry(_ layout: [HouseLayoutCell]?) -> Bool {
         guard let layout, layout.count == 4 else { return layout == nil }
+        if layout.contains(where: { ($0.level ?? 0) != 0 }) { return false }
         let norm = Set(layout.map { "\($0.module):\($0.col),\($0.row)" })
         let classic = Set(classicFour.map { "\($0.module):\($0.col),\($0.row)" })
         return norm == classic
