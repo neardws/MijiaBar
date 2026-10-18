@@ -1,0 +1,17 @@
+{
+  "id": "cozy-wood",
+  "name": {
+    "zh": "温馨木屋",
+    "en": "Cozy wood"
+  },
+  "kind": "builtin",
+  "version": 1,
+  "variants": [
+    "light-wood",
+    "walnut"
+  ],
+  "description": {
+    "zh": "默认暖木色；浅木白墙 / 胡桃木是调色板子变体。",
+    "en": "Default warm wood; light-wood and walnut are free palette sub-variants."
+  }
+}

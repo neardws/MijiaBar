@@ -252,7 +252,7 @@ struct HouseArrangeView: View {
         // 同步合成：截图 CLI 的 RunLoop 等待很短，异步 Task 来不及
         // 经典四室实际走整图（平地），预览也按平地合成，避免和真实小屋不一致
         let shown = HouseLayoutSolver.isClassicGeometry(m.house.homes[home]?.layout) ? HouseLayoutSolver.setAllLevels(layout, flat: true) : layout
-        if let result = HouseModuleAssets.compose(layout: shown, phase: phase) {
+        if let result = HouseModuleAssets.compose(layout: shown, phase: phase, style: m.houseStyle) {
             previewMs = result.ms
             preview = result.image
         } else {
@@ -263,28 +263,55 @@ struct HouseArrangeView: View {
 }
 
 enum HouseModuleAssets {
-    /// SPM .process 可能把 House/modules/ 摊平；和 HouseAssets 一样两处都找
-    static func resourceURL(_ name: String, _ ext: String) -> URL? {
+    /// SPM .process may flatten House/modules/; look in style pack dirs first, then default.
+    static func resourceURL(_ name: String, _ ext: String, style: String? = nil) -> URL? {
+        let styleId = HouseStyles.resolve(style)
+        if styleId != HouseStyles.defaultStyle {
+            for sub in ["House/styles/\(styleId)/modules", "styles/\(styleId)/modules",
+                        "House/styles/\(styleId)/classic", "styles/\(styleId)/classic"] {
+                if let u = Bundle.module.url(forResource: name, withExtension: ext, subdirectory: sub) { return u }
+            }
+            // Dev: repo assets/. Runtime: Application Support (downloaded packs; SPM cannot embed duplicate basenames).
+            let fm = FileManager.default
+            if let support = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
+                .appendingPathComponent("MijiaBar/House/styles/\(styleId)", isDirectory: true) {
+                for sub in ["modules", "classic"] {
+                    let p = support.appendingPathComponent("\(sub)/\(name).\(ext)")
+                    if fm.fileExists(atPath: p.path) { return p }
+                }
+            }
+            let root = URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            for rel in ["assets/house/styles/\(styleId)/modules/\(name).\(ext)",
+                        "assets/house/styles/\(styleId)/classic/\(name).\(ext)"] {
+                let p = root.appendingPathComponent(rel)
+                if fm.fileExists(atPath: p.path) { return p }
+            }
+        }
         if let u = Bundle.module.url(forResource: name, withExtension: ext, subdirectory: "House/modules")
             ?? Bundle.module.url(forResource: name, withExtension: ext, subdirectory: "modules")
             ?? Bundle.module.url(forResource: name, withExtension: ext, subdirectory: "House")
             ?? Bundle.module.url(forResource: name, withExtension: ext) {
             return u
         }
-        // 开发目录回退（swift build 跑 snapshot 时 bundle 里偶发缺文件）
         let dev = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("assets/house/modules/\(name).\(ext)")
         return FileManager.default.fileExists(atPath: dev.path) ? dev : nil
     }
 
-    @MainActor private static var inputs: [HousePhase: (HouseModuleCatalog, [String: HouseModuleImages])] = [:]
+    @MainActor private static var inputs: [String: (HouseModuleCatalog, [String: HouseModuleImages])] = [:]
     @MainActor private static var scenes: [String: HouseSceneSource] = [:]
 
-    /// 目录 + 某个时段的全部模块图（读一次缓存）
-    @MainActor static func load(phase: HousePhase) -> (HouseModuleCatalog, [String: HouseModuleImages])? {
-        if let c = inputs[phase] { return c }
-        guard let url = resourceURL("catalog", "json") else {
+    @MainActor static func clearCache() { inputs.removeAll(); scenes.removeAll() }
+
+    /// Catalog + module images for a phase (cached per style+phase). Palette variants share anchors.
+    @MainActor static func load(phase: HousePhase, style: String? = nil) -> (HouseModuleCatalog, [String: HouseModuleImages])? {
+        let styleId = HouseStyles.resolve(style)
+        let cacheKey = "\(styleId)|\(phase.assetName)"
+        if let c = inputs[cacheKey] { return c }
+        guard let url = resourceURL("catalog", "json", style: HouseStyles.defaultStyle)
+                ?? resourceURL("catalog", "json", style: styleId) else {
             fputs("HouseModuleAssets: catalog.json not found\n", stderr); return nil
         }
         let cat: HouseModuleCatalog
@@ -292,27 +319,28 @@ enum HouseModuleAssets {
         catch { fputs("HouseModuleAssets: catalog decode \(error)\n", stderr); return nil }
         var images: [String: HouseModuleImages] = [:]
         let tag = phase == .day ? "day" : "night"
-        func load(_ variants: [String: String], _ key: String) -> CGImage? {
+        func loadPNG(_ variants: [String: String], _ key: String) -> CGImage? {
             guard let name = variants[key] else { return nil }
             let base = URL(fileURLWithPath: name).deletingPathExtension().lastPathComponent
-            return resourceURL(base, "png").flatMap(HouseComposer.loadCGImage(from:))
+            return resourceURL(base, "png", style: styleId).flatMap(HouseComposer.loadCGImage(from:))
+                ?? resourceURL(base, "png", style: HouseStyles.defaultStyle).flatMap(HouseComposer.loadCGImage(from:))
         }
         for (id, art) in cat.modules {
-            guard let v = art.variants, let ui = load(v, "\(tag)-unlit"), let li = load(v, "\(tag)-lit") else {
-                fputs("HouseModuleAssets: missing png for \(id)\n", stderr); continue
+            guard let v = art.variants, let ui = loadPNG(v, "\(tag)-unlit"), let li = loadPNG(v, "\(tag)-lit") else {
+                fputs("HouseModuleAssets: missing png for \(id) style=\(styleId)\n", stderr); continue
             }
-            images[id] = HouseModuleImages(unlit: ui, lit: li, unlitCut: load(v, "\(tag)-unlit-cut"), litCut: load(v, "\(tag)-lit-cut"))
+            images[id] = HouseModuleImages(unlit: ui, lit: li, unlitCut: loadPNG(v, "\(tag)-unlit-cut"), litCut: loadPNG(v, "\(tag)-lit-cut"))
         }
         guard !images.isEmpty else { fputs("HouseModuleAssets: no images\n", stderr); return nil }
-        inputs[phase] = (cat, images)
+        inputs[cacheKey] = (cat, images)
         return (cat, images)
     }
 
-    /// 自定义布局的整屋场景：合成 unlit / lit + 场景 JSON（按布局 + 时段缓存，布局不变不重算）
-    @MainActor static func composedScene(layout: [HouseLayoutCell], phase: HousePhase) -> HouseSceneSource? {
-        let key = "\(phase.assetName)|" + layout.map { "\($0.room)=\($0.module)@\($0.col),\($0.row)^\(HouseLevels.effective($0))" }.joined(separator: ";")
+    @MainActor static func composedScene(layout: [HouseLayoutCell], phase: HousePhase, style: String? = nil) -> HouseSceneSource? {
+        let styleId = HouseStyles.resolve(style)
+        let key = "\(styleId)|\(phase.assetName)|" + layout.map { "\($0.room)=\($0.module)@\($0.col),\($0.row)^\(HouseLevels.effective($0))" }.joined(separator: ";")
         if let s = scenes[key] { return s }
-        guard let (cat, images) = load(phase: phase) else { return nil }
+        guard let (cat, images) = load(phase: phase, style: styleId) else { return nil }
         let r = HouseComposer.compose(.init(layout: layout, catalog: cat, images: images, night: phase == .night))
         guard let u = r.unlit, let l = r.lit else { return nil }
         let scene: HouseCutawaySceneFile
@@ -326,8 +354,8 @@ enum HouseModuleAssets {
         return src
     }
 
-    @MainActor static func compose(layout: [HouseLayoutCell], phase: HousePhase) -> (image: NSImage, ms: Double)? {
-        guard let (cat, images) = load(phase: phase) else { return nil }
+    @MainActor static func compose(layout: [HouseLayoutCell], phase: HousePhase, style: String? = nil) -> (image: NSImage, ms: Double)? {
+        guard let (cat, images) = load(phase: phase, style: style) else { return nil }
         let r = HouseComposer.compose(.init(layout: layout, catalog: cat, images: images, night: phase == .night))
         // 预览：白天看关灯底图，夜间看开灯（暖光）版
         guard let img = phase == .day ? r.unlit : r.lit else { fputs("HouseModuleAssets: compose produced nil\n", stderr); return nil }

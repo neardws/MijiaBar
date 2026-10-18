@@ -12,3 +12,6 @@ docs/assets/shots/
 docs/assets/art/
 docs/assets/og.jpg
 assets/house/spike/
+
+__pycache__/
+*.pyc

@@ -21,6 +21,7 @@ let houseUsage = """
   mijiabar house layout flat | stagger [--home H]    整屋平铺（全部 0）/ 回到自动错层（后排两角高、前排右格低）
   mijiabar house reset [<设备> | --room <房间> | --layout] [--home H]   恢复自动
   mijiabar house sync [icloud | local | <文件夹>]    查看 / 切换 house.json 的存放位置（默认 iCloud Drive，多台 Mac 同步）
+  mijiabar house style [list|set <id>|show] [--home H] [--json]
   mijiabar house schema                             打印 house.json 的 JSON Schema
 设备 = did 或名称；房间 = 米家房间 id 或名称；--json 输出机器可读结果（修改类命令总是输出 JSON）。
 """
@@ -395,7 +396,39 @@ nonisolated(unsafe) let houseSchema: [String: Any] = [
         let r = try houseSync(pos.first)
         if asJSON || pos.first != nil { print(json(r)) } else { print("\(r["sync"] ?? "") · \(r["file"] ?? "")") }
     case "schema": print(json(houseSchema))
+    case "style":
+        print(json(try await houseStyle(pos: pos, rest: rest, asJSON: asJSON)))
     default: print(houseUsage)
+    }
+}
+
+@MainActor func houseStyle(pos: [String], rest: [String], asJSON: Bool) async throws -> [String: Any] {
+    let h = try await houseHome(opt(rest, "--home"))
+    let sub = pos.first ?? "show"
+    switch sub {
+    case "list":
+        let cur = HouseStyles.resolve(try HouseStore.load().homes[h.id]?.style)
+        return ["ok": true, "current": cur, "styles": HouseStyles.all.map {
+            ["id": $0.id, "name": ["zh": $0.nameZh, "en": $0.nameEn], "kind": $0.kind.rawValue, "parent": $0.parent as Any]
+        }]
+    case "show":
+        let cur = HouseStyles.resolve(try HouseStore.load().homes[h.id]?.style)
+        let info = HouseStyles.info(cur)
+        return ["ok": true, "home": h.id, "style": cur, "name": ["zh": info.nameZh, "en": info.nameEn], "kind": info.kind.rawValue]
+    case "set":
+        guard pos.count >= 2 else { throw MijiaError.unknownProperty("style id") }
+        let id = pos[1]
+        let resolved = id == "auto" || id == "default" ? nil : HouseStyles.resolve(id)
+        if id != "auto" && id != "default" && resolved != id && id != HouseStyles.defaultStyle {
+            // resolve maps unknown → default; reject truly unknown
+            if !HouseStyles.all.contains(where: { $0.id == id }) {
+                throw MijiaError.unknownProperty(L("风格 ", "style ") + id)
+            }
+        }
+        try HouseStore.update { $0.setStyle(home: h.id, style: resolved == HouseStyles.defaultStyle ? nil : resolved) }
+        return ["ok": true, "home": h.id, "style": HouseStyles.resolve(resolved)]
+    default:
+        throw MijiaError.unknownProperty(sub)
     }
 }
 
@@ -416,6 +449,10 @@ nonisolated(unsafe) let houseMCPTools: [[String: Any]] = [
      "inputSchema": ["type": "object", "properties": ["home": ["type": "string"], "mode": ["type": "string", "enum": ["classic", "auto", "flat", "stagger"]], "cells": ["type": "array"]], "required": []]],
     ["name": "set_house_room_level", "description": "错层：把小屋布局里一个房间的地面抬高 / 下沉一级。level = -1 | 0 | 1 | \"auto\"（回到自动图案）。Set a room's floor level in the composed house.",
      "inputSchema": ["type": "object", "properties": ["room": ["type": "string"], "level": ["description": "-1 | 0 | 1 | \"auto\""], "home": ["type": "string"]], "required": ["room", "level"]]],
+    ["name": "get_house_styles", "description": "列出小屋风格（温馨木屋 / 浅木白墙 / 胡桃木）和当前选用。",
+     "inputSchema": ["type": "object", "properties": ["home": ["type": "string"]]]],
+    ["name": "set_house_style", "description": "设置小屋风格：cozy-wood | light-wood | walnut | auto。",
+     "inputSchema": ["type": "object", "properties": ["style": ["type": "string"], "home": ["type": "string"]], "required": ["style"]]],
     ["name": "reset_house", "description": "把小屋恢复自动：整个家、一台设备或一个房间。",
      "inputSchema": ["type": "object", "properties": ["home": ["type": "string"], "device": ["type": "string"], "room": ["type": "string"]]]],
 ]
@@ -457,6 +494,10 @@ nonisolated(unsafe) let houseMCPTools: [[String: Any]] = [
         var rest3: [String] = []; if let h = a["home"] as? String { rest3 = ["--home", h] }
         let lv = a["level"].map { $0 is NSNull ? "auto" : "\($0)" } ?? "auto"
         return try await houseLayout(pos: ["level", anyString(a["room"]), lv], rest: rest3)
+    case "get_house_styles":
+        return try await houseStyle(pos: ["list"], rest: a["home"] as? String != nil ? ["--home", a["home"] as! String] : [], asJSON: true)
+    case "set_house_style":
+        return try await houseStyle(pos: ["set", anyString(a["style"])], rest: a["home"] as? String != nil ? ["--home", a["home"] as! String] : [], asJSON: true)
     case "reset_house": return try await houseReset(device: a["device"] as? String, room: a["room"] as? String, home: a["home"] as? String)
     default: return nil
     }

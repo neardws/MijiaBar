@@ -88,10 +88,11 @@ struct HouseSceneSource {
     var artSize: CGSize { scene.artSize }
     func module(for room: HouseRoom) -> HouseCutawayModule? { scene.modules[byRoom ? room.key : room.module.rawValue] }
 
-    @MainActor static func make(layout: [HouseLayoutCell]?, phase: HousePhase) -> HouseSceneSource? {
+    @MainActor static func make(layout: [HouseLayoutCell]?, phase: HousePhase, style: String? = nil) -> HouseSceneSource? {
         if let layout, !HouseLayoutSolver.isClassicGeometry(layout),
-           let c = HouseModuleAssets.composedScene(layout: layout, phase: phase) { return c }
-        guard let u = HouseAssets.cutawayImage(phase: phase, lit: false), let l = HouseAssets.cutawayImage(phase: phase, lit: true),
+           let c = HouseModuleAssets.composedScene(layout: layout, phase: phase, style: style) { return c }
+        guard let u = HouseAssets.cutawayImage(phase: phase, lit: false, style: style),
+              let l = HouseAssets.cutawayImage(phase: phase, lit: true, style: style),
               let sc = HouseAssets.cutawayScene() else { return nil }
         return HouseSceneSource(unlit: u, lit: l, scene: sc, byRoom: false)
     }
@@ -126,14 +127,19 @@ enum HouseAssets {
     private static var images: [String: NSImage] = [:]
     private static var sceneCache: HouseCutawaySceneFile??
 
-    /// 烘焙底图：house-cutaway-{day,night}-{unlit,lit}.png
-    static func cutawayImage(phase: HousePhase, lit: Bool) -> NSImage? {
+    /// 烘焙底图：house-cutaway-{day,night}-{unlit,lit}.png（风格包优先）
+    static func cutawayImage(phase: HousePhase, lit: Bool, style: String? = nil) -> NSImage? {
         let name = "house-cutaway-\(phase.assetName)-\(lit ? "lit" : "unlit")"
-        if let img = images[name] { return img }
-        guard let url = resourceURL(name, "png"), let img = NSImage(contentsOf: url) else { return nil }
-        images[name] = img
+        let styleId = HouseStyles.resolve(style)
+        let key = "\(styleId)|\(name)"
+        if let img = images[key] { return img }
+        let url = HouseModuleAssets.resourceURL(name, "png", style: styleId) ?? resourceURL(name, "png")
+        guard let url, let img = NSImage(contentsOf: url) else { return nil }
+        images[key] = img
         return img
     }
+
+    static func clearImageCache() { images.removeAll() }
 
     /// 徽章小图标：badge-<category>-{on,off}.png（scripts/gen-house-badges.py 生成，12×12）
     static func badge(_ c: DeviceCategory, on: Bool) -> NSImage? {
@@ -252,6 +258,9 @@ extension AppModel {
         return HouseLayoutSolver.isClassicGeometry(L) ? nil : L
     }
 
+    /// 当前家庭的小屋风格（nil / 未知 → cozy-wood）
+    var houseStyle: String { HouseStyles.resolve(house.homes[houseHomeKey]?.style) }
+
 
     func houseRoom(_ r: ResolvedHouseRoom) -> HouseRoom {
         let ds = r.devices.map { x -> HouseDevice in
@@ -298,8 +307,9 @@ struct HouseCutawaySceneView: View {
     var edit: HouseEditContext? = nil
     /// 自定义布局（非经典四室）→ 用模块合成图；nil / 经典几何 → 手绘整图
     var layout: [HouseLayoutCell]? = nil
+    var style: String? = nil
 
-    private var source: HouseSceneSource? { HouseSceneSource.make(layout: layout, phase: phase) }
+    private var source: HouseSceneSource? { HouseSceneSource.make(layout: layout, phase: phase, style: style) }
     private var artSize: CGSize { source?.artSize ?? CGSize(width: 960, height: 540) }
     private var displayScale: CGFloat {
         guard let fitWidth else { return 1 }
@@ -698,6 +708,7 @@ private struct HouseRevealEllipse: Shape {
 // MARK: - 整栋小屋
 
 struct HouseFullView: View {
+    @EnvironmentObject var m: AppModel
     var rooms: [HouseRoom]
     var phase: HousePhase = .from()
     var showChrome = true
@@ -720,7 +731,7 @@ struct HouseFullView: View {
                     .font(.system(size: 12)).foregroundStyle(.secondary).frame(width: sceneWidth, height: 200)
             } else {
                 HouseCutawaySceneView(rooms: rooms, phase: phase, showLabels: true, fitWidth: showChrome ? sceneWidth : nil,
-                                      onToggle: onToggle, edit: edit, layout: layout)
+                                      onToggle: onToggle, edit: edit, layout: layout, style: m.houseStyle)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Theme.stroke))
             }
@@ -927,7 +938,7 @@ enum HouseWindow {
     }
 }
 
-enum HouseEditTab: String, CaseIterable { case devices, arrange }
+enum HouseEditTab: String, CaseIterable { case devices, arrange, style }
 
 struct HousePilotHost: View {
     @EnvironmentObject var m: AppModel
@@ -946,7 +957,8 @@ struct HousePilotHost: View {
                         Picker("", selection: $editTab) {
                             Text(L("设备", "Devices")).tag(HouseEditTab.devices)
                             Text(L("房间布局", "Room layout")).tag(HouseEditTab.arrange)
-                        }.pickerStyle(.segmented).frame(width: 240)
+                            Text(L("风格", "Style")).tag(HouseEditTab.style)
+                        }.pickerStyle(.segmented).frame(width: 320)
                         Spacer()
                         editButtons
                     }
@@ -954,6 +966,8 @@ struct HousePilotHost: View {
                     Divider()
                     if editTab == .arrange {
                         HouseArrangeView()
+                    } else if editTab == .style {
+                        HouseStyleView()
                     } else {
                         let resolved = m.houseResolved
                         let edit = context(resolved)
