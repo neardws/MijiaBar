@@ -46,12 +46,30 @@ scripts/fetch-sparkle.sh
 
 swift build -c release $ARCHS
 BIN="$(swift build -c release $ARCHS --show-bin-path)"
+[ -d "$BIN/MijiaBar_MijiaBarApp.bundle" ] || { echo "❌ Missing SwiftPM resource bundle: $BIN/MijiaBar_MijiaBarApp.bundle" >&2; exit 1; }
 
 FW=".build/sparkle/spm/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework"
 [ -d "$FW" ] || { echo "❌ 找不到 $FW"; exit 1; }
 echo "📦 Sparkle.framework ← $FW"
 
 rm -rf dist && mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/bin" "$APP/Contents/Frameworks"
+for bundle in "$BIN"/*.bundle; do
+  [ -d "$bundle" ] || continue
+  cp -a "$bundle" "$APP/Contents/Resources/"
+done
+for style in japanese modern light-wood walnut; do
+  for sub in modules classic; do
+    source="assets/house/styles/$style/$sub"
+    [ -d "$source" ] || continue
+    destination="$APP/Contents/Resources/House/styles/$style/$sub"
+    mkdir -p "$destination"
+    for png in "$source"/*.png; do
+      [ -f "$png" ] || continue
+      cp "$png" "$destination/"
+    done
+  done
+done
+scripts/verify-app-bundle.sh "$APP"
 cp "$BIN/MijiaBarApp" "$APP/Contents/MacOS/MijiaBar"
 cp "$BIN/mijiabar" "$APP/Contents/Resources/bin/mijiabar"
 cp "$G2/go2rtc" "$APP/Contents/Resources/bin/go2rtc"
@@ -87,6 +105,7 @@ fi
 sign --identifier org.sparkle-project.Sparkle "$APP/Contents/Frameworks/Sparkle.framework"
 sign --entitlements "$ENT" "$APP"
 codesign --verify --strict --verbose=2 "$APP"
+scripts/verify-app-bundle.sh "$APP"
 
 STAGE=dist/dmg && mkdir -p "$STAGE"
 cp -R "$APP" "$STAGE/" && ln -s /Applications "$STAGE/Applications"

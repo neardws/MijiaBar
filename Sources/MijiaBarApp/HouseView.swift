@@ -200,8 +200,8 @@ enum HouseAssets {
 
     /// SPM 的 .process 可能把 House/ 摊平到 bundle 根目录，两处都找
     private static func resourceURL(_ name: String, _ ext: String) -> URL? {
-        Bundle.module.url(forResource: name, withExtension: ext, subdirectory: "House")
-            ?? Bundle.module.url(forResource: name, withExtension: ext)
+        AppResources.url(name, ext, subdirectory: "House")
+            ?? AppResources.url(name, ext)
     }
 }
 

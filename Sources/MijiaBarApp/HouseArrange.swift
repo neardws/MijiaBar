@@ -274,9 +274,15 @@ enum HouseModuleAssets {
     static func resourceURL(_ name: String, _ ext: String, style: String? = nil, fallbackToDefault: Bool = true) -> URL? {
         let styleId = HouseStyles.resolve(style)
         if styleId != HouseStyles.defaultStyle {
+            if let resources = Bundle.main.resourceURL {
+                for sub in ["modules", "classic"] {
+                    let url = resources.appendingPathComponent("House/styles/\(styleId)/\(sub)/\(name).\(ext)")
+                    if FileManager.default.fileExists(atPath: url.path) { return url }
+                }
+            }
             for sub in ["House/styles/\(styleId)/modules", "styles/\(styleId)/modules",
                         "House/styles/\(styleId)/classic", "styles/\(styleId)/classic"] {
-                if let u = Bundle.module.url(forResource: name, withExtension: ext, subdirectory: sub) { return u }
+                if let u = AppResources.url(name, ext, subdirectory: sub) { return u }
             }
             // Dev: repo assets/. Runtime: Application Support (downloaded packs; SPM cannot embed duplicate basenames).
             let fm = FileManager.default
@@ -296,10 +302,10 @@ enum HouseModuleAssets {
             }
             if HouseStyles.info(styleId).hasOwnCatalog || !fallbackToDefault { return nil }
         }
-        if let u = Bundle.module.url(forResource: name, withExtension: ext, subdirectory: "House/modules")
-            ?? Bundle.module.url(forResource: name, withExtension: ext, subdirectory: "modules")
-            ?? Bundle.module.url(forResource: name, withExtension: ext, subdirectory: "House")
-            ?? Bundle.module.url(forResource: name, withExtension: ext) {
+        if let u = AppResources.url(name, ext, subdirectory: "House/modules")
+            ?? AppResources.url(name, ext, subdirectory: "modules")
+            ?? AppResources.url(name, ext, subdirectory: "House")
+            ?? AppResources.url(name, ext) {
             return u
         }
         let dev = URL(fileURLWithPath: #filePath)
