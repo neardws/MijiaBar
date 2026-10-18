@@ -13,6 +13,7 @@ import pipeline as pl
 from geom import *
 
 import os
+WORK = os.environ.get('HOUSE_WORK', '/tmp/house-work'); os.makedirs(WORK, exist_ok=True)
 RAW = os.environ.get('HOUSE_RAW', str(__import__('pathlib').Path(__file__).resolve().parents[2] / 'assets/house/modules/src'))
 
 def load(p): return np.asarray(Image.open(p).convert('RGB'))
@@ -50,7 +51,7 @@ def fix_front_edge(rgb, g, col, s=2, rim=10):
     wgt = (np.clip((col - 0.6) / 0.2, 0, 1) * zone)[..., None]
     return rgb * (1 - wgt) + paint * wgt
 
-def fix_top_edge(rgb, g, col, s=2, depth=16):
+def fix_top_edge(rgb, g, col, s=2, depth=28):
     """NE 墙顶的压条：右格源图的墙顶压条和左格不一样（或者被裁掉），用左格 col∈[0.2,0.75] 的
     “到墙顶的竖直距离 → 颜色”中位数剖面重画 col>0.75 的墙顶一条（0.6~0.85 羽化）。"""
     h, w = rgb.shape[:2]
@@ -72,6 +73,69 @@ def fix_top_edge(rgb, g, col, s=2, depth=16):
     return rgb * (1 - wgt) + paint * wgt
 
 SEAM0, SEAM1, S0 = 0.84, 0.94, 0.14
+
+def fix_rail(rgb, g, col, masks, zlo=54, zhi=86, s=2):
+    """护墙板顶木线：右格源图的木线比左格低 ~6px、颜色也偏黄。用左格 col∈[0.62,0.84]（窗帘和壁灯之间）的
+    “离墙根高度 → 颜色”中位数剖面重画 col>0.9 的这一条（0.86~0.94 羽化），保留一点横向纹理。"""
+    z = np.round(wall_z(g, rgb.shape[:2], s)).astype(int)
+    import PIL.ImageDraw as D
+    pm = Image.new('L', (rgb.shape[1], rgb.shape[0]), 0)
+    D.Draw(pm).polygon(PROTECT[0], fill=255)     # 只护电视（绿植在木线以下）
+    zone = masks['ne'] & (z >= zlo) & (z < zhi) & ~(np.asarray(pm) > 0)
+    ref = zone & (col > 0.62) & (col < 0.84)
+    paint = rgb.astype(np.float32).copy()
+    for k in range(zlo, zhi):
+        m = ref & (z == k)
+        if m.any(): paint[zone & (z == k)] = np.median(rgb[m].reshape(-1, 3), 0)
+    blur = cv2.GaussianBlur(rgb.astype(np.float32), (0, 0), 2)
+    paint = paint + 0.35 * (rgb.astype(np.float32) - blur)
+    wgt = (np.clip((col - 0.86) / 0.08, 0, 1) * zone)[..., None]
+    return rgb * (1 - wgt) + paint * wgt
+
+# 右格源图里不参与分区调色的家具（s=2 规范坐标多边形）：只做亮度增益，免得电视 / 绿植被墙纸增益染色
+PROTECT = [[(735, 294), (752, 294), (849, 336), (849, 420), (865, 428), (865, 477), (822, 501), (806, 501), (707, 449), (707, 392), (733, 380)],
+           [(922, 426), (984, 426), (984, 514), (922, 514)]]
+
+def wall_z(g, shape, s=2):
+    """NE 墙区每个像素离墙根的高度（s=2 像素）"""
+    h, w = shape
+    ys, xs = np.mgrid[0:h, 0:w].astype(np.float32)
+    T, R = np.array(g['T'], np.float32) * s, np.array(g['R'], np.float32) * s
+    return T[1] + (xs - T[0]) * (R[1] - T[1]) / (R[0] - T[0]) - ys
+
+def match_zones(A, Bm, g, col, masks, s=2):
+    """右格分区调色：NE 墙的墙纸带 / 护墙板带 / 地板各自按“接缝左侧一条 vs 右侧一条”的逐通道中位数求增益，
+    分区之间按高度羽化。只比亮度会留下墙纸的冷暖差（左格偏灰、右格偏粉），这里逐通道对齐。"""
+    import PIL.ImageDraw as D
+    z = wall_z(g, A.shape[:2], s)
+    ok = (A[..., 3] > 0) & (Bm[..., 3] > 0)
+    Bf = Bm[..., :3].astype(np.float32)
+    left = (col > 0.8) & (col < 0.92); right = (col > SEAM1) & (col < 1.1)
+    ne = masks['ne']
+    zones = dict(paper=ne & (z >= 80) & (z < 182), wains=ne & (z >= 6) & (z < 68), floor=masks['floor'])
+    gains = {}
+    for k, m in zones.items():
+        if (m & ok & left).sum() < 50 or (m & ok & right).sum() < 50:
+            gains[k] = np.ones(3); continue
+        a = np.median(A[..., :3][m & ok & left].reshape(-1, 3), 0)
+        b = np.median(Bf[m & ok & right].reshape(-1, 3), 0)
+        gains[k] = np.clip(a / np.maximum(b, 1), 0.6, 1.4)
+        print('  zone', k, np.round(gains[k], 3))
+    # 羽化的分区权重（墙上按高度，墙纸 / 护墙板之间的木线 68..80 用两者平均）
+    def ramp(x, a, b): return np.clip((x - a) / (b - a), 0, 1)
+    wp = ne * ramp(z, 70, 78)
+    ww = ne * (1 - ramp(z, 70, 78))
+    wf = (~ne).astype(np.float32)
+    gain = wp[..., None] * gains['paper'] + ww[..., None] * gains['wains'] + wf[..., None] * gains['floor']
+    # 墙顶压条（z>=182）由 fix_top_edge 重画；家具多边形里只用地板亮度增益
+    lum = float(np.dot(gains['floor'], [0.3, 0.59, 0.11]))
+    pm = Image.new('L', (A.shape[1], A.shape[0]), 0)
+    for poly in PROTECT: D.Draw(pm).polygon(poly, fill=255)
+    # 只护家具本身：护墙板木线 / 墙纸带（z>=66）照常调色，不然家具外围留一圈没调色的亮边
+    pm = (np.asarray(pm) > 0) & ~(ne & (z >= 66))
+    pm = cv2.GaussianBlur(pm.astype(np.float32), (0, 0), 1)[..., None]
+    gain = gain * (1 - pm) + lum * pm
+    return np.clip(Bf * gain, 0, 255)
 
 def stage_pair(mid, fw=2, mid2=None):
     """左格 = <mid> 源图（1x1 房间），右格 = <mid2> 源图（同一房间的编辑版，1x1）的 NE 墙 + 地板。"""
@@ -112,22 +176,14 @@ def stage_pair(mid, fw=2, mid2=None):
         fl = masks['floor'] & (A[..., 3] > 0) & (Bm[..., 3] > 0)
         band = fl & (col > SEAM0 - 0.1) & (col < SEAM1)
         wb = (masks['ne']) & (A[..., 3] > 0) & (Bm[..., 3] > 0) & (col > SEAM0 - 0.04) & (col < SEAM1)
-        Bf = Bm[..., :3].astype(np.float32)
-        gf = A[..., :3][band].reshape(-1, 3).mean(0) / np.maximum(Bf[band].reshape(-1, 3).mean(0), 1)
-        gw = A[..., :3][wb].reshape(-1, 3).mean(0) / np.maximum(Bf[wb].reshape(-1, 3).mean(0), 1)
-        print(v, 'gain floor', np.round(gf, 3), 'wall', np.round(gw, 3))
-        # 只做亮度增益 + 有限的通道修正，避免电视等家具被染色
-        lum_g = float(np.mean(gf * [0.3, 0.59, 0.11]) / 0.3333)
-        lum_g = float((A[..., :3][band].reshape(-1, 3) @ [0.3, 0.59, 0.11]).mean() / max((Bf[band].reshape(-1, 3) @ [0.3, 0.59, 0.11]).mean(), 1))
-        ch = np.clip(gf / lum_g, 0.93, 1.07)
-        Bf = Bf * lum_g * ch
-        Bm = np.dstack([np.clip(Bf, 0, 255), Bm[..., 3:]])
+        Bm = np.dstack([match_zones(A, Bm, g, col, masks), Bm[..., 3:]])
         wgt = np.clip((col - SEAM0) / (SEAM1 - SEAM0), 0, 1)[..., None]
         wgt = wgt * wgt * (3 - 2 * wgt)
         rgb = A[..., :3] * (1 - wgt) + Bm[..., :3] * wgt
         rgb = fix_front_edge(rgb, g, col)
         if v == 'full':
             rgb = fix_top_edge(rgb, g, col)
+            rgb = fix_rail(rgb, g, col, masks)
         sil = pl.silhouette_mask(g, 2, cut=False)
         alpha = sil.copy()
         if v == 'cut':
@@ -135,7 +191,7 @@ def stage_pair(mid, fw=2, mid2=None):
         else:
             full_canon = rgb.copy()
         out = np.dstack([np.clip(rgb, 0, 255).astype(np.uint8), (alpha * 255).astype(np.uint8)])
-        Image.fromarray(out, 'RGBA').save(f'{RAW}/{mid}-day-{v}-canon.png')
+        Image.fromarray(out, 'RGBA').save(f'{WORK}/{mid}-day-{v}-stitched.png')
         print(v, 'ok')
 
 if __name__ == '__main__':
