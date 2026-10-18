@@ -58,8 +58,8 @@
     ]
    ],
    "label": [
-    100,
-    72
+    55,
+    91
    ],
    "badges": [
     [
@@ -168,8 +168,8 @@
      ],
      "strength": 0.85,
      "alt": [
-      263,
-      185
+      314,
+      187
      ]
     },
     {
@@ -206,6 +206,100 @@
       272,
       120,
       75
+     ]
+    },
+    {
+     "id": "ac",
+     "kind": "ac",
+     "role": "ac",
+     "slot": 0,
+     "wall": "nw",
+     "vent": [
+      [
+       93,
+       93
+      ],
+      [
+       128,
+       78
+      ]
+     ],
+     "led": [
+      135,
+      64
+     ],
+     "core": [
+      [
+       91,
+       64
+      ],
+      [
+       141,
+       64
+      ],
+      [
+       143,
+       86
+      ],
+      [
+       89,
+       86
+      ]
+     ],
+     "reveal": [
+      121,
+      106,
+      44,
+      34
+     ],
+     "anchor": [
+      116,
+      75
+     ],
+     "alt": [
+      210,
+      147
+     ]
+    },
+    {
+     "id": "curtain",
+     "kind": "curtain",
+     "role": "curtain",
+     "slot": 0,
+     "wall": "ne",
+     "patch": "curtain-living",
+     "rect": [
+      234,
+      60,
+      62,
+      80
+     ],
+     "mid": 265.0,
+     "quad": [
+      [
+       234.0,
+       60.2
+      ],
+      [
+       296.0,
+       85.8
+      ],
+      [
+       296.0,
+       139.0
+      ],
+      [
+       234.0,
+       113.4
+      ]
+     ],
+     "anchor": [
+      265,
+      100
+     ],
+     "alt": [
+      269,
+      172
      ]
     }
    ],
@@ -272,8 +366,8 @@
     ]
    ],
    "label": [
-    100,
-    72
+    55,
+    91
    ],
    "badges": [
     [
@@ -285,8 +379,8 @@
      213
     ],
     [
-     138,
-     190
+     98,
+     200
     ]
    ],
    "lights": [
@@ -370,18 +464,63 @@
       ]
      ],
      "reveal": [
-      144,
-      168,
-      70,
-      50
+      121,
+      106,
+      44,
+      34
      ],
      "anchor": [
       116,
       75
      ],
      "alt": [
-      164,
-      170
+      141,
+      158
+     ]
+    },
+    {
+     "id": "curtain",
+     "kind": "curtain",
+     "role": "curtain",
+     "slot": 0,
+     "wall": "ne",
+     "patch": "curtain-bedroom",
+     "rect": [
+      258,
+      66,
+      64,
+      74
+     ],
+     "mid": 290.0,
+     "quad": [
+      [
+       258.0,
+       66.2
+      ],
+      [
+       322.0,
+       92.6
+      ],
+      [
+       322.0,
+       139.0
+      ],
+      [
+       258.0,
+       112.6
+      ]
+     ],
+     "anchor": [
+      290,
+      103
+     ],
+     "alt": [
+      290,
+      212
+     ],
+     "alt2": [
+      186,
+      232
      ]
     }
    ],
@@ -394,7 +533,11 @@
     "day-lit-cut": "module-bedroom-day-lit-cut.png",
     "night-unlit-cut": "module-bedroom-night-unlit-cut.png",
     "night-lit-cut": "module-bedroom-night-lit-cut.png"
-   }
+   },
+   "floorLabel": [
+    138,
+    230
+   ]
   },
   "study": {
    "footprint": [
@@ -453,8 +596,8 @@
      216
     ],
     [
-     226,
-     220
+     210,
+     233
     ],
     [
      122,
@@ -519,6 +662,104 @@
       85,
       65
      ]
+    },
+    {
+     "id": "ac",
+     "kind": "ac",
+     "role": "ac",
+     "slot": 0,
+     "wall": "ne",
+     "vent": [
+      [
+       296,
+       100
+      ],
+      [
+       332,
+       115
+      ]
+     ],
+     "led": [
+      304,
+      90
+     ],
+     "core": [
+      [
+       299,
+       89
+      ],
+      [
+       339,
+       89
+      ],
+      [
+       341,
+       111
+      ],
+      [
+       297,
+       111
+      ]
+     ],
+     "reveal": [
+      304,
+      127,
+      44,
+      34
+     ],
+     "anchor": [
+      314,
+      99
+     ],
+     "alt": [
+      274,
+      196
+     ],
+     "alt2": [
+      258,
+      220
+     ]
+    },
+    {
+     "id": "curtain",
+     "kind": "curtain",
+     "role": "curtain",
+     "slot": 0,
+     "wall": "ne",
+     "patch": "curtain-study",
+     "rect": [
+      232,
+      58,
+      64,
+      74
+     ],
+     "mid": 264.0,
+     "quad": [
+      [
+       232.0,
+       58.2
+      ],
+      [
+       296.0,
+       84.6
+      ],
+      [
+       296.0,
+       132.0
+      ],
+      [
+       232.0,
+       105.6
+      ]
+     ],
+     "anchor": [
+      264,
+      95
+     ],
+     "alt": [
+      183,
+      175
+     ]
     }
    ],
    "variants": {
@@ -530,7 +771,11 @@
     "day-lit-cut": "module-study-day-lit-cut.png",
     "night-unlit-cut": "module-study-night-unlit-cut.png",
     "night-lit-cut": "module-study-night-lit-cut.png"
-   }
+   },
+   "floorLabel": [
+    114,
+    213
+   ]
   },
   "generic": {
    "footprint": [
@@ -589,8 +834,8 @@
      216
     ],
     [
-     226,
-     220
+     210,
+     233
     ],
     [
      122,
@@ -630,7 +875,11 @@
     "day-lit-cut": "module-generic-day-lit-cut.png",
     "night-unlit-cut": "module-generic-night-unlit-cut.png",
     "night-lit-cut": "module-generic-night-lit-cut.png"
-   }
+   },
+   "floorLabel": [
+    178,
+    193
+   ]
   },
   "kitchen": {
    "footprint": [
@@ -718,6 +967,89 @@
      "alt": [
       186,
       133
+     ]
+    },
+    {
+     "id": "fridge",
+     "kind": "fridge",
+     "role": "fridge",
+     "slot": 0,
+     "display": [
+      [
+       144,
+       132
+      ],
+      [
+       150,
+       130
+      ],
+      [
+       150,
+       134
+      ],
+      [
+       144,
+       136
+      ]
+     ],
+     "body": [
+      [
+       130,
+       128
+      ],
+      [
+       160,
+       118
+      ],
+      [
+       160,
+       152
+      ],
+      [
+       130,
+       162
+      ]
+     ]
+    },
+    {
+     "id": "curtain",
+     "kind": "curtain",
+     "role": "curtain",
+     "slot": 0,
+     "wall": "nw",
+     "patch": "curtain-kitchen",
+     "rect": [
+      46,
+      72,
+      60,
+      70
+     ],
+     "mid": 76.0,
+     "quad": [
+      [
+       46.0,
+       96.8
+      ],
+      [
+       106.0,
+       72.0
+      ],
+      [
+       106.0,
+       117.0
+      ],
+      [
+       46.0,
+       141.8
+      ]
+     ],
+     "anchor": [
+      76,
+      107
+     ],
+     "alt": [
+      66,
+      187
      ]
     }
    ],
@@ -823,6 +1155,77 @@
       186,
       150
      ]
+    },
+    {
+     "id": "water_heater",
+     "kind": "water-heater",
+     "role": "water-heater",
+     "slot": 0,
+     "wall": "nw",
+     "display": [
+      [
+       176.8,
+       71.6
+      ],
+      [
+       177.7,
+       68.3
+      ],
+      [
+       180.0,
+       66.2
+      ],
+      [
+       182.2,
+       66.5
+      ],
+      [
+       183.2,
+       69.0
+      ],
+      [
+       182.2,
+       72.3
+      ],
+      [
+       180.0,
+       74.4
+      ],
+      [
+       177.7,
+       74.1
+      ]
+     ],
+     "led": [
+      174.4,
+      75.4
+     ],
+     "body": [
+      [
+       162.5,
+       65.4
+      ],
+      [
+       191.3,
+       53.5
+      ],
+      [
+       191.3,
+       78.6
+      ],
+      [
+       162.5,
+       90.5
+      ]
+     ],
+     "anchor": [
+      176.9,
+      72.0
+     ],
+     "alt": [
+      197,
+      181
+     ]
     }
    ],
    "variants": {
@@ -834,7 +1237,11 @@
     "day-lit-cut": "module-bathroom-day-lit-cut.png",
     "night-unlit-cut": "module-bathroom-night-unlit-cut.png",
     "night-lit-cut": "module-bathroom-night-lit-cut.png"
-   }
+   },
+   "floorLabel": [
+    130,
+    220
+   ]
   },
   "balcony": {
    "footprint": [
@@ -948,8 +1355,70 @@
       99
      ],
      "alt": [
-      154,
-      164
+      95,
+      214
+     ]
+    },
+    {
+     "id": "washer",
+     "kind": "washer",
+     "role": "washer",
+     "slot": 0,
+     "door": {
+      "c": [
+       85.6,
+       169.6
+      ],
+      "s": [
+       1,
+       -0.4125
+      ],
+      "t": [
+       0,
+       -1
+      ],
+      "r": 5.48,
+      "ry": 7.23
+     },
+     "display": [
+      [
+       90.2,
+       147.8
+      ],
+      [
+       95.9,
+       145.4
+      ],
+      [
+       95.9,
+       148.1
+      ],
+      [
+       90.2,
+       150.5
+      ]
+     ],
+     "led": [
+      96.6,
+      146.5
+     ],
+     "body": [
+      [
+       72.4,
+       152.7
+      ],
+      [
+       98.0,
+       142.1
+      ],
+      [
+       98.0,
+       180.1
+      ],
+      [
+       72.4,
+       190.7
+      ]
      ]
     }
    ],
@@ -962,7 +1431,11 @@
     "day-lit-cut": "module-balcony-day-lit-cut.png",
     "night-unlit-cut": "module-balcony-night-unlit-cut.png",
     "night-lit-cut": "module-balcony-night-lit-cut.png"
-   }
+   },
+   "floorLabel": [
+    186,
+    197
+   ]
   }
  }
 }

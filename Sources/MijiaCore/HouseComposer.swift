@@ -119,8 +119,15 @@ public enum HouseComposer {
                 // alt：墙挂灯具被切时的地面替代位；吸顶灯（没有本体）的编辑位落点
                 if let a = L.alt, a.count >= 2 {
                     var q = floorPointLift(a, placed: it.placed, elev: elev)
-                    // 吸顶灯 / 被切的墙挂灯具在编辑模式里就是这个点上的位置框：和徽章位挨得太近时往上（天花板方向）让开
-                    if L.kind == "ceiling" || hidden { q = clearOfBadges(q, badgePts); altPts.append(q) }
+                    if hidden, let a2 = L.alt2, a2.count >= 2 {
+                        // alt 被前排切墙挡住要往里挪（挪进房间可能压到家具）→ 用挪动更少的备选位
+                        let q2 = floorPointLift(a2, placed: it.placed, elev: elev)
+                        if hypot(q2[0] - a2[0], q2[1] - a2[1]) + 2 < hypot(q[0] - a[0], q[1] - a[1]) { q = q2 }
+                    }
+                    // 吸顶灯的编辑位：离徽章太近时往上（天花板方向）让开；被切的墙挂灯具：alt 是素材里挑好的空地，
+                    // 只在合成后徽章位挪得太近时小幅让开（最多 12px），不会被推到床 / 桌子上
+                    if L.kind == "ceiling" { q = clearOfBadges(q, badgePts); altPts.append(q) }
+                    else if hidden { q = clearOfBadges(q, badgePts, minD: 30, maxUp: 12); altPts.append(q) }
                     d["alt"] = tx(q)
                 }
                 switch L.reveal {
@@ -128,8 +135,21 @@ public enum HouseComposer {
                 case .room: d["reveal"] = "room"
                 case nil: break
                 }
-                for (k, poly) in [("shade", L.shade), ("screen", L.screen), ("core", L.core)] where !hidden {
+                for (k, poly) in [("shade", L.shade), ("screen", L.screen), ("core", L.core), ("vent", L.vent),
+                                  ("quad", L.quad), ("display", L.display), ("body", L.body)] where !hidden {
                     if let poly { d[k] = poly.map(tx) }
+                }
+                if !hidden {
+                    // 窗帘贴片 / 家电指示灯：跟着模块平移（墙被切掉时和本体一起不画）
+                    if let p = L.patch { d["patch"] = p }
+                    if let r = L.rect, r.count == 4 { d["rect"] = [r[0] + dx, r[1] + dy, r[2], r[3]] }
+                    if let m = L.mid { d["mid"] = m + dx }
+                    if let l = L.led, l.count >= 2 { d["led"] = tx(l) }
+                    if let door = L.door {
+                        var dd: [String: Any] = ["c": tx(door.c), "s": door.s, "t": door.t, "r": door.r]
+                        if let ry = door.ry { dd["ry"] = ry }
+                        d["door"] = dd
+                    }
                 }
                 lights.append(d)
             }
@@ -181,7 +201,7 @@ public enum HouseComposer {
     }
 
     /// alt 位置框和徽章位至少隔 minD：只往上挪（最多 60px）
-    static func clearOfBadges(_ p: [Double], _ badges: [[Double]], minD: Double = 54) -> [Double] {
+    static func clearOfBadges(_ p: [Double], _ badges: [[Double]], minD: Double = 54, maxUp: Double = 60) -> [Double] {
         var q = p
         for _ in 0..<3 {
             for b in badges where b.count >= 2 {
@@ -190,7 +210,7 @@ public enum HouseComposer {
                 q[1] = min(q[1], b[1] - (minD * minD - dx * dx).squareRoot())
             }
         }
-        q[1] = max(q[1], p[1] - 60)
+        q[1] = max(q[1], p[1] - maxUp)
         return q
     }
 

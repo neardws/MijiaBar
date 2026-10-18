@@ -73,10 +73,42 @@ Fixture slots (`mijiabar house slots --json`):
 
 | Module | Fixtures (accepts) | Badges |
 |---|---|---|
-| `living` | `floor_lamp` (light), `sconce` (light), `tv` (tv) | 4 |
+| `living` | `floor_lamp` (light), `sconce` (light), `tv` (tv), `ac` (ac, wall unit above the sofa) | 4 |
 | `bedroom` | `bedside` (light), `ac` (ac) | 3 |
-| `study` | `ceiling` (light), `monitor` (light/tv/other, name must mention 显示器/monitor/screen…) | 3 |
+| `study` | `ceiling` (light), `monitor` (light/tv/other, name must mention 显示器/monitor/screen…), `ac` (ac, wall unit beside the window) | 3 |
 | `generic` | `entry_light` (light) | 3 |
+| `kitchen` / `bathroom` / `balcony` (composed layouts) | `pendant` / `ceiling` / `wall_lamp` (light) | 3 |
+
+### Device classes (fixture vs badge)
+
+Devices are either **(A) fixtures** drawn into the room art with an on/off state, or **(B) badges** (pixel icon on the floor).
+`HouseCatalog.deviceClass(category:model:)` decides; `mijiabar house --json` reports it per device as `class`
+(`fixture:<kind>`, `fixture:<kind>(badge)` = type A without art yet, or `badge`), and `house slots --json` lists every fixture's `kind`.
+
+| Class | Kinds | Shown as |
+|---|---|---|
+| A, has art (baked light) | `light`, `screen` (TV / monitor), `ac` (wall unit) | Baked into the module art: lit layer fades in when the device is on (lamp glow, screen picture, AC airflow + green LED) |
+| A, has art (live state) | `curtain`, `fridge`, `water-heater`, `washer` | Drawn into the art; the state is drawn live by the app (never baked, so another light's lit layer can't leak it): **curtain** = closed-curtain patch over the window, sliding in from both sides by `current-position` (0–100 %, partial supported; on/off when there is no position), and the room dims a little in daytime while closed; **fridge** = cyan display on the door (dark when off/offline); **water heater** = display window glows orange with flickering flame cells + red LED while heating (`status` option text contains heat/work/busy…), blue + green LED when on but idle, dark when off; **washer** = green panel display + clothes tumbling in the drum (8 fps) while running, dark when off |
+| A, art planned | `fan`, `air-purifier`, `humidifier`, `dehumidifier`, `heater`, `vacuum` (floor sprites with on/off frames, Phase 3b/3c) | Badge until the art lands |
+| B | plugs, switches, sensors, gateways, remotes, locks, cameras, speakers, printers, water purifiers, kitchen appliances | Badge |
+
+A type-A device falls back to a badge when its room module has no free slot of that kind (no such slot, already taken, or the wall it
+hangs on is cut away in a composed layout — then the badge sits on the slot's floor `alt` point). Every art set — the classic cutaway
+(`house-cutaway.json`), the module catalog and every style pack — must define exactly the fixture set of `HouseCatalog.fixtures`
+(`HouseCatalog.fixtureSetProblems`, checked by unit tests).
+
+Live-state fixture slots:
+
+| Slot id | Kind | Modules (classic cutaway / composed modules) | Notes |
+|---|---|---|---|
+| `curtain` | `curtain` | living, bedroom, study (classic + modules), kitchen (modules) | Wall fixture (`ne`; kitchen `nw`): hidden + badge at `alt` when its wall is cut. Patch `curtain-<module>-{day,night}-{unlit,lit}.png` (classic: `curtain-classic-<room>-…`); the lit patch is revealed with the same per-light reveal masks as the room art |
+| `fridge` | `fridge` | kitchen (modules only) | The fridge already in the kitchen art; `display` quad on the door |
+| `water_heater` | `water-heater` | bathroom (modules only) | Wall unit on the bathroom `nw` wall; hidden + badge when that wall is cut |
+| `washer` | `washer` | balcony (modules only) | Floor appliance (front-loader), visible in every layout |
+
+Classic has no kitchen / bathroom / balcony rooms, so fridge / water heater / washer only appear in composed layouts.
+New device categories: `curtain`, `fridge`, `washer`, `water-heater` (`DeviceCategory.guess`: `curtain`; `fridge` / `refrigerator`;
+`washer` / `dryer` / `.wash.` (not `dishwasher` → kitchen, not `hairdryer`); `waterheater` / `water_heater` / `gasheater`).
 
 ## CLI
 

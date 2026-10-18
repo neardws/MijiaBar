@@ -67,6 +67,12 @@ Pipeline (`scripts/house_modules/build.py`), same treatment as `gen-house-cutawa
      top inside a retouched hole follows the generator's actual wall top next to it; for the kitchen it blends
      linearly from the left to the right side. Output: `src/{living,study,kitchen}-day-{full,cut}-canon.png`, used
      by `build.py` directly.
+   * **Wall AC** (`add_ac.py modules`, after `retouch.py`): the bedroom's wall unit (warped to the 2x canonical frame
+     the same way `build.py` does) is pasted onto living's NW wall above the sofa (same spot — all modules share the
+     tip) and, mirrored about the tip column (`P(0,v,z) ↔ P(u=v,0,z)`) and shortened, onto study's NE wall right of
+     the window; tone matched to the target wallpaper. Slots: `ac_nw` / `ac_ne` in `fixtures.py`.
+     `add_ac.py classic` did the same for the classic cutaway (living: replaces the large painting, LaMa fills the
+     rest; study: NE wall left of the window) and patched its unlit/lit incrementally.
    * The kitchen pendant was edited out of the source: a pendant hanging in mid-air would be sliced in half by a
      cut-wall strip, so the kitchen light is an invisible ceiling light with its pool on the table.
 2. **Fit**: auto-detect the room silhouette (outer edges, wall-top lines fitted by least squares so hanging items
@@ -81,28 +87,53 @@ Pipeline (`scripts/house_modules/build.py`), same treatment as `gen-house-cutawa
    dark furniture sides survive; near-black 1–3 px fringes left by the generator along the cut edge are peeled off.
 3. **Pixelize**: half-resolution LANCZOS + brightness/contrast + NEAREST ×2 + sharpen (classic parameters).
 4. **Night**: 3D LUT learned from the aligned classic `day-base → night-base` pair (pixel-aligned by construction),
-   window glass replaced with night sky.
-5. **Bake**: the classic light functions (`light_field`, `band`, `paint_shade`, `paint_screen`); AC airflow drifts
-   away from the wall the unit hangs on (`paint_ac` in `pipeline.py`).
+   window glass replaced with night sky. The LUT is frozen in `assets/house/modules/night-lut.npz` (learned before the
+   classic bases got the AC units); delete it to re-learn.
+   * **Curtain patches** (`curtains.py build`): one "fully closed" patch per curtained window (classic living / bedroom /
+     study; modules living / bedroom / study / kitchen) × day/night × unlit/lit. Fabric = 4-level palette k-means'd from the
+     existing side curtains + vertical folds, header and wavy hem; module night = the frozen day→night LUT, lit = the lit
+     art's own per-level side-curtain colours (so it never over-exposes). Every variant is then scaled so its mean luminance
+     matches the original side curtains in the same image (the fold pattern alone over-weights the bright level and read as
+     backlit). Occlusion polygons keep the study monitor / plant in
+     front. The app slides the two halves in from the window edges by curtain position (2px-aligned x ranges).
+     `curtains.py geometry <name>` gives `patch / rect / mid / quad` for `fixtures.py` without reading images.
+   * **Water heater + washer** (`add_appliances.py canon && LAMA=big-lama.pt add_appliances.py paint`): small 3D
+     SDF models (`appliance_models.py`) rendered with the module art's own orthographic camera (`appliance_render.py`:
+     rounded edges, AO, soft shadow onto wall / floor, Blinn highlights, environment reflection, warm room tint, dark
+     outline ring), supersampled into the 2x canon so they go through the same pixelize as the painted furniture —
+     a horizontal enamel storage heater (straps, chrome-bezel round gauge, knob, pipes + valves) on the bathroom NW wall,
+     a front-loader (chrome door ring + glass, gasket, drawer, dial, display recess) on the balcony after LaMa-removing
+     the plants there. Overlay anchors (`display`, `led`, `door` with `r`/`ry`) come from the same models. Rerun `build.py` after.
+   * Live-state fixtures (`curtain`, `fridge`, `water-heater`, `washer`) are listed in `catalog.json` lights but are
+     **never baked**: `pipeline.bake_module` only bakes roles `light` / `tv` / `ac`, and the app only reveals lit art for those.
+5. **Bake**: the classic light functions (`light_field`, `band`, `paint_shade`, `paint_screen`); AC airflow (dashed
+   pixel streams + particles + green LED, `acsprite.paint_airflow`) drifts away from the wall the unit hangs on. An AC's
+   `reveal` is the airflow area right under the vent, so the lit airflow actually shows when the AC is on.
    Wall-mounted lights (`"wall": "nw"|"ne"`, with an `anchor` point) are skipped in the `-cut` bake.
 
 **Hidden wall fixtures.** The composer finds the wall segment under a fixture's `anchor`; if that segment is cut,
 the fixture's body went with the wall: the scene marks it `"hidden": true` and drops its `shade`/`screen`/`core`
 polygons (nothing paints a body that isn't there; the tap target falls back to the reveal ellipse). Lamps keep
-their light — the floor pool comes from the full-wall lit image, which is what's under the strip. The bedroom AC
-has no pool, so it carries an `alt` floor point where the app shows an AC badge instead. Only the segment that
+their light — the floor pool comes from the full-wall lit image, which is what's under the strip. ACs have no
+pool, so they carry an `alt` floor point where the app shows an AC badge instead (curtains / water heater / wall lamp
+too). Each `alt` is hand-picked clear floor near the fixture's wall — not on furniture, ≥38px from the module's
+badge spots and from other alts (`moduleAltSpotsClearOfBadges`). The composer keeps it (lifted with the floor) and only
+nudges it ≤12px if a composed badge lands within 30px; ceiling-light edit spots still dodge badges upward.
+An optional `alt2` is used when `floorPointLift` would push `alt` inward onto furniture (bedroom curtain, study AC).
+Modules also carry a `floorLabel` used when both back walls are cut, so the room name sits on clear floor, not the bed. Only the segment that
 actually holds the fixture matters (living's sconce is on NE segment 0; a room behind segment 1 doesn't hide it).
 
-Fixture ids: living `floor_lamp`/`sconce`/`tv`, bedroom `bedside`/`ac`, study `ceiling`/`monitor`,
+Fixture ids: living `floor_lamp`/`sconce`/`tv`/`ac`, bedroom `bedside`/`ac`, study `ceiling`/`monitor`/`ac`,
 generic `entry_light` (Phase 1 ids), kitchen `pendant`, bathroom `ceiling`, balcony `wall_lamp`.
 
 All seven modules now have generated art (`catalog.style = "generated"`). Without sources, `build.py` falls
 back to **geometry shells** (empty rooms) marked `shell-standin` — geometry review only, not final art.
 
 Regenerate: `python3 scripts/house_modules/extend.py pair living livingR && LAMA=big-lama.pt python3
-scripts/house_modules/retouch.py living && … retouch.py study && … retouch.py kitchen && python3 scripts/house_modules/build.py
+scripts/house_modules/retouch.py living && … retouch.py study && … retouch.py kitchen && python3 scripts/house_modules/add_ac.py modules && python3 scripts/house_modules/add_appliances.py canon && LAMA=big-lama.pt python3 scripts/house_modules/add_appliances.py paint && python3 scripts/house_modules/build.py
 assets/house/modules --raw assets/house/modules/src --classic <dir with house-cutaway-{day,night}-base.png> &&
-scripts/sync-house-modules.sh`. `fitcheck.py <id> <fw>` writes a corner overlay + full/cut fit preview to /tmp.
+scripts/sync-house-modules.sh && python3 scripts/house_modules/curtains.py build`. Screenshots of every live-state fixture:
+`MijiaBarApp --house-fixtures-snapshot <dir>` (classic curtains open/half/closed, two composed layouts × day/night × on/off, `crops.json`). `fitcheck.py <id> <fw>` writes a corner overlay + full/cut fit preview to /tmp.
 
 ## Timing
 

@@ -33,14 +33,34 @@ struct HouseLightSpec: Decodable, Identifiable {
     let shade: [[Double]]?    // 灯罩多边形
     let screen: [[Double]]?   // 屏幕四边形
     let core: [[Double]]?     // 灯具本体（关灯时用 unlit 盖回去）
+    /// 空调出风口下沿（两点）+ 送风方向：开机时画动态送风（HouseAirflow）
+    var vent: [[Double]]? = nil
+    var wall: String? = nil
+    var flow: Double? = nil
+    var flowDirection: Double { flow ?? (wall == "ne" ? -1 : 1) }
 
     /// 合成场景：墙挂灯具所在那段墙被切掉了（本体不可见，没有 shade/screen/core）
     var hidden: Bool? = nil
     /// 本体被切掉时的徽章位（地面点，空调用）
     var alt: [Double]? = nil
 
+    /// 窗帘贴片（patch + rect + mid + quad）、家电显示屏 / 指示灯 / 滚筒门、家电本体（只用来点击）
+    var patch: String? = nil
+    var rect: [Double]? = nil
+    var mid: Double? = nil
+    var quad: [[Double]]? = nil
+    var display: [[Double]]? = nil
+    var led: [Double]? = nil
+    var door: HouseDoor? = nil
+    var body: [[Double]]? = nil
+
+    /// 只有灯 / 屏幕 / 空调烘焙了光；窗帘、冰箱、热水器、洗衣机的状态全由 App 动态画（不露 lit 图）
+    var bakesLight: Bool { ["light", "tv", "ac"].contains(role) }
+
     /// 关掉时需要用 unlit 盖回去的灯具本体（防止同房间其他灯的 lit 蒙版把它“点亮”）
-    var corePolygon: [[Double]]? { core ?? screen ?? shade }
+    var corePolygon: [[Double]]? { bakesLight ? (core ?? screen ?? shade) : nil }
+    /// 点击区域
+    var hitPolygon: [[Double]]? { corePolygon ?? body ?? quad }
 
     func strength(_ l: RoomLighting) -> Double { l.level(id) }
 
@@ -124,6 +144,15 @@ enum HouseAssets {
         return img
     }
 
+    /// 窗帘关合贴片：<patch>-{day,night}-{unlit,lit}.png（scripts/house_modules/curtains.py）
+    static func curtainPatch(_ name: String, phase: HousePhase, lit: Bool) -> NSImage? {
+        let key = "\(name)-\(phase.assetName)-\(lit ? "lit" : "unlit")"
+        if let img = images[key] { return img }
+        guard let url = resourceURL(key, "png") ?? HouseModuleAssets.resourceURL(key, "png"), let img = NSImage(contentsOf: url) else { return nil }
+        images[key] = img
+        return img
+    }
+
     static func cutawayScene() -> HouseCutawaySceneFile? {
         if let cached = sceneCache { return cached }
         let scene = resourceURL("house-cutaway", "json")
@@ -156,7 +185,12 @@ struct RoomLighting: Equatable {
         for d in devices where d.on {
             guard case .fixture(let id)? = d.spot else { continue }
             lv[id] = 1
-            switch d.category { case .tv: tv = 1; case .ac: ac = 1; default: lamps += 1 }
+            switch d.category {
+            case .tv: tv = 1
+            case .ac: ac = 1
+            case .curtain, .fridge, .washer, .waterHeater: break   // 不算「暖意」
+            default: lamps += 1
+            }
         }
         return RoomLighting(levels: lv, cozy: min(1, 0.12 + lamps * 0.28 + tv * 0.32 + ac * 0.22))
     }
@@ -169,6 +203,13 @@ struct HouseDevice: Equatable {
     let online: Bool
     /// 有开关（传感器之类没有）
     let toggleable: Bool
+    /// 窗帘开合度 0（全关）..1（全开）；nil = 不知道，按 on 当全开 / 全关
+    var level: Double? = nil
+    /// 热水器正在加热、洗衣机正在洗（没有状态属性时按开着算）
+    var busy: Bool = false
+
+    /// 窗帘露出的程度：没装设备 / 离线 = 1（底图里系起来的窗帘）
+    var curtainOpen: Double { online ? min(1, max(0, level ?? (on ? 1 : 0))) : 1 }
 }
 
 struct HouseRoom: Identifiable, Equatable {
@@ -215,7 +256,19 @@ extension AppModel {
     func houseRoom(_ r: ResolvedHouseRoom) -> HouseRoom {
         let ds = r.devices.map { x -> HouseDevice in
             let p = device(x.did).flatMap { powerInfo($0) }
-            return HouseDevice(did: x.did, name: x.name, category: x.category, spot: x.spot, on: x.online && p?.isOn == true, online: x.online, toggleable: p != nil)
+            var d = HouseDevice(did: x.did, name: x.name, category: x.category, spot: x.spot, on: x.online && p?.isOn == true, online: x.online, toggleable: p != nil)
+            let st = states[x.did]
+            switch x.category {
+            case .curtain:
+                // 窗帘没有开关属性：按当前位置（0..100，100 = 全开）
+                if let pos = HouseDeviceState.curtainPosition(st) { d.level = pos; d.on = x.online && pos > 0.02 }
+            case .fridge:
+                d.on = x.online && (p?.isOn ?? true)
+            case .washer, .waterHeater:
+                d.busy = d.on && HouseDeviceState.busy(st, otherwise: x.category == .washer)
+            default: break
+            }
+            return d
         }
         return HouseRoom(key: r.key, title: r.title, module: r.module, devices: ds, lighting: .from(ds))
     }
@@ -262,7 +315,7 @@ struct HouseCutawaySceneView: View {
                 ForEach(rooms) { room in
                     if let m = src.module(for: room) {
                         HouseRoomLightLayer(module: m, devices: room.devices, lighting: room.lighting,
-                                            lit: lit, unlit: unlit, artSize: artSize, onToggle: edit == nil ? onToggle : nil)
+                                            lit: lit, unlit: unlit, artSize: artSize, phase: phase, onToggle: edit == nil ? onToggle : nil)
                     }
                 }
                 ForEach(rooms) { room in
@@ -341,6 +394,48 @@ struct HouseCutawaySceneView: View {
     }
 }
 
+/// 空调送风：出风口下沿往前下方飘的几股像素点（2 px 格，和底图像素对齐），8 fps；坐标 = 底图像素。
+/// 菜单栏面板 / 窗口关掉时视图不在层级里，TimelineView 自然停。
+struct HouseAirflow: View {
+    let a: CGPoint, b: CGPoint
+    let dir: Double
+    static let streams = 5, perStream = 6
+
+    var body: some View {
+        TimelineView(.periodic(from: .init(timeIntervalSinceReferenceDate: 0), by: 1.0 / 8)) { ctx in
+            Canvas { g, _ in Self.draw(g, a: a, b: b, dir: dir, t: ctx.date.timeIntervalSinceReferenceDate) }
+        }
+    }
+
+    /// 纯函数（同一时刻画出来一样），截图和测试都能复现
+    static func particles(a: CGPoint, b: CGPoint, dir: Double, t: Double) -> [(CGPoint, Double)] {
+        var out: [(CGPoint, Double)] = []
+        for i in 0..<streams {
+            let s = (Double(i) + 0.5) / Double(streams)
+            let base = CGPoint(x: a.x + (b.x - a.x) * s, y: a.y + (b.y - a.y) * s)
+            let seed = Double(i) * 0.37
+            for j in 0..<perStream {
+                // 0 → 1：从出风口飘出去、变淡
+                var p = (t * 0.45 + Double(j) / Double(perStream) + seed).truncatingRemainder(dividingBy: 1)
+                if p < 0 { p += 1 }
+                let d = 4 + p * 26
+                let wob = sin(t * 2.1 + Double(i) * 1.7 + p * 6) * 1.6
+                let x = base.x + dir * d * 0.85 + wob
+                let y = base.y + 2 + d * 0.9
+                out.append((CGPoint(x: (x / 2).rounded(.down) * 2, y: (y / 2).rounded(.down) * 2), 0.3 + (1 - p) * 0.65))
+            }
+        }
+        return out
+    }
+
+    static func draw(_ g: GraphicsContext, a: CGPoint, b: CGPoint, dir: Double, t: Double) {
+        let col = Color(red: 0.70, green: 0.92, blue: 1.0)
+        for (p, alpha) in particles(a: a, b: b, dir: dir, t: t) {
+            g.fill(Path(CGRect(x: p.x, y: p.y, width: 2, height: 2)), with: .color(col.opacity(alpha)))
+        }
+    }
+}
+
 /// 单个房间：每盏开着的灯按「房间多边形 ∩ 灯具蒙版」露出 lit 底图；关着的灯具本体用 unlit 盖回去。
 private struct HouseRoomLightLayer: View {
     let module: HouseCutawayModule
@@ -349,11 +444,12 @@ private struct HouseRoomLightLayer: View {
     let lit: NSImage
     let unlit: NSImage
     let artSize: CGSize
+    var phase: HousePhase = .night
     var onToggle: ((String) -> Void)?
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            ForEach(module.lights) { light in
+            ForEach(module.lights.filter(\.bakesLight)) { light in
                 let k = light.strength(lighting)
                 if let reveal = light.reveal {
                     image(lit)
@@ -376,6 +472,61 @@ private struct HouseRoomLightLayer: View {
                         .mask(HousePolygon(points: core).fill(Color.white))
                         .opacity(1 - k)
                         .animation(.easeInOut(duration: 0.35), value: k)
+                }
+            }
+            // 空调送风：动态像素粒子（不烘焙进 lit——同屋的灯开着时 lit 会把烘焙的送风也露出来）
+            ForEach(module.lights) { light in
+                if light.kind == "ac", light.hidden != true, let v = light.vent, v.count == 2 {
+                    let k = light.strength(lighting)
+                    if k > 0 {
+                        HouseAirflow(a: CGPoint(x: v[0][0], y: v[0][1]), b: CGPoint(x: v[1][0], y: v[1][1]), dir: light.flowDirection)
+                            .frame(width: artSize.width, height: artSize.height)
+                            .opacity(k)
+                            .allowsHitTesting(false)
+                    }
+                }
+            }
+            // 窗帘：关合贴片盖住窗户（按开合度只露两侧）；白天关着时房间暗一点（挡住了窗外光）
+            ForEach(module.lights.filter { $0.role == "curtain" && $0.hidden != true }) { light in
+                if let dev = light.matchedDevice(in: devices), dev.curtainOpen < 0.995,
+                   let name = light.patch, let r = light.rect, r.count == 4, let q = light.quad, q.count == 4,
+                   let img = HouseAssets.curtainPatch(name, phase: phase, lit: false) {
+                    let closed = 1 - dev.curtainOpen
+                    let x0 = q[0][0], x1 = q[1][0], mid = light.mid ?? (q[0][0] + q[1][0]) / 2
+                    if phase == .day {
+                        HouseMultiPolygon(polygons: module.visible ?? [module.region])
+                            .fill(Color(red: 0.08, green: 0.05, blue: 0.02).opacity(0.13 * closed), style: FillStyle(eoFill: true))
+                            .allowsHitTesting(false)
+                    }
+                    ZStack(alignment: .topLeading) {
+                        HouseCurtainPatch(image: img, rect: r, x0: x0, x1: x1, mid: mid, closed: closed)
+                            .frame(width: artSize.width, height: artSize.height, alignment: .topLeading)
+                        // 被灯照到的部分换成 lit 贴片：和底图一样按每盏灯的 reveal 蒙版 × 亮度叠上去，颜色和周围一致
+                        if let litImg = HouseAssets.curtainPatch(name, phase: phase, lit: true) {
+                            ForEach(module.lights.filter(\.bakesLight)) { l in
+                                let k = l.strength(lighting)
+                                if k > 0, let rv = l.reveal {
+                                    HouseCurtainPatch(image: litImg, rect: r, x0: x0, x1: x1, mid: mid, closed: closed)
+                                        .frame(width: artSize.width, height: artSize.height, alignment: .topLeading)
+                                        .mask(revealMask(rv))
+                                        .opacity(k)
+                                }
+                            }
+                        }
+                    }
+                        .frame(width: artSize.width, height: artSize.height, alignment: .topLeading)
+                        .mask(HouseMultiPolygon(polygons: module.visible ?? [module.region]).fill(Color.white, style: FillStyle(eoFill: true)))
+                        .animation(.easeInOut(duration: 0.6), value: closed)
+                        .allowsHitTesting(false)
+                }
+            }
+            // 冰箱 / 热水器 / 洗衣机：显示屏、指示灯、火光、滚筒动画（状态动态画，不烘焙）
+            ForEach(module.lights.filter { ["fridge", "water-heater", "washer"].contains($0.role) && $0.hidden != true }) { light in
+                if let dev = light.matchedDevice(in: devices) {
+                    HouseApplianceOverlay(light: light, on: dev.on && dev.online, busy: dev.busy, online: dev.online, phase: phase)
+                        .frame(width: artSize.width, height: artSize.height, alignment: .topLeading)
+                        .mask(HouseMultiPolygon(polygons: module.visible ?? [module.region]).fill(Color.white, style: FillStyle(eoFill: true)))
+                        .allowsHitTesting(false)
                 }
             }
             if onToggle != nil {
@@ -471,7 +622,7 @@ struct HouseBadge: View {
         case .light: return Color(red: 1, green: 0.8, blue: 0.4)
         case .tv, .camera: return Color(red: 0.5, green: 0.75, blue: 1)
         case .ac, .fan, .airPurifier, .purifier, .dehumidifier: return Color(red: 0.55, green: 0.9, blue: 1)
-        case .heater, .kitchen: return Color(red: 1, green: 0.6, blue: 0.3)
+        case .heater, .kitchen, .waterHeater: return Color(red: 1, green: 0.6, blue: 0.3)
         default: return Color(red: 0.55, green: 1, blue: 0.6)
         }
     }
@@ -527,7 +678,7 @@ private struct HouseFixtureHit {
     let shape: AnyShape
 
     init?(light: HouseLightSpec) {
-        if let poly = light.corePolygon, poly.count >= 3 {
+        if let poly = light.hitPolygon, poly.count >= 3 {
             shape = AnyShape(HousePolygon(points: poly))
             return
         }
@@ -924,6 +1075,16 @@ struct HousePilotHost: View {
 // MARK: - CLI
 
 extension Snapshot {
+    /// 客厅空调开 / 关（其余照演示状态）
+    static func acPair(_ rooms: [HouseRoom]) -> [(String, HousePhase, [HouseRoom])] {
+        func onIds(_ r: HouseRoom) -> Set<String> {
+            Set(r.devices.compactMap { d -> String? in if case .fixture(let id)? = d.spot, d.on { return id }; return nil })
+        }
+        let on = rooms.map { $0.module == .living ? $0.lit(onIds($0).union(["ac"]), badgesOn: false) : $0 }
+        let off = rooms.map { $0.module == .living ? $0.lit(onIds($0).subtracting(["ac"]), badgesOn: false) : $0 }
+        return [("house-day-ac-on", .day, on), ("house-day-ac-off", .day, off), ("house-night-ac-on", .night, on), ("house-night-ac-off", .night, off)]
+    }
+
     static func house(dir: String) {
         NSApplication.shared.setActivationPolicy(.accessory)
         let out = URL(fileURLWithPath: dir)
@@ -946,15 +1107,140 @@ extension Snapshot {
         let oneLamp = rooms.map { $0.lit($0.module == .living ? ["floor_lamp"] : [], badgesOn: false) }
         let twoLamps = rooms.map { $0.lit($0.module == .living ? ["floor_lamp"] : $0.module == .bedroom ? ["bedside"] : [], badgesOn: false) }
         let partial: [(String, HousePhase, [HouseRoom])] = [
-            ("house-night-partial", .night, rooms),   // 演示数据的真实状态：客厅落地灯 + 电视，客厅空调徽章
+            ("house-night-partial", .night, rooms),   // 演示数据的真实状态：客厅落地灯 + 电视 + 墙上空调
             ("house-day-partial", .day, rooms),
             ("house-night-onelamp", .night, oneLamp),
             ("house-night-twolamps", .night, twoLamps),
-        ]
+        ] + acPair(rooms)
         for (name, phase, rs) in exports + partial {
             render(HouseCutawaySceneView(rooms: rs, phase: phase, showLabels: false), out.appendingPathComponent("\(name).png"),
                    size: CGSize(width: 960, height: 540))
         }
         exit(0)
+    }
+}
+
+
+// MARK: - 窗帘 / 家电的动态状态
+
+/// 窗帘关合贴片：左右两半从外侧往中间拉，closed = 0（全开，不画）..1（全关）。
+/// 墙面竖线在 iso 里仍是竖线，所以按 x 裁就是沿墙裁；裁边对齐 2px 像素格。
+struct HouseCurtainPatch: View {
+    let image: NSImage
+    let rect: [Double]
+    let x0: Double, x1: Double, mid: Double
+    let closed: Double
+
+    static func visibleRanges(x0: Double, x1: Double, mid: Double, closed: Double) -> [ClosedRange<Double>] {
+        HouseDeviceState.curtainVisibleRanges(x0: x0, x1: x1, mid: mid, closed: closed)
+    }
+
+    var body: some View {
+        let ranges = Self.visibleRanges(x0: x0, x1: x1, mid: mid, closed: closed)
+        Image(nsImage: image).interpolation(.none).resizable()
+            .frame(width: rect[2], height: rect[3])
+            .mask(alignment: .topLeading) {
+                ZStack(alignment: .topLeading) {
+                    ForEach(Array(ranges.enumerated()), id: \.offset) { _, rg in
+                        Rectangle().frame(width: max(0, rg.upperBound - rg.lowerBound), height: rect[3])
+                            .offset(x: rg.lowerBound - rect[0])
+                    }
+                }
+                .frame(width: rect[2], height: rect[3], alignment: .topLeading)
+            }
+            .offset(x: rect[0], y: rect[1])
+    }
+}
+
+/// 冰箱 / 热水器 / 洗衣机的显示屏、指示灯、热水器火光、洗衣机滚筒里转动的衣物（2px 像素格，8 fps）
+struct HouseApplianceOverlay: View {
+    let light: HouseLightSpec
+    let on: Bool, busy: Bool, online: Bool
+    let phase: HousePhase
+
+    private var animated: Bool { on && busy && (light.role == "washer" || light.role == "water-heater") }
+
+    var body: some View {
+        if animated {
+            TimelineView(.periodic(from: .init(timeIntervalSinceReferenceDate: 0), by: 1.0 / 8)) { ctx in
+                Canvas { g, _ in Self.draw(g, light: light, on: on, busy: busy, phase: phase, t: ctx.date.timeIntervalSinceReferenceDate) }
+            }
+        } else {
+            Canvas { g, _ in Self.draw(g, light: light, on: on, busy: busy, phase: phase, t: 0) }
+        }
+    }
+
+    static let screenOff = Color(red: 0.10, green: 0.12, blue: 0.14)
+    static func displayColor(role: String, on: Bool, busy: Bool) -> Color? {
+        guard on else { return screenOff }
+        switch role {
+        case "fridge": return Color(red: 0.55, green: 0.92, blue: 1.0)
+        case "water-heater": return busy ? Color(red: 1.0, green: 0.55, blue: 0.16) : Color(red: 0.45, green: 0.75, blue: 1.0)
+        case "washer": return Color(red: 0.5, green: 1.0, blue: 0.72)
+        default: return nil
+        }
+    }
+
+    static func cell(_ x: Double, _ y: Double) -> CGRect { CGRect(x: (x / 2).rounded(.down) * 2, y: (y / 2).rounded(.down) * 2, width: 2, height: 2) }
+
+    /// 洗衣机滚筒里的衣物：门面坐标（px）里绕圆心转的几块颜色，纯函数（截图 / 测试可复现）
+    static func drumCells(door: HouseDoor, t: Double) -> [(CGRect, Color)] {
+        let cols: [Color] = [Color(red: 0.95, green: 0.55, blue: 0.45), Color(red: 0.55, green: 0.75, blue: 1.0),
+                             Color(red: 0.98, green: 0.92, blue: 0.7), Color(red: 0.6, green: 0.9, blue: 0.6)]
+        var out: [(CGRect, Color)] = []
+        let r = door.r - 1.6
+        let ky = door.ry.map { ($0 - 1.6) / max(0.5, r) } ?? 1   // 门玻璃竖向半径 / 横向半径
+        for i in 0..<4 {
+            let a = t * 2.6 + Double(i) * .pi / 2
+            let rr = r * (i % 2 == 0 ? 0.75 : 0.45)
+            let fx = cos(a) * rr, fy = sin(a) * rr * ky
+            let x = door.c[0] + door.s[0] * fx + door.t[0] * fy
+            let y = door.c[1] + door.s[1] * fx + door.t[1] * fy
+            out.append((cell(x, y), cols[i]))
+        }
+        // 泡沫：门下半圈
+        for k in 0..<2 {
+            let fx = (Double(k) - 0.5) * r * 0.9, fy = -r * 0.7 * ky + sin(t * 5 + Double(k)) * 0.8
+            out.append((cell(door.c[0] + door.s[0] * fx + door.t[0] * fy, door.c[1] + door.s[1] * fx + door.t[1] * fy), Color.white.opacity(0.85)))
+        }
+        return out
+    }
+
+    static func draw(_ g: GraphicsContext, light: HouseLightSpec, on: Bool, busy: Bool, phase: HousePhase, t: Double) {
+        let night = phase == .night
+        if let d = light.display, d.count >= 3, let col = displayColor(role: light.role, on: on, busy: busy) {
+            let path = HousePolygon(points: d).path(in: .zero)
+            if on {
+                // 屏幕的光晕
+                let b = path.boundingRect
+                let glow = CGRect(x: b.midX - b.width * 0.9, y: b.midY - b.height * 1.1, width: b.width * 1.8, height: b.height * 2.2)
+                g.fill(Path(ellipseIn: glow), with: .radialGradient(Gradient(colors: [col.opacity(night ? 0.38 : 0.18), col.opacity(0)]),
+                                                                    center: CGPoint(x: b.midX, y: b.midY), startRadius: 0, endRadius: max(glow.width, glow.height) / 2))
+            }
+            g.fill(path, with: .color(col))
+            if light.role == "water-heater", on, busy {
+                // 火光：显示窗里几格黄 / 红随机闪
+                let b = path.boundingRect
+                let seed = Int(t * 8)
+                var g = g; g.clip(to: path)   // 圆形表盘：火光格不出表盘
+                for i in 0..<3 {
+                    let h = (seed &* 31 &+ i &* 17) % 7
+                    let x = b.minX + 1 + Double((h * 5 + i * 3) % max(1, Int(b.width) - 2))
+                    let y = b.minY + 2 + Double((h + i * 2) % max(1, Int(b.height) - 3))
+                    g.fill(Path(cell(x, y)), with: .color(i == 0 ? Color(red: 1, green: 0.95, blue: 0.55) : Color(red: 1, green: 0.78, blue: 0.3)))
+                }
+            } else if light.role == "fridge", on {
+                // 温度数字的两格暗点
+                let b = path.boundingRect
+                g.fill(Path(cell(b.minX + 1, b.minY + 2)), with: .color(Color(red: 0.2, green: 0.45, blue: 0.6)))
+            }
+        }
+        if let p = light.led, p.count >= 2, on {
+            let c = light.role == "water-heater" && busy ? Color(red: 1, green: 0.35, blue: 0.25) : Color(red: 0.45, green: 1, blue: 0.6)
+            g.fill(Path(cell(p[0], p[1])), with: .color(c))
+        }
+        if light.role == "washer", on, busy, let door = light.door {
+            for (r, c) in drumCells(door: door, t: t) { g.fill(Path(r), with: .color(c)) }
+        }
     }
 }

@@ -42,6 +42,10 @@ extension DeviceCategory {
         case .purifier: return "drop"
         case .other: return "square.grid.2x2"
         case .airPurifier: return "air.purifier"
+        case .curtain: return "curtains.closed"
+        case .fridge: return "refrigerator"
+        case .washer: return "washer"
+        case .waterHeater: return "drop.degreesign"
         }
     }
     var color: Color {
@@ -61,6 +65,10 @@ extension DeviceCategory {
         case .purifier: return .blue
         case .other: return .indigo
         case .airPurifier: return .cyan
+        case .curtain: return .brown
+        case .fridge: return .cyan
+        case .washer: return .blue
+        case .waterHeater: return Theme.heat
         }
     }
 }

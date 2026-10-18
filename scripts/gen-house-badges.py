@@ -196,6 +196,59 @@ kkkkkkkkkkkk
 ..kwwGwwwk..
 ..kkkkkkkk..
 ............""",
+    "curtain": """
+kkkkkkkkkkkk
+knnnkbbknnnk
+knonkbbknonk
+knnnkbbknnnk
+knonkbwknonk
+knnnkbbknnnk
+knonkbbknonk
+knnnkbbknnnk
+knonkkkknonk
+knnnk..knnnk
+kkkkk..kkkkk
+............""",
+    "fridge": """
+..kkkkkkkk..
+..kwwwwwwk..
+..kwwwwkwk..
+..kwwwwkwk..
+..kwwwwwwk..
+..kkkkkkkk..
+..kwwwwwwk..
+..kwwwwkwk..
+..kwwwwkwk..
+..kwwwwkwk..
+..kwwwwwwk..
+..kkkkkkkk..""",
+    "water-heater": """
+..kkkkkkkk..
+..kwwwwwwk..
+..kwkkkkwk..
+..kwkookwk..
+..kwkkkkwk..
+..kwwwwwwk..
+..kwwwwrwk..
+..kwwwwwwk..
+..kkkkkkkk..
+....dk.dk...
+....dk.dk...
+............""",
+    "washer": """
+.kkkkkkkkkk.
+.kwwwwwGGwk.
+.kkkkkkkkkk.
+.kwwkkkkwwk.
+.kwkbbbbkwk.
+.kwkbBBbkwk.
+.kwkbBBbkwk.
+.kwkbbbbkwk.
+.kwwkkkkwwk.
+.kwwwwwwwwk.
+.kkkkkkkkkk.
+............""",
+
 }
 
 
