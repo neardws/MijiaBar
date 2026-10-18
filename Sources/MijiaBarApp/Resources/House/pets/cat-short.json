@@ -1,0 +1,253 @@
+{
+ "schema": 1,
+ "id": "cat-short",
+ "species": "cat",
+ "cellPx": 2,
+ "frameSize": [
+  40,
+  43
+ ],
+ "anchor": [
+  20.0,
+  36.0
+ ],
+ "columns": 8,
+ "frameCount": 68,
+ "patterns": [
+  "solid",
+  "tabby",
+  "tabbyWhite",
+  "bicolor",
+  "calico",
+  "colorpoint"
+ ],
+ "sheets": {
+  "solid": "cat-short-solid.png",
+  "tabby": "cat-short-tabby.png",
+  "tabbyWhite": "cat-short-tabbyWhite.png",
+  "bicolor": "cat-short-bicolor.png",
+  "calico": "cat-short-calico.png",
+  "colorpoint": "cat-short-colorpoint.png"
+ },
+ "actions": {
+  "idle": {
+   "fps": 4,
+   "loop": true,
+   "frames": {
+    "SE": [
+     0,
+     1,
+     2,
+     3
+    ],
+    "NE": [
+     34,
+     35,
+     36,
+     37
+    ]
+   }
+  },
+  "walk": {
+   "fps": 8,
+   "loop": true,
+   "frames": {
+    "SE": [
+     4,
+     5,
+     6,
+     7,
+     8,
+     9
+    ],
+    "NE": [
+     38,
+     39,
+     40,
+     41,
+     42,
+     43
+    ]
+   }
+  },
+  "sit": {
+   "fps": 3,
+   "loop": true,
+   "frames": {
+    "SE": [
+     10,
+     11,
+     12,
+     13
+    ],
+    "NE": [
+     44,
+     45,
+     46,
+     47
+    ]
+   }
+  },
+  "groom": {
+   "fps": 4,
+   "loop": true,
+   "frames": {
+    "SE": [
+     14,
+     15,
+     16,
+     17,
+     18,
+     19
+    ],
+    "NE": [
+     48,
+     49,
+     50,
+     51,
+     52,
+     53
+    ]
+   }
+  },
+  "lookup": {
+   "fps": 3,
+   "loop": true,
+   "frames": {
+    "SE": [
+     20,
+     21
+    ],
+    "NE": [
+     54,
+     55
+    ]
+   }
+  },
+  "sleep": {
+   "fps": 2,
+   "loop": true,
+   "frames": {
+    "SE": [
+     22,
+     23,
+     24,
+     25
+    ],
+    "NE": [
+     56,
+     57,
+     58,
+     59
+    ]
+   }
+  },
+  "stretch": {
+   "fps": 4,
+   "loop": false,
+   "frames": {
+    "SE": [
+     26,
+     27,
+     28,
+     29
+    ],
+    "NE": [
+     60,
+     61,
+     62,
+     63
+    ]
+   }
+  },
+  "jump": {
+   "fps": 8,
+   "loop": false,
+   "frames": {
+    "SE": [
+     30,
+     31,
+     32,
+     33
+    ],
+    "NE": [
+     64,
+     65,
+     66,
+     67
+    ]
+   }
+  }
+ },
+ "mirror": {
+  "SW": "SE",
+  "NW": "NE"
+ },
+ "regions": {
+  "none": 0,
+  "base": 1,
+  "second": 2,
+  "white": 3,
+  "under": 4,
+  "pink": 5,
+  "iris": 6,
+  "pupil": 7,
+  "highlight": 8,
+  "closed": 9,
+  "shadow": 10,
+  "mouth": 11
+ },
+ "encoding": "R = region + 16*outline; G = shade*127.5 (shade 0..2); B = spec*255; A = 255 body / ground-shadow alpha (region 10)",
+ "jumpNote": "jump frames are drawn in place (no vertical travel); the renderer adds the arc offset",
+ "lighting": {
+  "day": {
+   "mul": [
+    1,
+    1,
+    1
+   ],
+   "add": [
+    0,
+    0,
+    0
+   ]
+  },
+  "dayLit": {
+   "mul": [
+    1.02,
+    1.0,
+    0.96
+   ],
+   "add": [
+    0,
+    0,
+    0
+   ]
+  },
+  "night": {
+   "mul": [
+    0.43,
+    0.43,
+    0.47
+   ],
+   "add": [
+    0.008,
+    0.008,
+    0.006
+   ]
+  },
+  "nightLit": {
+   "mul": [
+    0.62,
+    0.54,
+    0.42
+   ],
+   "add": [
+    0.006,
+    0.004,
+    0.0
+   ]
+  }
+ },
+ "recolor": "see docs/HOUSE_PETS.md (reference: scripts/house_pets/golden.py recolor_px)"
+}

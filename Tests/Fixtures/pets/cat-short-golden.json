@@ -1,0 +1,4613 @@
+{
+"note": "expected straight-alpha RGBA 0..255; tolerance \u00b12",
+"samples": [
+{
+"pattern": "tabby",
+"x": 177,
+"y": 243,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+146,
+13,
+255
+],
+"rgba": [
+255,
+187,
+83,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 177,
+"y": 243,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+146,
+13,
+255
+],
+"rgba": [
+112,
+82,
+40,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 177,
+"y": 243,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+146,
+13,
+255
+],
+"rgba": [
+67,
+62,
+66,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 177,
+"y": 243,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+146,
+13,
+255
+],
+"rgba": [
+31,
+29,
+33,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 136,
+"y": 204,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+100,
+0,
+255
+],
+"rgba": [
+180,
+117,
+50,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 136,
+"y": 204,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+100,
+0,
+255
+],
+"rgba": [
+79,
+53,
+25,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 136,
+"y": 204,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+100,
+0,
+255
+],
+"rgba": [
+36,
+33,
+38,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 136,
+"y": 204,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+100,
+0,
+255
+],
+"rgba": [
+17,
+16,
+19,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 179,
+"y": 336,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+18,
+64,
+0,
+255
+],
+"rgba": [
+65,
+31,
+18,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 179,
+"y": 336,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+18,
+64,
+0,
+255
+],
+"rgba": [
+30,
+16,
+10,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 179,
+"y": 336,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+18,
+64,
+0,
+255
+],
+"rgba": [
+22,
+15,
+19,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 179,
+"y": 336,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+18,
+64,
+0,
+255
+],
+"rgba": [
+11,
+8,
+10,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 170,
+"y": 75,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+10,
+55,
+0,
+26
+],
+"rgba": [
+31,
+20,
+18,
+26
+]
+},
+{
+"pattern": "tabby",
+"x": 170,
+"y": 75,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+10,
+55,
+0,
+26
+],
+"rgba": [
+31,
+20,
+18,
+26
+]
+},
+{
+"pattern": "tabby",
+"x": 170,
+"y": 75,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+10,
+55,
+0,
+26
+],
+"rgba": [
+31,
+20,
+18,
+26
+]
+},
+{
+"pattern": "tabby",
+"x": 170,
+"y": 75,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+10,
+55,
+0,
+26
+],
+"rgba": [
+31,
+20,
+18,
+26
+]
+},
+{
+"pattern": "tabby",
+"x": 64,
+"y": 360,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+109,
+0,
+255
+],
+"rgba": [
+198,
+129,
+54,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 64,
+"y": 360,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+109,
+0,
+255
+],
+"rgba": [
+87,
+58,
+27,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 64,
+"y": 360,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+109,
+0,
+255
+],
+"rgba": [
+39,
+37,
+41,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 64,
+"y": 360,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+109,
+0,
+255
+],
+"rgba": [
+19,
+18,
+21,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 59,
+"y": 123,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+2,
+128,
+0,
+255
+],
+"rgba": [
+180,
+86,
+28,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 59,
+"y": 123,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+2,
+128,
+0,
+255
+],
+"rgba": [
+79,
+39,
+15,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 59,
+"y": 123,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+2,
+128,
+0,
+255
+],
+"rgba": [
+28,
+26,
+30,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 59,
+"y": 123,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+2,
+128,
+0,
+255
+],
+"rgba": [
+14,
+13,
+16,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 28,
+"y": 225,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+109,
+0,
+255
+],
+"rgba": [
+198,
+129,
+54,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 28,
+"y": 225,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+109,
+0,
+255
+],
+"rgba": [
+87,
+58,
+27,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 28,
+"y": 225,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+109,
+0,
+255
+],
+"rgba": [
+39,
+37,
+41,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 28,
+"y": 225,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+109,
+0,
+255
+],
+"rgba": [
+19,
+18,
+21,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 141,
+"y": 37,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+109,
+0,
+255
+],
+"rgba": [
+198,
+129,
+54,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 141,
+"y": 37,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+109,
+0,
+255
+],
+"rgba": [
+87,
+58,
+27,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 141,
+"y": 37,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+109,
+0,
+255
+],
+"rgba": [
+39,
+37,
+41,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 141,
+"y": 37,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+109,
+0,
+255
+],
+"rgba": [
+19,
+18,
+21,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 7,
+"y": 12,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+17,
+64,
+0,
+255
+],
+"rgba": [
+81,
+50,
+28,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 7,
+"y": 12,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+17,
+64,
+0,
+255
+],
+"rgba": [
+37,
+23,
+15,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 7,
+"y": 12,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+17,
+64,
+0,
+255
+],
+"rgba": [
+27,
+20,
+24,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 7,
+"y": 12,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+17,
+64,
+0,
+255
+],
+"rgba": [
+14,
+10,
+13,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 211,
+"y": 333,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+118,
+0,
+255
+],
+"rgba": [
+215,
+140,
+58,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 211,
+"y": 333,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+118,
+0,
+255
+],
+"rgba": [
+94,
+62,
+29,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 211,
+"y": 333,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+118,
+0,
+255
+],
+"rgba": [
+43,
+40,
+44,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 211,
+"y": 333,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+118,
+0,
+255
+],
+"rgba": [
+20,
+19,
+22,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 226,
+"y": 315,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+146,
+0,
+255
+],
+"rgba": [
+255,
+174,
+71,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 226,
+"y": 315,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+146,
+0,
+255
+],
+"rgba": [
+112,
+77,
+35,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 226,
+"y": 315,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+146,
+0,
+255
+],
+"rgba": [
+54,
+50,
+54,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 226,
+"y": 315,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+146,
+0,
+255
+],
+"rgba": [
+25,
+23,
+27,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 58,
+"y": 295,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+2,
+118,
+0,
+255
+],
+"rgba": [
+166,
+80,
+26,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 58,
+"y": 295,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+2,
+118,
+0,
+255
+],
+"rgba": [
+73,
+36,
+14,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 58,
+"y": 295,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+2,
+118,
+0,
+255
+],
+"rgba": [
+26,
+24,
+28,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 58,
+"y": 295,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+2,
+118,
+0,
+255
+],
+"rgba": [
+13,
+12,
+15,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 62,
+"y": 105,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+2,
+137,
+0,
+255
+],
+"rgba": [
+194,
+93,
+30,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 62,
+"y": 105,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+2,
+137,
+0,
+255
+],
+"rgba": [
+86,
+42,
+16,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 62,
+"y": 105,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+2,
+137,
+0,
+255
+],
+"rgba": [
+30,
+28,
+32,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 62,
+"y": 105,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+2,
+137,
+0,
+255
+],
+"rgba": [
+15,
+14,
+17,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 17,
+"y": 329,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+155,
+0,
+255
+],
+"rgba": [
+255,
+186,
+75,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 17,
+"y": 329,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+155,
+0,
+255
+],
+"rgba": [
+112,
+82,
+37,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 17,
+"y": 329,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+155,
+0,
+255
+],
+"rgba": [
+57,
+53,
+57,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 17,
+"y": 329,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+155,
+0,
+255
+],
+"rgba": [
+27,
+25,
+28,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 309,
+"y": 187,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+137,
+13,
+255
+],
+"rgba": [
+255,
+175,
+79,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 309,
+"y": 187,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+137,
+13,
+255
+],
+"rgba": [
+112,
+77,
+39,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 309,
+"y": 187,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+137,
+13,
+255
+],
+"rgba": [
+63,
+59,
+63,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 309,
+"y": 187,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+137,
+13,
+255
+],
+"rgba": [
+29,
+27,
+31,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 300,
+"y": 23,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+2,
+118,
+0,
+255
+],
+"rgba": [
+166,
+80,
+26,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 300,
+"y": 23,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+2,
+118,
+0,
+255
+],
+"rgba": [
+73,
+36,
+14,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 300,
+"y": 23,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+2,
+118,
+0,
+255
+],
+"rgba": [
+26,
+24,
+28,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 300,
+"y": 23,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+2,
+118,
+0,
+255
+],
+"rgba": [
+13,
+12,
+15,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 25,
+"y": 35,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+100,
+0,
+255
+],
+"rgba": [
+180,
+117,
+50,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 25,
+"y": 35,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+100,
+0,
+255
+],
+"rgba": [
+79,
+53,
+25,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 25,
+"y": 35,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+100,
+0,
+255
+],
+"rgba": [
+36,
+33,
+38,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 25,
+"y": 35,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+100,
+0,
+255
+],
+"rgba": [
+17,
+16,
+19,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 20,
+"y": 108,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+109,
+0,
+255
+],
+"rgba": [
+198,
+129,
+54,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 20,
+"y": 108,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+109,
+0,
+255
+],
+"rgba": [
+87,
+58,
+27,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 20,
+"y": 108,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+109,
+0,
+255
+],
+"rgba": [
+39,
+37,
+41,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 20,
+"y": 108,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+109,
+0,
+255
+],
+"rgba": [
+19,
+18,
+21,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 26,
+"y": 168,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+118,
+0,
+255
+],
+"rgba": [
+215,
+140,
+58,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 26,
+"y": 168,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+118,
+0,
+255
+],
+"rgba": [
+94,
+62,
+29,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 26,
+"y": 168,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+118,
+0,
+255
+],
+"rgba": [
+43,
+40,
+44,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 26,
+"y": 168,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+118,
+0,
+255
+],
+"rgba": [
+20,
+19,
+22,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 301,
+"y": 293,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+109,
+0,
+255
+],
+"rgba": [
+198,
+129,
+54,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 301,
+"y": 293,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+109,
+0,
+255
+],
+"rgba": [
+87,
+58,
+27,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 301,
+"y": 293,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+109,
+0,
+255
+],
+"rgba": [
+39,
+37,
+41,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 301,
+"y": 293,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+109,
+0,
+255
+],
+"rgba": [
+19,
+18,
+21,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 180,
+"y": 113,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+4,
+100,
+0,
+255
+],
+"rgba": [
+185,
+139,
+88,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 180,
+"y": 113,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+4,
+100,
+0,
+255
+],
+"rgba": [
+82,
+62,
+43,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 180,
+"y": 113,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+4,
+100,
+0,
+255
+],
+"rgba": [
+84,
+80,
+80,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 180,
+"y": 113,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+4,
+100,
+0,
+255
+],
+"rgba": [
+38,
+36,
+39,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 177,
+"y": 114,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+91,
+0,
+255
+],
+"rgba": [
+162,
+106,
+46,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 177,
+"y": 114,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+91,
+0,
+255
+],
+"rgba": [
+72,
+48,
+23,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 177,
+"y": 114,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+91,
+0,
+255
+],
+"rgba": [
+32,
+30,
+35,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 177,
+"y": 114,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+91,
+0,
+255
+],
+"rgba": [
+16,
+15,
+18,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 294,
+"y": 282,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+2,
+118,
+0,
+255
+],
+"rgba": [
+166,
+80,
+26,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 294,
+"y": 282,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+2,
+118,
+0,
+255
+],
+"rgba": [
+73,
+36,
+14,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 294,
+"y": 282,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+2,
+118,
+0,
+255
+],
+"rgba": [
+26,
+24,
+28,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 294,
+"y": 282,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+2,
+118,
+0,
+255
+],
+"rgba": [
+13,
+12,
+15,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 91,
+"y": 289,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+100,
+0,
+255
+],
+"rgba": [
+180,
+117,
+50,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 91,
+"y": 289,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+100,
+0,
+255
+],
+"rgba": [
+79,
+53,
+25,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 91,
+"y": 289,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+100,
+0,
+255
+],
+"rgba": [
+36,
+33,
+38,
+255
+]
+},
+{
+"pattern": "tabby",
+"x": 91,
+"y": 289,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+100,
+0,
+255
+],
+"rgba": [
+17,
+16,
+19,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 258,
+"y": 295,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+2,
+118,
+0,
+255
+],
+"rgba": [
+166,
+80,
+26,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 258,
+"y": 295,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+2,
+118,
+0,
+255
+],
+"rgba": [
+73,
+36,
+14,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 258,
+"y": 295,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+2,
+118,
+0,
+255
+],
+"rgba": [
+26,
+24,
+28,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 258,
+"y": 295,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+2,
+118,
+0,
+255
+],
+"rgba": [
+13,
+12,
+15,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 295,
+"y": 291,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+128,
+0,
+255
+],
+"rgba": [
+233,
+152,
+63,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 295,
+"y": 291,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+128,
+0,
+255
+],
+"rgba": [
+102,
+67,
+31,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 295,
+"y": 291,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+128,
+0,
+255
+],
+"rgba": [
+46,
+43,
+48,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 295,
+"y": 291,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+128,
+0,
+255
+],
+"rgba": [
+22,
+21,
+24,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 129,
+"y": 163,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+10,
+55,
+0,
+102
+],
+"rgba": [
+31,
+20,
+18,
+102
+]
+},
+{
+"pattern": "calico",
+"x": 129,
+"y": 163,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+10,
+55,
+0,
+102
+],
+"rgba": [
+31,
+20,
+18,
+102
+]
+},
+{
+"pattern": "calico",
+"x": 129,
+"y": 163,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+10,
+55,
+0,
+102
+],
+"rgba": [
+31,
+20,
+18,
+102
+]
+},
+{
+"pattern": "calico",
+"x": 129,
+"y": 163,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+10,
+55,
+0,
+102
+],
+"rgba": [
+31,
+20,
+18,
+102
+]
+},
+{
+"pattern": "calico",
+"x": 140,
+"y": 245,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+2,
+100,
+0,
+255
+],
+"rgba": [
+139,
+67,
+22,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 140,
+"y": 245,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+2,
+100,
+0,
+255
+],
+"rgba": [
+62,
+31,
+12,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 140,
+"y": 245,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+2,
+100,
+0,
+255
+],
+"rgba": [
+22,
+20,
+24,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 140,
+"y": 245,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+2,
+100,
+0,
+255
+],
+"rgba": [
+11,
+11,
+13,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 135,
+"y": 31,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+3,
+109,
+0,
+255
+],
+"rgba": [
+209,
+203,
+195,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 135,
+"y": 31,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+3,
+109,
+0,
+255
+],
+"rgba": [
+92,
+90,
+93,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 135,
+"y": 31,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+3,
+109,
+0,
+255
+],
+"rgba": [
+207,
+205,
+202,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 135,
+"y": 31,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+3,
+109,
+0,
+255
+],
+"rgba": [
+91,
+90,
+96,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 138,
+"y": 99,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+2,
+146,
+13,
+255
+],
+"rgba": [
+222,
+112,
+43,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 138,
+"y": 99,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+2,
+146,
+13,
+255
+],
+"rgba": [
+97,
+50,
+22,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 138,
+"y": 99,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+2,
+146,
+13,
+255
+],
+"rgba": [
+46,
+43,
+46,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 138,
+"y": 99,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+2,
+146,
+13,
+255
+],
+"rgba": [
+22,
+20,
+23,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 251,
+"y": 330,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+3,
+109,
+0,
+255
+],
+"rgba": [
+209,
+203,
+195,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 251,
+"y": 330,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+3,
+109,
+0,
+255
+],
+"rgba": [
+92,
+90,
+93,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 251,
+"y": 330,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+3,
+109,
+0,
+255
+],
+"rgba": [
+207,
+205,
+202,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 251,
+"y": 330,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+3,
+109,
+0,
+255
+],
+"rgba": [
+91,
+90,
+96,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 222,
+"y": 167,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+19,
+64,
+0,
+255
+],
+"rgba": [
+84,
+74,
+78,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 222,
+"y": 167,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+19,
+64,
+0,
+255
+],
+"rgba": [
+38,
+34,
+38,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 222,
+"y": 167,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+19,
+64,
+0,
+255
+],
+"rgba": [
+84,
+74,
+80,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 222,
+"y": 167,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+19,
+64,
+0,
+255
+],
+"rgba": [
+38,
+34,
+39,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 50,
+"y": 381,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+3,
+118,
+0,
+255
+],
+"rgba": [
+226,
+220,
+211,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 50,
+"y": 381,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+3,
+118,
+0,
+255
+],
+"rgba": [
+99,
+97,
+101,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 50,
+"y": 381,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+3,
+118,
+0,
+255
+],
+"rgba": [
+224,
+222,
+218,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 50,
+"y": 381,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+3,
+118,
+0,
+255
+],
+"rgba": [
+98,
+98,
+104,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 103,
+"y": 372,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+10,
+55,
+0,
+102
+],
+"rgba": [
+31,
+20,
+18,
+102
+]
+},
+{
+"pattern": "calico",
+"x": 103,
+"y": 372,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+10,
+55,
+0,
+102
+],
+"rgba": [
+31,
+20,
+18,
+102
+]
+},
+{
+"pattern": "calico",
+"x": 103,
+"y": 372,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+10,
+55,
+0,
+102
+],
+"rgba": [
+31,
+20,
+18,
+102
+]
+},
+{
+"pattern": "calico",
+"x": 103,
+"y": 372,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+10,
+55,
+0,
+102
+],
+"rgba": [
+31,
+20,
+18,
+102
+]
+},
+{
+"pattern": "calico",
+"x": 253,
+"y": 150,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+146,
+0,
+255
+],
+"rgba": [
+255,
+174,
+71,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 253,
+"y": 150,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+146,
+0,
+255
+],
+"rgba": [
+112,
+77,
+35,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 253,
+"y": 150,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+146,
+0,
+255
+],
+"rgba": [
+54,
+50,
+54,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 253,
+"y": 150,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+146,
+0,
+255
+],
+"rgba": [
+25,
+23,
+27,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 56,
+"y": 67,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+3,
+137,
+0,
+255
+],
+"rgba": [
+255,
+255,
+243,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 56,
+"y": 67,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+3,
+137,
+0,
+255
+],
+"rgba": [
+112,
+112,
+116,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 56,
+"y": 67,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+3,
+137,
+0,
+255
+],
+"rgba": [
+255,
+255,
+251,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 56,
+"y": 67,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+3,
+137,
+0,
+255
+],
+"rgba": [
+112,
+112,
+120,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 183,
+"y": 191,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+146,
+0,
+255
+],
+"rgba": [
+255,
+174,
+71,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 183,
+"y": 191,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+146,
+0,
+255
+],
+"rgba": [
+112,
+77,
+35,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 183,
+"y": 191,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+146,
+0,
+255
+],
+"rgba": [
+54,
+50,
+54,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 183,
+"y": 191,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+146,
+0,
+255
+],
+"rgba": [
+25,
+23,
+27,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 176,
+"y": 39,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+10,
+55,
+0,
+51
+],
+"rgba": [
+31,
+20,
+18,
+51
+]
+},
+{
+"pattern": "calico",
+"x": 176,
+"y": 39,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+10,
+55,
+0,
+51
+],
+"rgba": [
+31,
+20,
+18,
+51
+]
+},
+{
+"pattern": "calico",
+"x": 176,
+"y": 39,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+10,
+55,
+0,
+51
+],
+"rgba": [
+31,
+20,
+18,
+51
+]
+},
+{
+"pattern": "calico",
+"x": 176,
+"y": 39,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+10,
+55,
+0,
+51
+],
+"rgba": [
+31,
+20,
+18,
+51
+]
+},
+{
+"pattern": "calico",
+"x": 51,
+"y": 372,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+137,
+0,
+255
+],
+"rgba": [
+252,
+163,
+67,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 51,
+"y": 372,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+137,
+0,
+255
+],
+"rgba": [
+110,
+72,
+33,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 51,
+"y": 372,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+137,
+0,
+255
+],
+"rgba": [
+50,
+46,
+51,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 51,
+"y": 372,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+137,
+0,
+255
+],
+"rgba": [
+23,
+22,
+26,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 49,
+"y": 20,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+100,
+0,
+255
+],
+"rgba": [
+180,
+117,
+50,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 49,
+"y": 20,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+100,
+0,
+255
+],
+"rgba": [
+79,
+53,
+25,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 49,
+"y": 20,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+100,
+0,
+255
+],
+"rgba": [
+36,
+33,
+38,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 49,
+"y": 20,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+100,
+0,
+255
+],
+"rgba": [
+17,
+16,
+19,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 181,
+"y": 14,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+17,
+64,
+0,
+255
+],
+"rgba": [
+81,
+50,
+28,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 181,
+"y": 14,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+17,
+64,
+0,
+255
+],
+"rgba": [
+37,
+23,
+15,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 181,
+"y": 14,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+17,
+64,
+0,
+255
+],
+"rgba": [
+27,
+20,
+24,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 181,
+"y": 14,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+17,
+64,
+0,
+255
+],
+"rgba": [
+14,
+10,
+13,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 15,
+"y": 187,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+146,
+0,
+255
+],
+"rgba": [
+255,
+174,
+71,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 15,
+"y": 187,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+146,
+0,
+255
+],
+"rgba": [
+112,
+77,
+35,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 15,
+"y": 187,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+146,
+0,
+255
+],
+"rgba": [
+54,
+50,
+54,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 15,
+"y": 187,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+146,
+0,
+255
+],
+"rgba": [
+25,
+23,
+27,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 247,
+"y": 162,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+10,
+55,
+0,
+76
+],
+"rgba": [
+31,
+20,
+18,
+76
+]
+},
+{
+"pattern": "calico",
+"x": 247,
+"y": 162,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+10,
+55,
+0,
+76
+],
+"rgba": [
+31,
+20,
+18,
+76
+]
+},
+{
+"pattern": "calico",
+"x": 247,
+"y": 162,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+10,
+55,
+0,
+76
+],
+"rgba": [
+31,
+20,
+18,
+76
+]
+},
+{
+"pattern": "calico",
+"x": 247,
+"y": 162,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+10,
+55,
+0,
+76
+],
+"rgba": [
+31,
+20,
+18,
+76
+]
+},
+{
+"pattern": "calico",
+"x": 228,
+"y": 21,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+146,
+13,
+255
+],
+"rgba": [
+255,
+187,
+83,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 228,
+"y": 21,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+146,
+13,
+255
+],
+"rgba": [
+112,
+82,
+40,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 228,
+"y": 21,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+146,
+13,
+255
+],
+"rgba": [
+67,
+62,
+66,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 228,
+"y": 21,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+146,
+13,
+255
+],
+"rgba": [
+31,
+29,
+33,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 68,
+"y": 227,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+146,
+13,
+255
+],
+"rgba": [
+255,
+187,
+83,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 68,
+"y": 227,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+146,
+13,
+255
+],
+"rgba": [
+112,
+82,
+40,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 68,
+"y": 227,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+146,
+13,
+255
+],
+"rgba": [
+67,
+62,
+66,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 68,
+"y": 227,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+146,
+13,
+255
+],
+"rgba": [
+31,
+29,
+33,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 140,
+"y": 337,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+19,
+64,
+0,
+255
+],
+"rgba": [
+84,
+74,
+78,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 140,
+"y": 337,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+19,
+64,
+0,
+255
+],
+"rgba": [
+38,
+34,
+38,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 140,
+"y": 337,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+19,
+64,
+0,
+255
+],
+"rgba": [
+84,
+74,
+80,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 140,
+"y": 337,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+19,
+64,
+0,
+255
+],
+"rgba": [
+38,
+34,
+39,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 255,
+"y": 79,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+137,
+0,
+255
+],
+"rgba": [
+252,
+163,
+67,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 255,
+"y": 79,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+137,
+0,
+255
+],
+"rgba": [
+110,
+72,
+33,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 255,
+"y": 79,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+137,
+0,
+255
+],
+"rgba": [
+50,
+46,
+51,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 255,
+"y": 79,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+137,
+0,
+255
+],
+"rgba": [
+23,
+22,
+26,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 227,
+"y": 191,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "day",
+"encoded": [
+1,
+91,
+0,
+255
+],
+"rgba": [
+162,
+106,
+46,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 227,
+"y": 191,
+"palette": {
+"base": "#E8973F",
+"second": "#B3561C",
+"white": "#F4EEE4",
+"eye": "#9CC43E"
+},
+"lighting": "night",
+"encoded": [
+1,
+91,
+0,
+255
+],
+"rgba": [
+72,
+48,
+23,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 227,
+"y": 191,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "day",
+"encoded": [
+1,
+91,
+0,
+255
+],
+"rgba": [
+32,
+30,
+35,
+255
+]
+},
+{
+"pattern": "calico",
+"x": 227,
+"y": 191,
+"palette": {
+"base": "#2E2B30",
+"second": "#1C1A1E",
+"white": "#F2F0EC",
+"eye": "#E9C24A"
+},
+"lighting": "night",
+"encoded": [
+1,
+91,
+0,
+255
+],
+"rgba": [
+16,
+15,
+18,
+255
+]
+}
+]
+}

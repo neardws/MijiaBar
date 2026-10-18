@@ -1,0 +1,45 @@
+import Foundation
+import Testing
+import ImageIO
+import MijiaCore
+@testable import mijiabar
+
+@Suite struct HousePetsCommandTests {
+    @Test func parsesPetFlagsWithoutConsumingNamesAsPositionals() throws {
+        #expect(try housePetArguments([]) == ["list"])
+        #expect(try housePetArguments(["--json"]) == ["list"])
+        #expect(try housePetArguments(["add", "--photo", "/tmp/cat.jpg", "--name", "Two Words", "--palette", "base=#AABBCC"]) == ["add"])
+        #expect(try housePetArguments(["set", "Mochi", "--enabled", "false", "--room", "auto"]) == ["set", "Mochi"])
+        #expect(try housePetArguments(["preview", "p_1234", "--out", "/tmp/pet.png", "--action", "sit", "--phase", "night"]) == ["preview", "p_1234"])
+    }
+    @Test func rejectsMalformedOrInapplicableFlags() {
+        for args in [["add", "--photo"], ["add", "--oops", "yes"], ["set"], ["remove", "one", "two"],
+                     ["on", "--photo", "/tmp/a"], ["preview", "one", "--photo", "/tmp/a"], ["set", "one", "--name", "--room"],
+                     ["add", "--name", "one", "--name", "two"]] {
+            #expect(throws: (any Error).self) { try housePetArguments(args) }
+        }
+    }
+    @Test func petToolsAndSchemaAreValidJSON() throws {
+        let pets = houseMCPTools.filter { ($0["name"] as? String)?.hasSuffix("house_pets") == true }
+        #expect(pets.count == 2)
+        #expect(JSONSerialization.isValidJSONObject(pets))
+        #expect(JSONSerialization.isValidJSONObject(houseSchema))
+        let definitions = try #require(houseSchema["$defs"] as? [String: Any])
+        #expect(definitions["pet"] != nil && definitions["petPalette"] != nil)
+    }
+
+    @Test func previewWritesScaledContactSheetWithoutLaunchingAnApp() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let directory = root.appendingPathComponent("Sources/MijiaBarApp/Resources/House/pets")
+        let rig = try HousePetRig.load(from: directory.appendingPathComponent("cat-short.json"))
+        let output = FileManager.default.temporaryDirectory.appendingPathComponent("pet-preview-\(UUID().uuidString).png")
+        defer { try? FileManager.default.removeItem(at: output) }
+        let count = try housePetPreview(pet: .init(id: "p_1234"), rig: rig, directory: directory, output: output, action: "sit", phase: "night")
+        #expect(count == 8)
+        let source = try #require(CGImageSourceCreateWithURL(output as CFURL, nil))
+        let image = try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
+        #expect(image.width == rig.columns * rig.frameSize[0] * rig.cellPx)
+        #expect(image.height == rig.frameSize[1] * rig.cellPx)
+        #expect(throws: HousePetError.self) { try housePetPreview(pet: .init(), rig: rig, directory: directory, output: output, action: "missing") }
+    }
+}

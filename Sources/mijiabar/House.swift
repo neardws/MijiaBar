@@ -25,6 +25,11 @@ let houseUsage = """
   mijiabar house decor list [--room R] [--json]
   mijiabar house decor set <room/slot> <item|none|auto> [--home H]
   mijiabar house decor on|off | seasonal on|off | items | reset
+  mijiabar house pets list [--json] | on | off
+  mijiabar house pets add [--photo PATH] [--name N] [--pattern P] [--palette base=#RRGGBB,second=#RRGGBB,white=#RRGGBB,eye=#RRGGBB] [--room R]
+  mijiabar house pets set <id|name> [--photo PATH] [--name N] [--pattern P] [--palette ...] [--room R|auto] [--enabled true|false]
+  mijiabar house pets remove <id|name>
+  mijiabar house pets preview <id|name> --out pet.png [--action sit|walk|sleep|idle|groom|lookup|stretch|jump] [--phase day|night]
   mijiabar house schema                             打印 house.json 的 JSON Schema
 设备 = did 或名称；房间 = 米家房间 id 或名称；--json 输出机器可读结果（修改类命令总是输出 JSON）。
 """
@@ -324,6 +329,8 @@ nonisolated(unsafe) let houseSchema: [String: Any] = [
             "layout": ["type": ["array", "null"], "description": "Phase 2 grid layout (max 3×2); null = classic four", "items": ["$ref": "#/$defs/cell"]],
             "layoutUpdatedAt": ["type": "string", "format": "date-time"],
             "decor": ["type": ["object", "null"], "additionalProperties": ["$ref": "#/$defs/decor"]],
+            "pets": ["type": ["object", "null"], "propertyNames": ["pattern": "^p_[0-9a-fA-F]{4,6}$"], "additionalProperties": ["$ref": "#/$defs/pet"], "description": "At most 3 non-deleted pets; tombstones do not count"],
+            "petPrefs": ["type": ["object", "null"], "properties": ["enabled": ["type": "boolean", "default": true], "updatedAt": ["type": "string", "format": "date-time"]]],
             "decorPrefs": ["type": ["object", "null"], "properties": ["enabled": ["type": "boolean", "default": true], "seasonal": ["type": "boolean", "default": true], "updatedAt": ["type": "string", "format": "date-time"]]],
         ]],
         "cell": ["type": "object", "required": ["room", "module", "col", "row"], "properties": [
@@ -332,6 +339,8 @@ nonisolated(unsafe) let houseSchema: [String: Any] = [
             "level": ["type": "integer", "minimum": HouseGrid.levelRange.lowerBound, "maximum": HouseGrid.levelRange.upperBound,
                       "description": "split level (each step raises the room's floor 48 px); omitted = automatic pattern"],
         ]],
+        "pet": ["type": "object", "properties": ["id": ["type": "string", "pattern": "^p_[0-9a-fA-F]{4,6}$"], "name": ["type": "string"], "species": ["const": "cat"], "rig": ["const": "cat-short"], "pattern": ["enum": HousePetRig.patterns], "palette": ["$ref": "#/$defs/petPalette"], "homeRoom": ["type": ["string", "null"]], "enabled": ["type": "boolean", "default": true], "deleted": ["type": "boolean", "default": false], "updatedAt": ["type": "string", "format": "date-time"]]],
+        "petPalette": ["type": "object", "properties": Dictionary(uniqueKeysWithValues: ["base", "second", "white", "eye"].map { ($0, ["type": "string", "pattern": "^#[0-9a-fA-F]{6}$"]) })],
         "decor": ["type": "object", "required": ["updatedAt"], "properties": ["item": ["type": ["string", "null"], "description": "null = automatic; none = empty"], "updatedAt": ["type": "string", "format": "date-time"]]],
         "room": ["type": "object", "required": ["updatedAt"], "properties": [
             "module": ["type": ["string", "null"], "enum": HouseModule.allCases.map(\.rawValue) + ["none", NSNull()], "description": "null = automatic"],
@@ -351,7 +360,7 @@ nonisolated(unsafe) let houseSchema: [String: Any] = [
     let asJSON = args.contains("--json")
     let pos = { () -> [String] in
         var out: [String] = []; var i = 0
-        while i < rest.count { if ["--home", "--room", "--visible", "--place"].contains(rest[i]) { i += 2; continue }; if rest[i] != "--json" { out.append(rest[i]) }; i += 1 }
+        while i < rest.count { if ["--home", "--room", "--visible", "--place", "--photo", "--name", "--pattern", "--palette", "--enabled", "--out", "--action", "--phase"].contains(rest[i]) { i += 2; continue }; if rest[i] != "--json" { out.append(rest[i]) }; i += 1 }
         return out
     }()
     switch sub {
@@ -402,6 +411,7 @@ nonisolated(unsafe) let houseSchema: [String: Any] = [
         let r = try houseSync(pos.first)
         if asJSON || pos.first != nil { print(json(r)) } else { print("\(r["sync"] ?? "") · \(r["file"] ?? "")") }
     case "schema": print(json(houseSchema))
+    case "pets", "pet": print(json(try await housePets(pos: housePetArguments(rest), rest: rest)))
     case "style":
         print(json(try await houseStyle(pos: pos, rest: rest, asJSON: asJSON)))
     case "decor":
@@ -459,6 +469,10 @@ nonisolated(unsafe) let houseMCPTools: [[String: Any]] = [
      "inputSchema": ["type": "object", "properties": ["room": ["type": "string"], "level": ["description": "-1 | 0 | 1 | \"auto\""], "home": ["type": "string"]], "required": ["room", "level"]]],
     ["name": "get_house_styles", "description": "列出小屋风格（温馨木屋 / 浅木白墙 / 胡桃木 / 和风 / 现代）和当前选用。",
      "inputSchema": ["type": "object", "properties": ["home": ["type": "string"]]]],
+    ["name": "get_house_pets", "description": L("仅改变外观，绝不控制设备。读取宠物、偏好、可用花纹、动作和数量限制。", "Appearance only, never controls devices. Get pets, preferences, available patterns/actions and limits."),
+     "inputSchema": ["type": "object", "properties": ["home": ["type": "string"]]]],
+    ["name": "set_house_pets", "description": L("仅改变外观，绝不控制设备。添加、修改、移除宠物或开关显示。photoPath 只用于添加本地照片，绝不保存或上传照片。", "Appearance only, never controls devices. Add, update, remove pets or enable/disable their display. photoPath is local and add-only; photos are never saved or uploaded."),
+     "inputSchema": ["type": "object", "required": ["op"], "properties": ["op": ["enum": ["add", "update", "remove", "enable", "disable"]], "pet": ["type": "string"], "home": ["type": "string"], "name": ["type": "string"], "pattern": ["enum": HousePetRig.patterns], "palette": ["$ref": "#/$defs/petPalette"], "room": ["type": ["string", "null"]], "enabled": ["type": "boolean"], "photoPath": ["type": "string"]], "$defs": ["petPalette": houseSchema["$defs"].flatMap { ($0 as? [String: Any])?["petPalette"] } ?? [:]]]],
     ["name": "get_house_decor", "description": "Appearance only, never controls devices. List fixed decoration slots, current items, preferences and active seasons.",
      "inputSchema": ["type": "object", "properties": ["home": ["type": "string"], "room": ["type": "string"]]]],
     ["name": "set_house_decor", "description": "Appearance only, never controls devices. Set slot room/slot and item id|none|auto, or enabled, or seasonal. One operation per call.",
@@ -471,6 +485,30 @@ nonisolated(unsafe) let houseMCPTools: [[String: Any]] = [
 
 @MainActor func callHouseTool(_ name: String, _ a: [String: Any]) async throws -> Any? {
     switch name {
+    case "get_house_pets", "set_house_pets":
+        var rest: [String] = []
+        for field in ["home", "pet", "name", "pattern", "photoPath"] where a[field] != nil {
+            guard a[field] is String else { throw HousePetError.invalid }
+        }
+        if let enabled = a["enabled"], !(enabled is Bool) { throw HousePetError.invalid }
+        if let room = a["room"], !(room is String) && !(room is NSNull) { throw HousePetError.invalid }
+        if let home = a["home"] as? String { rest += ["--home", home] }
+        if name == "get_house_pets" { return try await housePets(pos: ["list"], rest: rest) }
+        guard let operation = a["op"] as? String, ["add", "update", "remove", "enable", "disable"].contains(operation),
+              a["photoPath"] == nil || operation == "add" else { throw HousePetError.invalid }
+        for (field, flag) in [("name", "--name"), ("pattern", "--pattern"), ("photoPath", "--photo")] {
+            if let value = a[field] as? String { rest += [flag, value] }
+        }
+        if let room = a["room"] { rest += ["--room", room is NSNull ? "auto" : anyString(room)] }
+        if let enabled = a["enabled"] as? Bool { rest += ["--enabled", enabled ? "true" : "false"] }
+        if let palette = a["palette"] {
+            guard let fields = palette as? [String: String], !fields.isEmpty else { throw HousePetError.invalid }
+            rest += ["--palette", fields.keys.sorted().map { "\($0)=\(fields[$0]!)" }.joined(separator: ",")]
+        }
+        if ["enable", "disable"].contains(operation) { return try await housePets(pos: housePetArguments([operation == "enable" ? "on" : "off"] + rest), rest: rest) }
+        var pos = [operation == "update" ? "set" : operation]
+        if operation != "add" { guard let pet = a["pet"] as? String else { throw HousePetError.invalid }; pos.append(pet) }
+        return try await housePets(pos: housePetArguments(pos + rest), rest: rest)
     case "get_house": return try await houseReport(home: try await houseHome(a["home"] as? String))
     case "get_house_slots": return houseSlots()
     case "set_house_device":

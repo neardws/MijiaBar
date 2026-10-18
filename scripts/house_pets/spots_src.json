@@ -1,0 +1,12 @@
+{"cozy": {
+ "living": [{"id": "tv", "kind": "tv", "at": [1.31, 0.81], "facing": "NE"}, {"id": "rug", "kind": "sit", "at": [0.81, 0.81]},
+            {"id": "window", "kind": "sit", "at": [0.56, 0.19]}, {"id": "corner", "kind": "sit", "at": [1.69, 0.56]},
+            {"id": "sofa", "kind": "sleep", "at": [0.2, 0.55], "z": 16, "from": [3, 6]}],
+ "bedroom": [{"id": "bed", "kind": "sleep", "at": [0.55, 0.3], "z": 22, "from": [5, 5]}, {"id": "rug", "kind": "sit", "at": [0.44, 0.81]},
+             {"id": "window", "kind": "sit", "at": [0.94, 0.19]}],
+ "study": [{"id": "rug", "kind": "sit", "at": [0.56, 0.69]}, {"id": "window", "kind": "sit", "at": [0.81, 0.44]}],
+ "generic": [{"id": "rug", "kind": "sit", "at": [0.31, 0.69]}, {"id": "door", "kind": "sit", "at": [0.19, 0.44]}, {"id": "mid", "kind": "sit", "at": [0.69, 0.56]}],
+ "kitchen": [{"id": "bowl", "kind": "sit", "at": [0.31, 0.81]}, {"id": "counter", "kind": "sit", "at": [0.56, 0.31]}],
+ "bathroom": [{"id": "rug", "kind": "sit", "at": [0.56, 0.69]}, {"id": "mid", "kind": "sit", "at": [0.56, 0.31]}],
+ "balcony": [{"id": "sun", "kind": "sit", "at": [0.81, 0.31]}, {"id": "front", "kind": "sit", "at": [0.56, 0.81]}]
+}}
