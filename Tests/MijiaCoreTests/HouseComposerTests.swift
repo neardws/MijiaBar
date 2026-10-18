@@ -174,10 +174,10 @@ import CoreGraphics
         func badges(_ m: [String: Any]) -> [[Double]] { m["badges"] as! [[Double]] }
         let lowBack = try scene([.init(room: "a", module: "bedroom", col: 0, row: 0, level: 0),
                                  .init(room: "l", module: "living", col: 0, row: 1, level: 1)])
-        let fb = badges(flat["a"]!)[0][1] - top(flat["a"]!), lb = badges(lowBack["a"]!)[0][1] - top(lowBack["a"]!)
-        #expect(abs((fb - lb) - Double(HouseGrid.levelStep)) < 0.5)
-        let ub = badges(up["a"]!)[0][1] - top(up["a"]!)
-        #expect(abs(fb - ub) < 0.5)
+        let fb = badges(flat["a"]!).map { $0[1] - top(flat["a"]!) }, lb = badges(lowBack["a"]!).map { $0[1] - top(lowBack["a"]!) }
+        let ub = badges(up["a"]!).map { $0[1] - top(up["a"]!) }
+        #expect(zip(fb, lb).allSatisfy { $0 >= $1 - 0.01 } && zip(fb, lb).contains { $0 > $1 + 1 })
+        #expect(zip(fb, ub).allSatisfy { $0 <= $1 + 0.01 })
     }
 
     @Test func levelPatternAndClamp() {

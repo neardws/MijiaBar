@@ -99,10 +99,12 @@ public enum HouseComposer {
         for (i, it) in items.enumerated() {
             let dx = Double(it.ox - originX), dy = Double(it.oy - originY)
             func tx(_ p: [Double]) -> [Double] { [p[0] + dx, p[1] + dy] }
-            // 错层：前面（右前 / 左前）邻格比本格高时，它的切墙顶在画面上也高出这么多，会压住本格靠前的地面。
-            // 地面上的点（徽章、alt 替代位）往上（= 往房间里面）挪同样的距离
-            let lift = Double(frontLift(it.placed, elev: elev))
-            func txFloor(_ p: [Double]) -> [Double] { [p[0] + dx, p[1] + dy - lift] }
+            // 地面上的点（徽章、alt 替代位）如果落在前面（右前 / 左前）邻格的切墙后面——错层时那堵墙更高——
+            // 就往上（= 往房间里面）挪到墙顶之上，徽章脚不会被墙压住
+            func txFloor(_ p: [Double]) -> [Double] {
+                let q = floorPointLift(p, placed: it.placed, elev: elev)
+                return [q[0] + dx, q[1] + dy]
+            }
             var lights: [[String: Any]] = []
             for L in it.art.lights {
                 var d: [String: Any] = ["id": L.id, "kind": L.kind ?? "lamp", "role": L.role ?? "light"]
@@ -140,7 +142,7 @@ public enum HouseComposer {
                 "region": silhouette(it.placed, ext: it.ext).map { [Double($0.x) + dx, Double($0.y) + dy] },
                 "level": HouseLevels.effective(it.placed.cell), "elevation": it.placed.elev,
                 "visible": polygons(visible),
-                "badges": it.art.badges.map(txFloor),
+                "badges": separated(it.art.badges.map { floorPointLift($0, placed: it.placed, elev: elev) }).map(tx),
                 "lights": lights,
                 "col": it.placed.cell.col, "row": it.placed.cell.row,
                 "walls": it.placed.segments.map { ["side": $0.side.rawValue, "height": $0.height] },
@@ -155,12 +157,52 @@ public enum HouseComposer {
 
     // MARK: - 几何
 
-    /// 前方邻格（右前 col+fw、左前 row+1）比本格高出的最大像素；都不高 → 0
-    static func frontLift(_ p: HouseWallPlanner.Placed, elev: [[Int]: Int]) -> Int {
+    /// 徽章挪进房间后可能挤到一起（一个往 −u、一个往 −v）：两两距离不到 minD 的，沿 x 各让一半
+    static func separated(_ pts: [[Double]], minD: Double = 54) -> [[Double]] {
+        var q = pts
+        for _ in 0..<4 {
+            for i in q.indices { for j in q.indices where j > i && q[i].count >= 2 && q[j].count >= 2 {
+                let dx = q[j][0] - q[i][0], dy = q[j][1] - q[i][1], d = (dx * dx + dy * dy).squareRoot()
+                guard d < minD else { continue }
+                let need = (minD * minD - dy * dy).squareRoot() - abs(dx)
+                guard need > 0 else { continue }
+                let sgn: Double = dx >= 0 ? 1 : -1
+                q[i][0] -= sgn * need / 2; q[j][0] += sgn * need / 2
+            } }
+        }
+        return q
+    }
+
+    /// 模块内一个地面点如果被前方邻格的切墙（高 cutH + 两格高差）挡住，就沿地面往房间里面挪
+    /// （挡在左前沿 → 往 −v 走，挡在右前沿 → 往 −u 走），直到露在墙顶之上 4px；最多挪到离后沿 0.12 格。
+    /// 沿地面走而不是竖直上移：同一房间的几个徽章相对位置不变，不会挤到一起。前方没有邻格（剖面敞开）→ 不动。
+    static func floorPointLift(_ pt: [Double], placed p: HouseWallPlanner.Placed, elev: [[Int]: Int]) -> [Double] {
+        guard pt.count >= 2 else { return pt }
+        let half = Double(HouseGrid.W / 2), fh = Double(HouseGrid.floorH / 2), fw = Double(p.fw)
         let c = p.cell.col, r = p.cell.row
-        var front: [[Int]] = [[c + p.fw, r]]
-        for dc in 0..<p.fw { front.append([c + dc, r + 1]) }
-        return front.compactMap { elev[$0] }.map { $0 - p.elev }.max().map { max(0, $0) } ?? 0
+        func wallTop(_ edgeY: Double, _ n: [Int]) -> Double? {
+            guard let e = elev[n] else { return nil }
+            return edgeY - Double(HouseGrid.cutH + e - p.elev)
+        }
+        var a = pt[0] - Double(p.tip.x), b = pt[1] - Double(p.tip.y)
+        // 左前沿 v = 1：同一 x 上的沿线点 u = 1 + a/(W/2)；墙顶随 x 变，沿 −v 走 t 格时点和墙顶一起变，
+        // 点的 y 每格减 fh、同一 x 上的墙顶 y 每格加 fh → 相对每格 2·fh
+        do {
+            let u = 1 + a / half, v = (b / fh - a / half) / 2
+            if u >= 0, u <= fw, let top = wallTop((u + 1) * fh, [c + min(p.fw - 1, Int(u)), r + 1]) {
+                let need = b - (top - 4)
+                if need > 0 { let t = min(need / (2 * fh), max(0, v - 0.12)); a += t * half; b -= t * fh }
+            }
+        }
+        // 右前沿 u = fw：沿线点 v = fw − a/(W/2)；沿 −u 走
+        do {
+            let v = fw - a / half, u = (b / fh + a / half) / 2
+            if v >= 0, v <= 1, let top = wallTop((fw + v) * fh, [c + p.fw, r]) {
+                let need = b - (top - 4)
+                if need > 0 { let t = min(need / (2 * fh), max(0, u - 0.12)); a -= t * half; b -= t * fh }
+            }
+        }
+        return [a + Double(p.tip.x), b + Double(p.tip.y)]
     }
 
     /// 模块剪影（模块内坐标，左上原点）：两面后墙按实际高度 + 地板 + 前沿地台（错层时再加厚 ext）
