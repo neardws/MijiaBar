@@ -51,8 +51,18 @@ Pipeline (`scripts/house_modules/build.py`), same treatment as `gen-house-cutawa
      the furniture). `extend.py pair living livingR` stitches two sources instead — `living` (1×1: sofa, floor lamp,
      window, sconce) for the left cell and `livingR` (a same-style long room, ≈1.45:1, with only a free-standing TV
      stand and a plant) for the right cell. Because `livingR` is longer than one cell, its right 1.16 cells are taken
-     at 1:1 — nothing is stretched. Soft seam, brightness matching, a re-drawn front slab and NE top trim →
-     `src/living-day-{full,cut}-canon.png`, which `build.py` uses directly.
+     at 1:1 — nothing is stretched. The right cell is colour-matched per zone (wallpaper band, wainscot band, floor:
+     per-channel median gains from a strip on each side of the seam, so the wallpaper's warm/cool cast matches, not
+     just its brightness); the front slab, NE top trim and wainscot rail are re-drawn from the left cell's profile →
+     `$HOUSE_WORK/living-day-{full,cut}-stitched.png`.
+   * **Retouch** (`retouch.py`, offline, needs torch + the LaMa `big-lama.pt` TorchScript model; the build itself
+     doesn't): living — LaMa repaints the seam band so the wallpaper pattern runs through, and the TV stand is moved
+     off the NE wall to the middle of the right cell (0.35 cell forward; LaMa fills the old spot, a contact shadow is
+     added). In composed layouts the NE wall is a cut wall, so a TV against it looked like it stood on the shared
+     wall. Study — the 2 m bookshelf on the NW wall (usually a cut wall shared with the bedroom) poked far above
+     the cut and read as furniture in the next room; it is shortened to a one-shelf low bookcase (≈37 px, below
+     `CUT_H`). In `-cut` variants the wall top inside a retouched hole follows the generator's actual wall top
+     next to it. Output: `src/{living,study}-day-{full,cut}-canon.png`, used by `build.py` directly.
    * The kitchen pendant was edited out of the source: a pendant hanging in mid-air would be sliced in half by a
      cut-wall strip, so the kitchen light is an invisible ceiling light with its pool on the table.
 2. **Fit**: auto-detect the room silhouette (outer edges, wall-top lines fitted by least squares so hanging items
@@ -85,7 +95,8 @@ generic `entry_light` (Phase 1 ids), kitchen `pendant`, bathroom `ceiling`, balc
 All seven modules now have generated art (`catalog.style = "generated"`). Without sources, `build.py` falls
 back to **geometry shells** (empty rooms) marked `shell-standin` — geometry review only, not final art.
 
-Regenerate: `python3 scripts/house_modules/extend.py pair living livingR && python3 scripts/house_modules/build.py
+Regenerate: `python3 scripts/house_modules/extend.py pair living livingR && LAMA=big-lama.pt python3
+scripts/house_modules/retouch.py living && … retouch.py study && python3 scripts/house_modules/build.py
 assets/house/modules --raw assets/house/modules/src --classic <dir with house-cutaway-{day,night}-base.png> &&
 scripts/sync-house-modules.sh`. `fitcheck.py <id> <fw>` writes a corner overlay + full/cut fit preview to /tmp.
 
