@@ -100,16 +100,16 @@ import Testing
     }
     @Test func syntheticPhotoPatterns() throws {
         let orange: [UInt8] = [210, 140, 65], white: [UInt8] = [245, 240, 232], black: [UInt8] = [28, 26, 30]
-        let solid = try Self.photo { _, _ in orange }
-        #expect(solid.pattern == "solid"); #expect(solid.palette.eye == "#9CC43E")
-        #expect(try Self.photo { col, _ in col < 22 ? white : orange }.pattern == "bicolor")
+        let tabby = try Self.photo { _, _ in orange }
+        #expect(tabby.pattern == "tabby"); #expect(tabby.palette.eye == "#9CC43E")
+        #expect(try Self.photo { col, _ in col < 22 ? white : orange }.pattern == "tabbyWhite")
         #expect(try Self.photo { col, _ in col < 32 ? white : black }.pattern == "bicolor")
         #expect(try Self.photo { col, _ in col < 21 ? white : col < 42 ? orange : black }.pattern == "calico")
         let pointed = try Self.photo { col, row in col < 12 || col > 52 || row < 10 ? black : [232, 218, 192] }
         #expect(pointed.pattern == "colorpoint"); #expect(pointed.palette.eye == "#4E8FE0")
         #expect(try Self.photo { col, _ in col < 16 ? [130, 85, 35] : orange }.pattern == "tabby")
         #expect(try Self.photo { col, _ in col < 16 ? white : col < 32 ? [130, 85, 35] : orange }.pattern == "tabbyWhite")
-        #expect(try Self.photo { _, _ in orange } == solid)
+        #expect(try Self.photo { _, _ in orange } == tabby)
         let override = try HousePetPhoto.analyze(rgba: [210, 140, 65, 255], width: 1, height: 1, eye: "#010203")
         #expect(override.palette.eye == "#010203")
         #expect(throws: HousePetError.self) { try HousePetPhoto.analyze(rgba: [0, 0, 0, 255], width: 1, height: 1, mask: [0]) }

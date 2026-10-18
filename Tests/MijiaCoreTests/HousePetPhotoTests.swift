@@ -38,6 +38,65 @@ import Testing
         #expect(result.pattern == "solid")
         #expect(rgb(result.palette.base) == [128, 128, 128])
     }
+    @Test func highWhiteCalicoKeepsTinyPaleGingerPatch() throws {
+        let result = try photo { col, row in
+            let index = row * 80 + col
+            return index < 128 ? [210, 180, 150] : index < 640 ? [25, 24, 27] : [245, 240, 232]
+        }
+        let base = rgb(result.palette.base)
+        #expect(result.pattern == "calico")
+        #expect(base[0] > 200 && base[0] > base[1] + 25 && base[1] > base[2] + 25)
+        #expect(rgb(result.palette.second).allSatisfy { $0 < 40 })
+    }
+    @Test func orangeWithSixPercentWhiteNeedsNoVisibleStripes() throws {
+        let result = try photo { col, row in row * 80 + col < 384 ? [245, 240, 232] : [225, 145, 55] }
+        #expect(result.pattern == "tabbyWhite")
+        #expect(rgb(result.palette.base)[0] > 200)
+    }
+    @Test func orangeWithoutWhiteIsTabbyAndSkipsChromaticHighlights() throws {
+        let result = try photo { _, _ in [240, 180, 90] }
+        #expect(result.pattern == "tabby")
+        #expect(rgb(result.palette.base) == [240, 171, 68])
+        #expect(rgb(result.palette.second) == [156, 111, 44])
+    }
+    @Test func tuxedoWithShadingKeepsDarkCoatMedian() throws {
+        let result = try photo { col, row in
+            let index = row * 80 + col
+            return index < 1280 ? [245, 240, 232] : index < 4480 ? (col % 2 == 0 ? [18, 18, 20] : [65, 65, 68]) : [110, 110, 112]
+        }
+        let base = rgb(result.palette.base), second = rgb(result.palette.second)
+        #expect(result.pattern == "bicolor")
+        #expect(base.allSatisfy { $0 < 75 })
+        #expect(zip(base, second).allSatisfy { abs(Double($0.1) - Double($0.0) * 0.7) <= 1 })
+    }
+    @Test func blackShadingDoesNotCountAsStripes() throws {
+        let result = try photo { col, _ in col % 2 == 0 ? [18, 18, 20] : [65, 65, 68] }
+        #expect(result.pattern == "solid")
+        #expect(rgb(result.palette.base).allSatisfy { $0 < 75 })
+    }
+    @Test func tenPercentWhiteTuxedoIsBicolor() throws {
+        let result = try photo { col, row in row * 80 + col < 640 ? [245, 240, 232] : [25, 24, 27] }
+        #expect(result.pattern == "bicolor")
+    }
+    @Test func mostlyOrangeWithBlackAndWhiteIsNotCalico() throws {
+        let result = try photo { col, row in
+            let index = row * 80 + col
+            return index < 640 ? [245, 240, 232] : index < 1280 ? [25, 24, 27] : [225, 145, 55]
+        }
+        #expect(result.pattern == "tabbyWhite")
+    }
+    @Test func whiteBalanceGainIsCappedAndWhiteIsLifted() throws {
+        let result = try photo { col, row in row * 80 + col < 640 ? [164, 164, 164] : [100, 100, 100] }
+        #expect(result.pattern == "solid")
+        #expect(rgb(result.palette.base) == [130, 130, 130])
+        #expect(rgb(result.palette.white).allSatisfy { $0 >= 221 })
+    }
+    @Test func dimWarmCoatUsesValueFloorAndDarkerFallback() throws {
+        let result = try photo { _, _ in [110, 65, 30] }
+        #expect(result.pattern == "tabby")
+        #expect(rgb(result.palette.base) == [128, 68, 21])
+        #expect(rgb(result.palette.second) == [83, 44, 14])
+    }
     @Test func creamWithDarkExtremitiesIsColorpoint() throws {
         let result = try photo { col, row in
             (row < 17 && col > 23 && col < 57) || (row > 65 && (col < 20 || col > 60)) || col < 8 ? [43, 35, 32] : [232, 218, 192]
@@ -49,13 +108,13 @@ import Testing
     @Test func maskExcludesDominantDarkBackground() throws {
         let mask = (0..<6400).map { index -> UInt8 in (20..<60).contains(index % 80) && (20..<60).contains(index / 80) ? 255 : 0 }
         let result = try photo(mask: mask) { col, row in (20..<60).contains(col) && (20..<60).contains(row) ? [225, 145, 55] : [9, 9, 12] }
-        #expect(result.pattern == "solid")
+        #expect(result.pattern == "tabby")
         #expect(rgb(result.palette.base)[0] > 200)
         #expect(!result.usedVisionMask && !result.usedEyePose)
     }
     @Test func neutralHighlightsRemoveCoolCast() throws {
         let result = try photo { col, _ in col < 20 ? [200, 215, 235] : [185, 130, 70] }
-        #expect(result.pattern == "bicolor")
+        #expect(result.pattern == "tabbyWhite")
         #expect(rgb(result.palette.base)[0] > 200)
         let white = rgb(result.palette.white)
         #expect(white[0] > white[1] && white[1] > white[2])
@@ -68,6 +127,10 @@ import Testing
         #expect(HousePetPhoto.eyeColour([[0, 0, 0], [255, 255, 255], [120, 120, 120]]) == nil)
         let result = try HousePetPhoto.analyze(rgba: [128, 128, 128, 255], width: 1, height: 1, eyeSamples: iris)
         #expect(result.palette.eye == detected)
+    }
+    @Test func muddyYellowEyesGainSaturationAndKeepValue() throws {
+        #expect(HousePetPhoto.eyeColour([[140, 120, 95]]) == "#8C704D")
+        #expect(HousePetPhoto.eyeColour([[90, 75, 45]]) == "#806226")
     }
     @Test func scaledVisionFormatsHonorStrideAndRange() throws {
         for format in [kCVPixelFormatType_OneComponent8, kCVPixelFormatType_OneComponent32Float, kCVPixelFormatType_OneComponent16Half] {
