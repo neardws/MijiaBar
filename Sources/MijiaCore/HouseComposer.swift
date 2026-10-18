@@ -102,12 +102,13 @@ public enum HouseComposer {
                     hidden = isHidden(L, wall: wall, segments: it.placed.segments)
                     d["wall"] = wall
                     if hidden {
-                        // 本体随墙一起被切掉：不再给本体多边形（App 不画开关灯本体、点击区退回 reveal 椭圆）；
-                        // 灯光本身照旧（光池在地面上，来自全高版 lit 图）；空调这类没有光池的给 alt 徽章位
+                        // 本体随墙一起被切掉：不再给本体多边形；灯光本身照旧（光池在地面上，来自全高版 lit 图）。
+                        // App 把灯具位 / 设备徽章挪到 alt 地面点
                         d["hidden"] = true
-                        if let a = L.alt, a.count >= 2 { d["alt"] = tx(a) }
                     }
                 }
+                // alt：墙挂灯具被切时的地面替代位；吸顶灯（没有本体）的编辑位落点
+                if let a = L.alt, a.count >= 2 { d["alt"] = tx(a) }
                 switch L.reveal {
                 case .ellipse(let cx, let cy, let rx, let ry): d["reveal"] = [cx + dx, cy + dy, rx, ry]
                 case .room: d["reveal"] = "room"
