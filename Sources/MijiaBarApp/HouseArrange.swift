@@ -374,7 +374,7 @@ enum HouseModuleAssets {
         catch { fputs("HouseModuleAssets: scene decode \(error)\n", stderr); return nil }
         let src = HouseSceneSource(unlit: NSImage(cgImage: u, size: NSSize(width: u.width, height: u.height)),
                                    lit: NSImage(cgImage: l, size: NSSize(width: l.width, height: l.height)),
-                                   scene: scene, byRoom: true)
+                                   scene: scene, byRoom: true, layout: layout)
         if scenes.count > 16 { scenes.removeAll() }
         scenes[key] = src
         return src

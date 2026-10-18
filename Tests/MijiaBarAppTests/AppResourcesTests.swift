@@ -39,6 +39,15 @@ import Testing
         #expect(checked > 0)
     }
 
+    @Test func bundleContainsPetResources() throws {
+        for name in ["cat-short", "pet-spots"] {
+            #expect(AppResources.url(name, "json", subdirectory: "House/pets") ?? AppResources.url(name, "json") != nil)
+        }
+        for pattern in ["solid", "tabby", "tabbyWhite", "bicolor", "calico", "colorpoint"] {
+            #expect(AppResources.url("cat-short-" + pattern, "png", subdirectory: "House/pets") ?? AppResources.url("cat-short-" + pattern, "png") != nil)
+        }
+    }
+
     @Test func bundleContainsDecorCatalogAndEverySprite() throws {
         let catalog = try #require(HouseModuleAssets.decorCatalog)
         let bundle = try #require(AppResources.bundle)

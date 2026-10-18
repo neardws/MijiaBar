@@ -96,6 +96,7 @@ public struct HouseModuleArt: Codable, Equatable, Sendable {
 }
 
 public struct HouseModuleLight: Codable, Equatable, Sendable {
+    public var pool: [Double]? = nil
     public var id: String
     public var kind: String?
     public var role: String?

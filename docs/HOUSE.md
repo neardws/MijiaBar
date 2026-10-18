@@ -93,6 +93,11 @@ Drag a tile onto a compatible visible slot (surface and size), or click a slot t
 Drag placed decor back to the panel or outside the house to remove it; cut-wall slots are hidden.
 Edits save through the same `house.json`/undo path as device edits. Reset to automatic in this tab resets only decor overrides.
 
+The adjacent **Pets** editor tab adds up to three customizable pixel cats (manual
+palette or on-device photo analysis), with room restrictions and independent
+visibility toggles. Pet edits/removal support ⌘Z and sync through the same store.
+See [HOUSE_PETS.md](HOUSE_PETS.md) for rendering, privacy and manual snapshot review.
+
 Automatic holiday items replace defaults only in compatible `holiday` slots with no live override. An invalid live override
 falls back to its default but still blocks holiday substitution. Dates use local calendar days (including both window endpoints);
 Chinese-calendar holidays ignore leap months and handle lunar-year boundaries. Disabled seasonal placement does not block

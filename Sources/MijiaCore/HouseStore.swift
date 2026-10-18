@@ -34,6 +34,8 @@ public struct HomeHouse: Codable, Equatable, Sendable {
     public var styleUpdatedAt: Date? = nil
     public var decorPrefs: HouseDecorPrefs? = nil
     public var decor: [String: HouseDecorEntry]? = nil
+    public var pets: [String: HousePet]? = nil
+    public var petPrefs: HousePetPrefs? = nil
     public init() {}
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -45,6 +47,9 @@ public struct HomeHouse: Codable, Equatable, Sendable {
         styleUpdatedAt = try c.decodeIfPresent(Date.self, forKey: .styleUpdatedAt)
         decorPrefs = try c.decodeIfPresent(HouseDecorPrefs.self, forKey: .decorPrefs)
         decor = try c.decodeIfPresent([String: HouseDecorEntry].self, forKey: .decor)
+        pets = try c.decodeIfPresent([String: HousePet].self, forKey: .pets)
+        for key in pets?.keys.map({ $0 }) ?? [] where pets?[key]?.id.isEmpty == true { pets?[key]?.id = key }
+        petPrefs = try c.decodeIfPresent(HousePetPrefs.self, forKey: .petPrefs)
     }
 }
 
@@ -75,6 +80,10 @@ public struct HouseFile: Codable, Equatable, Sendable {
                 if h.decor == nil { h.decor = [:] }; h.decor?[key] = entry
             }
             if let prefs = hb.decorPrefs, prefs.updatedAt > (h.decorPrefs?.updatedAt ?? .distantPast) { h.decorPrefs = prefs }
+            for (key, pet) in hb.pets ?? [:] where h.pets?[key] == nil || h.pets![key]!.updatedAt < pet.updatedAt {
+                if h.pets == nil { h.pets = [:] }; h.pets?[key] = pet
+            }
+            if let prefs = hb.petPrefs, h.petPrefs == nil || prefs.updatedAt > h.petPrefs!.updatedAt { h.petPrefs = prefs }
             out.homes[hid] = h
         }
         return out
@@ -234,14 +243,14 @@ public enum HouseStore {
 
     /// 读取 → 修改 → 原子写回，全程加文件协调锁（同一台 Mac 上 App 和命令行同时写不会互相覆盖）
     @discardableResult
-    public static func update(at url: URL = HouseStore.url, _ f: (inout HouseFile) -> Void) throws -> HouseFile {
+    public static func update(at url: URL = HouseStore.url, _ f: (inout HouseFile) throws -> Void) throws -> HouseFile {
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         var result = HouseFile(); var failure: Error?
         var err: NSError?
         NSFileCoordinator(filePresenter: nil).coordinate(writingItemAt: url, options: .forMerging, error: &err) { u in
             do {
                 var file = readMerged(u)
-                f(&file)
+                try f(&file)
                 file.schema = max(file.schema, HouseFile.currentSchema)
                 file.prune()
                 try file.encoded().write(to: u, options: .atomic)

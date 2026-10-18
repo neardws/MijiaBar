@@ -85,10 +85,16 @@ struct HouseSceneSource {
     let lit: NSImage
     let scene: HouseCutawaySceneFile
     let byRoom: Bool
+    var layout: [HouseLayoutCell]? = nil
     var artSize: CGSize { scene.artSize }
     func module(for room: HouseRoom) -> HouseCutawayModule? { scene.modules[byRoom ? room.key : room.module.rawValue] }
 
     @MainActor static func make(layout: [HouseLayoutCell]?, phase: HousePhase, style: String? = nil, config: HomeHouse = HomeHouse(), roomKeys: [String: String] = [:]) -> HouseSceneSource? {
+        if (config.pets ?? [:]).values.contains(where: { !$0.deleted }) {
+            let fallback = HouseLayoutSolver.classicFour.map { HouseLayoutCell(room: roomKeys[$0.module] ?? $0.module, module: $0.module, col: $0.col, row: $0.row) }
+            let cells = HouseLayoutSolver.isClassicGeometry(layout) ? HouseLayoutSolver.setAllLevels(layout ?? fallback, flat: true) : (layout ?? fallback)
+            return HouseModuleAssets.composedScene(layout: cells, phase: phase, style: style, config: config)
+        }
         if !HouseStyles.info(style).hasClassicArt {
             let classic = HouseLayoutSolver.isClassicGeometry(layout)
             let fallback = HouseLayoutSolver.classicFour.map { HouseLayoutCell(room: roomKeys[$0.module] ?? $0.module, module: $0.module, col: $0.col, row: $0.row) }
@@ -113,6 +119,7 @@ struct HouseCutawaySceneFile: Decodable {
     let size: [Double]
     let modules: [String: HouseCutawayModule]
     var decorSlots: [HouseDecorSceneSlot]? = nil
+    var origin: [Double]? = nil
     var artSize: CGSize { CGSize(width: size[0], height: size[1]) }
 }
 
@@ -339,6 +346,9 @@ struct HouseCutawaySceneView: View {
     var layout: [HouseLayoutCell]? = nil
     var style: String? = nil
     var decorConfig: HomeHouse = HomeHouse()
+    var petsRestOnly = false
+    var petDate: Date? = nil
+    var petPoses: [String: HousePetPose] = [:]
 
     private var source: HouseSceneSource? {
         let keys = rooms.reduce(into: [String: String]()) { if $0[$1.module.rawValue] == nil { $0[$1.module.rawValue] = $1.key } }
@@ -361,6 +371,10 @@ struct HouseCutawaySceneView: View {
                         HouseRoomLightLayer(module: m, devices: room.devices, lighting: room.lighting,
                                             lit: lit, unlit: unlit, artSize: artSize, phase: phase, style: style, onToggle: edit == nil ? onToggle : nil)
                     }
+                }
+                if (decorConfig.petPrefs?.enabled ?? true), (decorConfig.pets ?? [:]).values.contains(where: { $0.enabled && !$0.deleted }) {
+                    HousePetsLayer(source: src, rooms: rooms, layout: layout, style: style, config: decorConfig,
+                                   phase: phase, restOnly: petsRestOnly, date: petDate, poses: petPoses)
                 }
                 ForEach(rooms) { room in
                     if let m = src.module(for: room) {
@@ -839,12 +853,15 @@ enum HouseChipStyle {
 struct HouseListEmbed: View {
     @EnvironmentObject var m: AppModel
     @State private var contentWidth: CGFloat = 0
+    static let petsRestOnly = true
+    var snapshotDate: Date? = nil
+    var snapshotPhase: HousePhase? = nil
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { ctx in
             let rooms = m.houseRooms
             if !rooms.isEmpty {
-                let phase = HousePhase.from(date: ctx.date)
+                let phase = snapshotPhase ?? HousePhase.from(date: snapshotDate ?? ctx.date)
                 VStack(alignment: .leading, spacing: 6) {
                     embedChrome(phase: phase, cozy: rooms.contains { $0.lighting.cozy > 0.35 })
                     if contentWidth > 0 {
@@ -901,7 +918,7 @@ struct HouseListEmbed: View {
         HouseCutawaySceneView(rooms: rooms, phase: phase, showLabels: false, fitWidth: width, onToggle: { did in
             guard let d = m.device(did) else { return }
             withoutAnimation { m.toggle(d) }
-        }, layout: m.houseLayoutCells, style: m.houseStyle, decorConfig: m.house.homes[m.houseHomeKey] ?? HomeHouse())
+        }, layout: m.houseLayoutCells, style: m.houseStyle, decorConfig: m.house.homes[m.houseHomeKey] ?? HomeHouse(), petsRestOnly: Self.petsRestOnly, petDate: snapshotDate)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.stroke))
         .overlay(alignment: .topTrailing) {
@@ -973,7 +990,7 @@ enum HouseWindow {
     }
 }
 
-enum HouseEditTab: String, CaseIterable { case devices, arrange, style }
+enum HouseEditTab: String, CaseIterable { case devices, arrange, style, pets }
 
 struct HousePilotHost: View {
     @EnvironmentObject var m: AppModel
@@ -994,7 +1011,8 @@ struct HousePilotHost: View {
                             Text(L("设备", "Devices")).tag(HouseEditTab.devices)
                             Text(L("房间布局", "Room layout")).tag(HouseEditTab.arrange)
                             Text(L("风格与装饰", "Style & decor")).tag(HouseEditTab.style)
-                        }.pickerStyle(.segmented).frame(width: 370)
+                            Text(L("宠物", "Pets")).tag(HouseEditTab.pets)
+                        }.pickerStyle(.segmented).frame(width: 460)
                         Spacer()
                         editButtons
                     }
@@ -1004,6 +1022,8 @@ struct HousePilotHost: View {
                         HouseArrangeView()
                     } else if editTab == .style {
                         HouseStyleView(date: decorDate ?? ctx.date)
+                    } else if editTab == .pets {
+                        HousePetsEditor(date: decorDate)
                     } else {
                         let resolved = m.houseResolved
                         let edit = context(resolved)
