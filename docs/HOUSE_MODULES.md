@@ -61,8 +61,12 @@ Pipeline (`scripts/house_modules/build.py`), same treatment as `gen-house-cutawa
      added). In composed layouts the NE wall is a cut wall, so a TV against it looked like it stood on the shared
      wall. Study — the 2 m bookshelf on the NW wall (usually a cut wall shared with the bedroom) poked far above
      the cut and read as furniture in the next room; it is shortened to a one-shelf low bookcase (≈37 px, below
-     `CUT_H`). In `-cut` variants the wall top inside a retouched hole follows the generator's actual wall top
-     next to it. Output: `src/{living,study}-day-{full,cut}-canon.png`, used by `build.py` directly.
+     `CUT_H`). Kitchen: the fridge stands against the NW wall too. With split levels the room behind is often higher,
+     so a full-height fridge looked like it stood in the next room. It is shortened the same way (`shorten()`: a
+     z-band of the lower door is removed and the freezer section drops down) to ≈34 px. In `-cut` variants the wall
+     top inside a retouched hole follows the generator's actual wall top next to it; for the kitchen it blends
+     linearly from the left to the right side. Output: `src/{living,study,kitchen}-day-{full,cut}-canon.png`, used
+     by `build.py` directly.
    * The kitchen pendant was edited out of the source: a pendant hanging in mid-air would be sliced in half by a
      cut-wall strip, so the kitchen light is an invisible ceiling light with its pool on the table.
 2. **Fit**: auto-detect the room silhouette (outer edges, wall-top lines fitted by least squares so hanging items
@@ -96,7 +100,7 @@ All seven modules now have generated art (`catalog.style = "generated"`). Withou
 back to **geometry shells** (empty rooms) marked `shell-standin` — geometry review only, not final art.
 
 Regenerate: `python3 scripts/house_modules/extend.py pair living livingR && LAMA=big-lama.pt python3
-scripts/house_modules/retouch.py living && … retouch.py study && python3 scripts/house_modules/build.py
+scripts/house_modules/retouch.py living && … retouch.py study && … retouch.py kitchen && python3 scripts/house_modules/build.py
 assets/house/modules --raw assets/house/modules/src --classic <dir with house-cutaway-{day,night}-base.png> &&
 scripts/sync-house-modules.sh`. `fitcheck.py <id> <fw>` writes a corner overlay + full/cut fit preview to /tmp.
 
