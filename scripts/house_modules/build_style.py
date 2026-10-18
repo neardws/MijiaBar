@@ -39,13 +39,15 @@ def build(style, selected, prefix):
     source = pack / 'src'
     raw = pack / 'raw'
     output = pack / 'modules'
+    cut_config_file = source / 'cutcfg.json'
+    cut_config = json.loads(cut_config_file.read_text()) if cut_config_file.exists() else {}
     inputs = {}
     for module in selected:
         full = source / f'{prefix}-{module}-full.jpg'
         cut = source / f'{prefix}-{module}-cut.jpg'
         cut_source = source / f'{prefix}-{module}-cutsrc.jpg'
-        if not full.exists() or not (cut.exists() or cut_source.exists()):
-            raise FileNotFoundError(f'{module}: need {full.name} and cut or cutsrc JPG in {source}')
+        if not full.exists():
+            raise FileNotFoundError(f'{module}: need {full.name} in {source}')
         inputs[module] = (full, cut, cut_source)
     raw.mkdir(parents=True, exist_ok=True)
     output.mkdir(parents=True, exist_ok=True)
@@ -59,7 +61,11 @@ def build(style, selected, prefix):
             Image.open(cut_source).convert('RGB').resize((1280, 720), Image.Resampling.LANCZOS).save(raw / f'{module}-cutsrc-day-full.jpg', quality=95)
             cut_corners = detect(raw, f'{module}-cutsrc')
             cut_rgb = np.asarray(Image.open(raw / f'{module}-cutsrc-day-full.jpg').convert('RGB'))
-            canonical_cut = Image.fromarray(syncut(np.asarray(pipeline.warp_to_canonical(cut_rgb, cut_corners, geometry)).copy(), geometry))
+            canonical_cut = Image.fromarray(syncut(np.asarray(pipeline.warp_to_canonical(cut_rgb, cut_corners, geometry)).copy(), geometry,
+                                                   drop_rects=cut_config.get('drop_rects', {}).get(module, [])))
+        elif not cut.exists():
+            canonical_cut = Image.fromarray(syncut(np.asarray(canonical_full).copy(), geometry,
+                                                   drop_rects=cut_config.get('drop_rects', {}).get(module, [])))
         else:
             cut_image = Image.open(cut).convert('RGB').resize((1280, 720), Image.Resampling.LANCZOS)
             cut_image.save(raw / f'{module}-day-cut.jpg', quality=95)

@@ -148,6 +148,7 @@ manifest.json
 src/<prefix>-<module>-{full,cut,cutsrc}.jpg
 src/windows.json
 src/offsets.json
+src/cutcfg.json
 modules/catalog.json
 modules/module-<module>-{day,night}-{unlit,lit}[-cut].png
 modules/curtain-<module>-{day,night}-{unlit,lit}.png
@@ -166,16 +167,37 @@ OpenCV and SciPy environment; no Swift dependencies):
 
 ```bash
 python3 scripts/house_modules/build_style.py japanese --prefix jp
-python3 scripts/house_modules/build_style.py modern living bedroom
+python3 scripts/house_modules/build_style.py modern living bedroom --prefix md
 python3 scripts/house_modules/build_style.py sheet japanese /tmp/japanese-anchors.png
 ```
 
-The default prefix is the style ID; Japanese sources use `jp`. Each module needs a
-full JPG and either cut or cutsrc JPG. `cutsrc` is a plain-wall source used to
-synthesize a low-wall image. Intermediate normalized art/corners go into `raw/`;
-`windows.json` sets the window bounds/exclusions, and `offsets.json` shifts fixture
+The default prefix is the style ID; Japanese sources use `jp`, and Modern uses
+`md`. Each module needs a full JPG. An optional `cutsrc` plain-wall JPG takes
+precedence over a `cut` JPG and is used to synthesize a low-wall image. When
+neither exists, the full JPG is used for the synthetic cut instead. Intermediate
+normalized art/corners go into `raw/`;
+optional `windows.json` sets the window bounds/exclusions, and `offsets.json` shifts fixture
 anchors before baking. Subset builds preserve other catalog entries and images.
 The sheet shows day/unlit anchors, cut walls and night/lit art side by side.
+
+Optional `src/cutcfg.json` forces windows, mirrors or doors above the cut line
+out of synthetic cuts (from either `cutsrc` or the full JPG):
+
+```json
+{"drop_rects": {"living": [[100, 20, 180, 110]], "bedroom": [[20, 30, 80, 120]]}}
+```
+
+Each rectangle is `[x0, y0, x1, y1]` in canonical module pixels, not source JPG
+pixels; the pipeline scales these coordinates to its working resolution. Bounds
+include the left/top and exclude the right/bottom. Only wall pixels above
+`CUT_H` are cleared, before cap-band darkening; furniture outside the rectangles
+and pixels at/below the cut line are unaffected. Explicit `cut` JPGs keep their
+existing processing.
+
+Art manifests may set `"wallCap": "#RRGGBB"` for Swift-drawn wall tops and
+`"wallCapSide": "#RRGGBB"` for their edges, exposed ends and pilasters. Night
+rendering applies the existing dimming. Missing or invalid colors preserve the
+corresponding cozy-wood colors; palette styles do not use these overrides.
 
 `MijiaBarApp --house-style-snapshot <dir>` writes deterministic demo-only classic
 and composed day/night × unlit/lit images, edit-slot overlays, and closed-curtain
