@@ -1,0 +1,4 @@
+{"living": {"ac": [-6, 6], "floor_lamp": [-2, 14], "sconce": [19, 17]},
+ "bedroom": {"ac": [-4, 3], "bedside": [0, 9]},
+ "study": {"monitor": [0, 8], "ac": [0, 3]},
+ "balcony": {"wall_lamp": [-7, 11]}}

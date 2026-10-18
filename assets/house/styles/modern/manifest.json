@@ -1,0 +1,16 @@
+{
+  "id": "modern",
+  "name": {
+    "zh": "现代",
+    "en": "Modern"
+  },
+  "kind": "art",
+  "wallCap": "#E8E4DE",
+  "wallCapSide": "#B9B3AA",
+  "version": 1,
+  "description": {
+    "zh": "完整重绘：暖白墙、浅橡木地板、黑色金属灯具；灯具 / 设备位按新美术重新标定。",
+    "en": "Full redraw: warm white walls, pale oak floors, black metal fixtures; light / device anchors re-marked for the new art."
+  },
+  "classic": "composed"
+}

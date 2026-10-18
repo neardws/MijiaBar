@@ -29,8 +29,11 @@ public enum HouseComposer {
         public var pad: Int
         /// 夜景：墙顶 / 端面 / 壁柱用压暗的木色（和模块夜景调色一致）
         public var night: Bool
-        public init(layout: [HouseLayoutCell], catalog: HouseModuleCatalog, images: [String: HouseModuleImages], pad: Int = 24, night: Bool = false) {
+        public var wallCaps: HouseWallCapColors?
+        public init(layout: [HouseLayoutCell], catalog: HouseModuleCatalog, images: [String: HouseModuleImages], pad: Int = 24, night: Bool = false,
+                    wallCaps: HouseWallCapColors? = nil) {
             self.layout = layout; self.catalog = catalog; self.images = images; self.pad = pad; self.night = night
+            self.wallCaps = wallCaps
         }
     }
 
@@ -90,7 +93,7 @@ public enum HouseComposer {
         var width = maxX + pad - originX, height = maxY + pad - originY
         width += width % 2; height += height % 2
 
-        let pal = Palette(night: input.night)
+        let pal = Palette(night: input.night, wallCaps: input.wallCaps)
         let unlit = render(items, occ: occ, elev: elev, images: input.images, lit: false, pal: pal, originX: originX, originY: originY, width: width, height: height)
         let lit = render(items, occ: occ, elev: elev, images: input.images, lit: true, pal: pal, originX: originX, originY: originY, width: width, height: height)
 
@@ -337,13 +340,19 @@ public enum HouseComposer {
         /// 石砌基座：两种朝向的石块底色 / 灰缝 / 压顶木条下的阴影；石块按位置做 ±明暗抖动
         let stoneSW: (Double, Double, Double), stoneSE: (Double, Double, Double), mortarSW, mortarSE, plinthShadow, ground: CGColor
         let night: Bool
-        init(night: Bool) {
+        init(night: Bool, wallCaps: HouseWallCapColors? = nil) {
             self.night = night
             func c(_ r: Double, _ g: Double, _ b: Double) -> CGColor {
                 let k = night ? (0.46, 0.42, 0.44) : (1.0, 1.0, 1.0)
                 return CGColor(red: r * k.0 / 255, green: g * k.1 / 255, blue: b * k.2 / 255, alpha: 1)
             }
-            capTop = c(108, 66, 38); capEdge = c(38, 20, 11); endFace = c(72, 42, 24); pilaster = c(62, 36, 20)
+            func custom(_ rgb: UInt32?) -> CGColor? {
+                rgb.map { c(Double(($0 >> 16) & 255), Double(($0 >> 8) & 255), Double($0 & 255)) }
+            }
+            capTop = custom(wallCaps?.top) ?? c(108, 66, 38)
+            capEdge = custom(wallCaps?.side) ?? c(38, 20, 11)
+            endFace = custom(wallCaps?.side) ?? c(72, 42, 24)
+            pilaster = custom(wallCaps?.side) ?? c(62, 36, 20)
             // 错层加厚的地台：和模块自带前沿地台同色系（取自模块图地台中段），SW 面亮一点、SE 面暗一点
             slabSW = c(46, 25, 10); slabSE = c(33, 18, 7); slabLine = c(66, 38, 18)
             stoneSW = (104, 90, 76); stoneSE = (72, 62, 53)

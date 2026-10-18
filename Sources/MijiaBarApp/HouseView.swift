@@ -89,6 +89,17 @@ struct HouseSceneSource {
     func module(for room: HouseRoom) -> HouseCutawayModule? { scene.modules[byRoom ? room.key : room.module.rawValue] }
 
     @MainActor static func make(layout: [HouseLayoutCell]?, phase: HousePhase, style: String? = nil) -> HouseSceneSource? {
+        if !HouseStyles.info(style).hasClassicArt {
+            let classic = HouseLayoutSolver.isClassicGeometry(layout)
+            let fallback = HouseLayoutSolver.classicFour.map { HouseLayoutCell(room: $0.module, module: $0.module, col: $0.col, row: $0.row) }
+            let cells = classic ? HouseLayoutSolver.setAllLevels(layout ?? fallback, flat: true) : (layout ?? fallback)
+            guard let source = HouseModuleAssets.composedScene(layout: cells, phase: phase, style: style) else { return nil }
+            if layout != nil { return source }
+            var modules: [String: HouseCutawayModule] = [:]
+            for cell in cells { modules[cell.module] = source.scene.modules[cell.room] }
+            return HouseSceneSource(unlit: source.unlit, lit: source.lit,
+                                    scene: HouseCutawaySceneFile(size: source.scene.size, modules: modules), byRoom: false)
+        }
         if let layout, !HouseLayoutSolver.isClassicGeometry(layout),
            let c = HouseModuleAssets.composedScene(layout: layout, phase: phase, style: style) { return c }
         guard let u = HouseAssets.cutawayImage(phase: phase, lit: false, style: style),
@@ -151,10 +162,15 @@ enum HouseAssets {
     }
 
     /// 窗帘关合贴片：<patch>-{day,night}-{unlit,lit}.png（scripts/house_modules/curtains.py）
-    static func curtainPatch(_ name: String, phase: HousePhase, lit: Bool) -> NSImage? {
-        let key = "\(name)-\(phase.assetName)-\(lit ? "lit" : "unlit")"
+    static func curtainPatch(_ name: String, phase: HousePhase, lit: Bool, style: String? = nil) -> NSImage? {
+        let styleId = HouseStyles.resolve(style)
+        let file = "\(name)-\(phase.assetName)-\(lit ? "lit" : "unlit")"
+        let key = "\(styleId)|\(file)"
         if let img = images[key] { return img }
-        guard let url = resourceURL(key, "png") ?? HouseModuleAssets.resourceURL(key, "png"), let img = NSImage(contentsOf: url) else { return nil }
+        let url = styleId == HouseStyles.defaultStyle
+            ? (resourceURL(file, "png") ?? HouseModuleAssets.resourceURL(file, "png"))
+            : (HouseModuleAssets.resourceURL(file, "png", style: styleId) ?? resourceURL(file, "png"))
+        guard let url, let img = NSImage(contentsOf: url) else { return nil }
         images[key] = img
         return img
     }
@@ -325,7 +341,7 @@ struct HouseCutawaySceneView: View {
                 ForEach(rooms) { room in
                     if let m = src.module(for: room) {
                         HouseRoomLightLayer(module: m, devices: room.devices, lighting: room.lighting,
-                                            lit: lit, unlit: unlit, artSize: artSize, phase: phase, onToggle: edit == nil ? onToggle : nil)
+                                            lit: lit, unlit: unlit, artSize: artSize, phase: phase, style: style, onToggle: edit == nil ? onToggle : nil)
                     }
                 }
                 ForEach(rooms) { room in
@@ -455,6 +471,7 @@ private struct HouseRoomLightLayer: View {
     let unlit: NSImage
     let artSize: CGSize
     var phase: HousePhase = .night
+    var style: String? = nil
     var onToggle: ((String) -> Void)?
 
     var body: some View {
@@ -500,7 +517,7 @@ private struct HouseRoomLightLayer: View {
             ForEach(module.lights.filter { $0.role == "curtain" && $0.hidden != true }) { light in
                 if let dev = light.matchedDevice(in: devices), dev.curtainOpen < 0.995,
                    let name = light.patch, let r = light.rect, r.count == 4, let q = light.quad, q.count == 4,
-                   let img = HouseAssets.curtainPatch(name, phase: phase, lit: false) {
+                   let img = HouseAssets.curtainPatch(name, phase: phase, lit: false, style: style) {
                     let closed = 1 - dev.curtainOpen
                     let x0 = q[0][0], x1 = q[1][0], mid = light.mid ?? (q[0][0] + q[1][0]) / 2
                     if phase == .day {
@@ -512,7 +529,7 @@ private struct HouseRoomLightLayer: View {
                         HouseCurtainPatch(image: img, rect: r, x0: x0, x1: x1, mid: mid, closed: closed)
                             .frame(width: artSize.width, height: artSize.height, alignment: .topLeading)
                         // 被灯照到的部分换成 lit 贴片：和底图一样按每盏灯的 reveal 蒙版 × 亮度叠上去，颜色和周围一致
-                        if let litImg = HouseAssets.curtainPatch(name, phase: phase, lit: true) {
+                        if let litImg = HouseAssets.curtainPatch(name, phase: phase, lit: true, style: style) {
                             ForEach(module.lights.filter(\.bakesLight)) { l in
                                 let k = l.strength(lighting)
                                 if k > 0, let rv = l.reveal {

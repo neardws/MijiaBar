@@ -776,6 +776,60 @@ extension AppModel {
 }
 
 extension Snapshot {
+    static func houseStyles(dir: String) {
+        NSApplication.shared.setActivationPolicy(.accessory)
+        let out = URL(fileURLWithPath: dir)
+        do { try FileManager.default.createDirectory(at: out, withIntermediateDirectories: true) }
+        catch { fputs("house style snapshot: \(error)\n", stderr); exit(1) }
+        let model = AppModel(mock: true)
+        model.addHouseFixtureDemo()
+        let home = model.houseHomeKey
+        let modules: [HouseModule] = [.bedroom, .study, .bathroom, .living, .kitchen, .balcony]
+        let positions = [(0, 0), (1, 0), (2, 0), (0, 1), (2, 1), (2, 2)]
+        let layout = zip(modules, positions).map { module, position in
+            let key = model.devices.first { HouseModule.from(roomName: $0.roomName) == module }.map(HouseResolver.roomKey)
+                ?? "style-\(module.rawValue)"
+            return HouseLayoutCell(room: key, module: module.rawValue, col: position.0, row: position.1, level: 0)
+        }
+        model.houseEdit("snapshot") { file in
+            file.setLayout(home: home, layout: layout)
+        }
+        let demo = model.houseRooms
+        func rooms(_ lit: Bool, closed: Bool = false) -> [HouseRoom] {
+            demo.map { room in
+                let fixtures = HouseCatalog.fixtures(room.module).filter { $0.accepts.contains(.light) }
+                var result = room.lit(lit ? Set(fixtures.map(\.id)) : [], badgesOn: lit)
+                result.devices = result.devices.map { device in
+                    var next = device
+                    next.busy = false
+                    if next.category == .curtain { next.level = closed ? 0 : 1; next.on = !closed }
+                    return next
+                }
+                return result
+            }
+        }
+        for style in ["cozy-wood", "japanese", "modern"] {
+            guard HouseModuleAssets.resourceURL("module-living-day-unlit", "png", style: style) != nil else { continue }
+            func save(_ name: String, layout: [HouseLayoutCell]?, phase: HousePhase, lit: Bool, closed: Bool = false, edit: Bool = false) {
+                guard let source = HouseSceneSource.make(layout: layout, phase: phase, style: style) else { return }
+                let scene = HouseCutawaySceneView(rooms: rooms(lit, closed: closed), phase: phase, showLabels: false,
+                                                 edit: edit ? HouseEditContext(selected: nil, onSelect: { _ in }) : nil,
+                                                 layout: layout, style: style)
+                render(scene, out.appendingPathComponent("\(style)-\(name).png"), size: source.artSize)
+            }
+            for (name, cells) in [("classic", Optional<[HouseLayoutCell]>.none), ("composed", Optional(layout))] {
+                for phase in [HousePhase.day, .night] {
+                    for lit in [false, true] {
+                        save("\(name)-\(phase.assetName)-\(lit ? "lit" : "unlit")", layout: cells, phase: phase, lit: lit)
+                    }
+                }
+            }
+            save("edit-fixtures", layout: layout, phase: .day, lit: false, edit: true)
+            save("curtains-closed-night-lit", layout: layout, phase: .night, lit: true, closed: true)
+        }
+        exit(0)
+    }
+
     /// 每台家电开 / 关的场景图 + crops.json（每个灯具位在场景里的矩形，box 上裁特写用）+ 合成整屋窗口截图
     static func houseFixtures(dir: String) {
         NSApplication.shared.setActivationPolicy(.accessory)
