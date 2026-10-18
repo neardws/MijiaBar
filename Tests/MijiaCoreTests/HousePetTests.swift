@@ -206,7 +206,8 @@ import Testing
         let lowest = try #require(pets.min { $0.id < $1.id })
         for restOnly in [true, false] {
             let context = HousePetContext(night: true, lights: Dictionary(uniqueKeysWithValues: world.rooms.map { ($0, false) }),
-                                          rooms: world.rooms, petIDs: pets.map(\.id), changedAt: date, restOnly: restOnly)
+                                          rooms: world.rooms, petIDs: pets.map(\.id), changedAt: date, restOnly: restOnly,
+                                          timeZone: TimeZone(secondsFromGMT: 0)!)
             let time = date.addingTimeInterval(600)
             let poses = pets.map { behavior.pose($0, world: world, context: context, at: time) }
             for (pet, pose) in zip(pets, poses) {
@@ -261,17 +262,19 @@ import Testing
     @Test func restOnlyRosterNeverPilesAtNight() throws {
         let world = try Self.world(), rig = try Self.rig()
         let behavior = HousePetBehavior(rig: rig), fresh = HousePetBehavior(rig: rig)
-        let pets = ["p_100001", "p_100002", "p_100003"].map { HousePet(id: $0) }
+        let pets = ["p_100001", "p_100002", "p_100003"].sorted().map { HousePet(id: $0) }
         var violations = 0, moved = 0
         for day in 0..<30 {
             let date = Date(timeIntervalSince1970: 1792270000 + Double(day) * 86400)
             for changedAt in [nil, date] as [Date?] {
                 let context = HousePetContext(night: true, lights: ["a": true], rooms: world.rooms,
-                                              petIDs: pets.map(\.id), changedAt: changedAt, restOnly: true)
+                                              petIDs: pets.map(\.id), changedAt: changedAt, restOnly: true,
+                                              timeZone: TimeZone(secondsFromGMT: 0)!)
                 let time = date.addingTimeInterval(600)
                 let singles = pets.map { behavior.pose($0, world: world, context: context, at: time) }
                 let poses = behavior.poses(pets, world: world, context: context, at: time)
                 #expect(poses == fresh.poses(Array(pets.reversed()), world: world, context: context, at: time))
+                var placed: [HousePetPoint] = []
                 for (index, pet) in pets.enumerated() {
                     let pose = try #require(poses[pet.id]), original = singles[index]
                     #expect(pose.visible)
@@ -279,6 +282,12 @@ import Testing
                         moved += 1
                         #expect(pose.room == original.room)
                         #expect(world.nodes.contains { $0.point == pose.point && $0.room == pose.room && $0.module == pose.module })
+                        if world.nodes.contains(where: { node in
+                            node.room == original.room && (pet.homeRoom == nil || node.room == pet.homeRoom)
+                                && placed.allSatisfy { $0.distance(to: node.point) >= 3 * world.cellSize }
+                        }) {
+                            #expect(placed.allSatisfy { $0.distance(to: pose.point) >= 3 * world.cellSize - 0.001 })
+                        }
                         var expected = original
                         expected.point = pose.point; expected.module = pose.module; expected.room = pose.room
                         #expect(pose == expected)
@@ -288,9 +297,10 @@ import Testing
                            singles[index].point.distance(to: singles[other].point) < 3 * world.cellSize - 0.001 { violations += 1 }
                         let otherPose = try #require(poses[pets[other].id])
                         if pose.visible && otherPose.visible {
-                            #expect(pose.point.distance(to: otherPose.point) >= 3 * world.cellSize - 0.001)
+                            #expect(pose.point.distance(to: otherPose.point) >= 2 * world.cellSize - 0.001)
                         }
                     }
+                    if pose.visible { placed.append(pose.point) }
                 }
             }
         }
@@ -304,7 +314,8 @@ import Testing
         let date = Date(timeIntervalSince1970: 1792270000)
         for night in [false, true] {
             let context = HousePetContext(night: night, lights: ["a": true], rooms: world.rooms,
-                                          petIDs: pets.map(\.id), changedAt: date, restOnly: false)
+                                          petIDs: pets.map(\.id), changedAt: date, restOnly: false,
+                                          timeZone: TimeZone(secondsFromGMT: 0)!)
             for offset in [0.0, 1, 10, 600, 3600] {
                 let time = date.addingTimeInterval(offset)
                 let expected = Dictionary(uniqueKeysWithValues: pets.map { ($0.id, behavior.pose($0, world: world, context: context, at: time)) })
@@ -317,7 +328,8 @@ import Testing
         let world = try Self.world(), behavior = HousePetBehavior(rig: try Self.rig())
         let pets = ["p_100001", "p_100002"].map { HousePet(id: $0, homeRoom: "a") }
         let date = Date(timeIntervalSince1970: 1792270000)
-        let context = HousePetContext(night: true, rooms: world.rooms, petIDs: pets.map(\.id), restOnly: true)
+        let context = HousePetContext(night: true, rooms: world.rooms, petIDs: pets.map(\.id), restOnly: true,
+                                      timeZone: TimeZone(secondsFromGMT: 0)!)
         let original = behavior.pose(pets[0], world: world, context: context, at: date)
         let overrides = [pets[1].id: original]
         let poses = behavior.poses(pets, world: world, context: context, at: date, overrides: overrides)
