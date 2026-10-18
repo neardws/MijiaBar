@@ -38,4 +38,17 @@ import Testing
         }
         #expect(checked > 0)
     }
+
+    @Test func bundleContainsDecorCatalogAndEverySprite() throws {
+        let catalog = try #require(HouseModuleAssets.decorCatalog)
+        let bundle = try #require(AppResources.bundle)
+        let files = try #require(FileManager.default.enumerator(at: bundle.bundleURL, includingPropertiesForKeys: nil))
+        let names = Set(files.compactMap { ($0 as? URL)?.lastPathComponent })
+        #expect(names.contains("decor-catalog.json"))
+        for item in catalog.items {
+            for sprite in item.sprites.values {
+                for file in sprite.files { #expect(names.contains(file), "Missing bundled decor sprite: \(file)") }
+            }
+        }
+    }
 }

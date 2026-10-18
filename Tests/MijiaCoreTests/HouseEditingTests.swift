@@ -176,4 +176,24 @@ private func dev(_ did: String, _ name: String, _ model: String, room: String, r
         #expect(s.undos.count == 3)
         #expect(s.undos.first?.devices.keys.first == "d2")
     }
+
+    @Test func decorUndoUsesFreshTombstonesAndPreservesOtherSlots() {
+        var file = HouseFile(), stack = HouseUndoStack()
+        edit(&file, &stack, at: t0) { $0.setDecor(home: "h", key: "r/corner", item: "monstera", now: self.t0) }
+        let remote = file
+        file.setDecor(home: "h", key: "r/desk", item: "books", now: t0)
+        let unrelatedChangeDroppedUndo = stack.rebase(on: file)
+        #expect(!unrelatedChangeDroppedUndo)
+        _ = stack.undo(&file, now: t0.addingTimeInterval(1))
+        #expect(file.homes["h"]?.decor?["r/corner"]?.item == nil)
+        #expect(file.homes["h"]?.decor?["r/corner"]?.updatedAt == t0.addingTimeInterval(1))
+        #expect(HouseFile.merge(remote, file).homes["h"]?.decor?["r/corner"]?.item == nil)
+        #expect(file.homes["h"]?.decor?["r/desk"]?.item == "books")
+        _ = stack.redo(&file, now: t0.addingTimeInterval(2))
+        #expect(file.homes["h"]?.decor?["r/corner"]?.item == "monstera")
+        file.setDecor(home: "h", key: "r/corner", item: "none", now: t0.addingTimeInterval(3))
+        let sameSlotDroppedUndo = stack.rebase(on: file)
+        #expect(sameSlotDroppedUndo)
+        #expect(!stack.canUndo)
+    }
 }

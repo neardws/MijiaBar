@@ -71,6 +71,29 @@ import Testing
         }
     }
 
+    @Test func slotAnchorsStayClearOfBadges() throws {
+        var outside: [String] = []
+        for style in ["cozy-wood", "japanese", "modern"] {
+            for (module, art) in try Self.modules(style).modules {
+                let region = CGMutablePath()
+                region.addLines(between: art.region.filter { $0.count == 2 }.map { CGPoint(x: $0[0], y: $0[1]) })
+                region.closeSubpath()
+                for slot in art.decor ?? [] {
+                    let at = try #require(slot.at.count == 2 ? slot.at : nil)
+                    let name = "\(style)/\(module)/\(slot.id)"
+                    if !region.contains(CGPoint(x: at[0], y: at[1])) { outside.append(name) }
+                    if slot.surface == "floor" {
+                        for badge in art.badges where badge.count == 2 {
+                            let distance = hypot(at[0] - badge[0], at[1] - badge[1])
+                            #expect(distance >= 14, "\(name) is \(distance) px from badge \(badge); needs >= 14. Outside-region warnings: \(outside)")
+                        }
+                    }
+                }
+            }
+        }
+        if !outside.isEmpty { print("HouseDecor slot anchors outside region (warn only): \(outside.sorted().joined(separator: ", "))") }
+    }
+
     @Test func overrideAndAutoResolution() throws {
         let (modules, items, layout) = try Self.fixture()
         func resolve(_ override: String?, enabled: Bool = true) -> [HouseDecorPlacement] {

@@ -6,7 +6,7 @@ extension HouseModuleAssets {
         let name = URL(fileURLWithPath: file).deletingPathExtension().lastPathComponent
         let ext = URL(fileURLWithPath: file).pathExtension
         for sub in ["House/decor", "decor", "House", ""] {
-            if let url = Bundle.module.url(forResource: name, withExtension: ext, subdirectory: sub.isEmpty ? nil : sub) { return url }
+            if let url = AppResources.url(name, ext, subdirectory: sub.isEmpty ? nil : sub) { return url }
         }
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let url = root.appendingPathComponent("Sources/MijiaBarApp/Resources/House/decor/\(file)")

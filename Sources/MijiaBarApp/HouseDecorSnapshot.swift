@@ -1,5 +1,6 @@
 import AppKit
 import ImageIO
+import SwiftUI
 import MijiaCore
 
 extension Snapshot {
@@ -54,6 +55,9 @@ extension Snapshot {
                 let result = HouseComposer.compose(.init(layout: layout, catalog: modules, images: images, night: phase == .night,
                                                         wallCaps: HouseModuleAssets.wallCaps(style: style), decor: decor))
                 guard let image = phase == .day ? result.unlit : result.lit else { exit(1) }
+                guard image.width == result.width, image.height == result.height else {
+                    fputs("house decor snapshot: composer pixel size mismatch\n", stderr); exit(1)
+                }
                 write(image, prefix + "-\(phase.assetName)-\(phase == .day ? "unlit" : "lit")")
                 if overlay && phase == .day {
                     let context = canvas(width: image.width, height: image.height)
@@ -78,7 +82,7 @@ extension Snapshot {
             var shown = Set<Int>()
             let slots = layout.flatMap { cell in (modules.modules[cell.module]?.decor ?? []).map { (room: cell.room, slot: $0) } }
             let hidden = HouseDecor.hiddenSlots(layout: layout, catalog: modules), regular = catalog.items.filter { $0.category != "holiday" }
-            for phase in [HousePhase.day, .night] {
+            do {
                 var config = HomeHouse(), cursor = 0, assigned: [Int: Int] = [:]
                 config.decorPrefs = HouseDecorPrefs(seasonal: false)
                 func assign(_ item: Int, visited: inout Set<Int>) -> Bool {
@@ -99,7 +103,22 @@ extension Snapshot {
                     config.decor?["\(slot.room)/\(slot.slot.id)"] = .init(item: item.id, updatedAt: today)
                 }
                 shown.formUnion(assigned.values)
-                render(style: style, prefix: "\(style)-decor", config: config, date: today, phases: [phase], overlay: phase == .day)
+                render(style: style, prefix: "\(style)-decor", config: config, date: today, overlay: true)
+                let home = model.houseHomeKey
+                model.houseEdit("snapshot") { file in
+                    file.setLayout(home: home, layout: layout)
+                    file.setStyle(home: home, style: style)
+                    file.setDecorPrefs(home: home, enabled: true, seasonal: false)
+                    file.resetDecor(home: home)
+                    for (key, entry) in config.decor ?? [:] { file.setDecor(home: home, key: key, item: entry.item, now: today) }
+                }
+                let previousAppearance = Snapshot.appearance
+                for (suffix, appearance) in [("", NSAppearance.Name.darkAqua), ("-light", .aqua)] {
+                    Snapshot.appearance = NSAppearance(named: appearance)
+                    Snapshot.render(HousePilotHost(editing: true, editTab: .style, decorDate: today).environmentObject(model),
+                                    out.appendingPathComponent("edit-decor-\(style)\(suffix).png"), size: HouseWindow.editSize)
+                }
+                Snapshot.appearance = previousAppearance
             }
             for index in regular.indices where !shown.contains(index) { fputs("house decor snapshot: no visible fitting slot for \(regular[index].id) style=\(style)\n", stderr) }
             var config = HomeHouse(); config.decorPrefs = HouseDecorPrefs(enabled: false)

@@ -981,6 +981,7 @@ struct HousePilotHost: View {
     @State var selection: HouseSelection?
     @State var drag = HouseDragState()
     @State var editTab: HouseEditTab = .devices
+    var decorDate: Date? = nil
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { ctx in
@@ -992,8 +993,8 @@ struct HousePilotHost: View {
                         Picker("", selection: $editTab) {
                             Text(L("设备", "Devices")).tag(HouseEditTab.devices)
                             Text(L("房间布局", "Room layout")).tag(HouseEditTab.arrange)
-                            Text(L("风格", "Style")).tag(HouseEditTab.style)
-                        }.pickerStyle(.segmented).frame(width: 320)
+                            Text(L("风格与装饰", "Style & decor")).tag(HouseEditTab.style)
+                        }.pickerStyle(.segmented).frame(width: 370)
                         Spacer()
                         editButtons
                     }
@@ -1002,7 +1003,7 @@ struct HousePilotHost: View {
                     if editTab == .arrange {
                         HouseArrangeView()
                     } else if editTab == .style {
-                        HouseStyleView()
+                        HouseStyleView(date: decorDate ?? ctx.date)
                     } else {
                         let resolved = m.houseResolved
                         let edit = context(resolved)
@@ -1112,9 +1113,16 @@ struct HousePilotHost: View {
             .keyboardShortcut("z", modifiers: [.command, .shift])
             .disabled(!m.houseUndo.canRedo)
             .help(m.houseUndo.redoLabel.map { L("重做：", "Redo: ") + $0 + "（⇧⌘Z）" } ?? L("没有可重做的操作", "Nothing to redo"))
-            Button(L("恢复自动", "Reset to automatic")) { selection = nil; m.houseResetAll() }
+            Button(L("恢复自动", "Reset to automatic")) {
+                selection = nil
+                if editTab == .style { m.houseEdit(L("恢复自动", "Reset to automatic")) { $0.resetDecor(home: m.houseHomeKey) } }
+                else { m.houseResetAll() }
+            }
                 .buttonStyle(.bordered).controlSize(.small)
-                .disabled(m.house.homes[m.houseHomeKey].map { h in h.devices.values.allSatisfy(\.isEmpty) && h.rooms.values.allSatisfy { $0.module == nil } } ?? true)
+                .disabled(m.house.homes[m.houseHomeKey].map { h in
+                    editTab == .style ? (h.decor ?? [:]).values.allSatisfy { $0.item == nil }
+                        : h.devices.values.allSatisfy(\.isEmpty) && h.rooms.values.allSatisfy { $0.module == nil }
+                } ?? true)
             Button(L("完成", "Done")) { selection = nil; drag = HouseDragState(); editing = false; HouseWindow.resize(editing: false) }
                 .buttonStyle(.borderedProminent).controlSize(.small).keyboardShortcut(.defaultAction)
         }

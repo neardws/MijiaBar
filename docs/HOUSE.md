@@ -87,7 +87,11 @@ mijiabar house decor reset
 Listing reports preferences, active seasons, overrides, and each module slot's item/source and `hidden: "wall cut"`
 when the composer's wall-light rule hides that wall. If module catalogs are unavailable, overrides are still listed;
 setting an unknown slot or incompatible item returns error JSON rather than guessing. All mutations return JSON.
-The MCP tools `get_house_decor` and `set_house_decor` use the same resolver and validation. No decor editor UI is included yet.
+The MCP tools `get_house_decor` and `set_house_decor` use the same resolver and validation.
+In the edit window, **Style & decor** combines style cards, decoration/holiday toggles, and categorized sprite tiles.
+Drag a tile onto a compatible visible slot (surface and size), or click a slot to choose an item, None, or Automatic.
+Drag placed decor back to the panel or outside the house to remove it; cut-wall slots are hidden.
+Edits save through the same `house.json`/undo path as device edits. Reset to automatic in this tab resets only decor overrides.
 
 Automatic holiday items replace defaults only in compatible `holiday` slots with no live override. An invalid live override
 falls back to its default but still blocks holiday substitution. Dates use local calendar days (including both window endpoints);
@@ -96,10 +100,13 @@ explicit user holiday items. Missing PNGs are skipped, with a single stderr diag
 
 For asset review, run `MijiaBarApp --house-decor-snapshot /tmp/house-decor --date 2026-10-18`.
 It uses only demo rooms/in-memory overrides, never the real home or `house.json`. Outputs include decor/no-decor day/night
-pairs for three styles, fixed-date holiday scenes, labelled slot overlays with scene JSON, and a 3× nearest-neighbour catalog sheet.
+pairs for three styles, fixed-date holiday scenes, labelled slot overlays with scene JSON, a 3× nearest-neighbour catalog sheet,
+and `edit-decor-{cozy-wood,japanese,modern}.png` editor windows with visible slots (`-light` variants included).
 The optional date controls regular demos; holiday examples always use their documented 2026/2027 dates.
-Regular demo overrides cycle between the day and night examples so items sharing a scarce rug or large-floor slot
-all appear across the pair; every slot receives a compatible item. Slot overlays describe the day example.
+Each style uses identical demo overrides for day and night; every slot receives a compatible item.
+Slots too scarce to show every catalog item are reported on stderr. Slot overlays describe the day example.
+Composed PNGs are written directly from the composer's CGImage, at the scene JSON's pixel dimensions, without display/Retina scaling.
+The current six-room demo composes at 848×568 pixels; exporting 1696×1136 would be a 2× enlargement, not native 1×.
 
 ## Automatic layout
 

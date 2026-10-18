@@ -63,6 +63,9 @@ for style in japanese modern light-wood walnut; do
     [ -d "$source" ] || continue
     destination="$APP/Contents/Resources/House/styles/$style/$sub"
     mkdir -p "$destination"
+    if [ -f "$source/catalog.json" ]; then
+      cp "$source/catalog.json" "$destination/"
+    fi
     for png in "$source"/*.png; do
       [ -f "$png" ] || continue
       cp "$png" "$destination/"
