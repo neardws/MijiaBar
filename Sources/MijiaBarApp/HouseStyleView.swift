@@ -28,6 +28,7 @@ struct HouseStyleView: View {
     @ViewBuilder
     private func styleCard(_ st: HouseStyleInfo) -> some View {
         let selected = m.houseStyle == st.id
+        let image = preview(st.id)
         Button {
             m.houseEdit(L("风格 ", "Style ") + HouseStyles.displayName(st.id, zh: L("是","no")=="是")) { file in
                 file.setStyle(home: m.houseHomeKey, style: st.id == HouseStyles.defaultStyle ? nil : st.id)
@@ -37,7 +38,7 @@ struct HouseStyleView: View {
         } label: {
             VStack(alignment: .leading, spacing: 8) {
                 // 预览：客厅模块 day-unlit
-                if let img = preview(st.id) {
+                if let img = image {
                     Image(nsImage: img)
                         .resizable()
                         .interpolation(.none)
@@ -51,7 +52,7 @@ struct HouseStyleView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(HouseStyles.displayName(st.id, zh: L("是","no")=="是")).font(.system(size: 13, weight: .semibold))
-                        Text(st.kind == .palette
+                        Text(image == nil ? L("美术制作中", "Art in progress") : st.kind == .art ? L("完整重绘", "Full redraw") : st.kind == .palette
                              ? L("调色板 · 基于温馨木屋", "Palette · based on Cozy wood")
                              : L("默认", "Default"))
                             .font(.system(size: 10)).foregroundStyle(.secondary)
@@ -68,12 +69,12 @@ struct HouseStyleView: View {
                 .stroke(selected ? Color.accentColor : Theme.stroke))
         }
         .buttonStyle(.plain)
+        .disabled(image == nil)
     }
 
     private func preview(_ styleId: String) -> NSImage? {
         let name = "module-living-day-unlit"
-        guard let url = HouseModuleAssets.resourceURL(name, "png", style: styleId) else { return nil }
+        guard let url = HouseModuleAssets.resourceURL(name, "png", style: styleId, fallbackToDefault: false) else { return nil }
         return NSImage(contentsOf: url)
     }
 }
-

@@ -1,6 +1,6 @@
 # House modules (Phase 2)
 
-Custom layouts are stitched at runtime from per-room **modules**. The classic four-room preset keeps
+Custom layouts are stitched at runtime from per-room **modules**. For builtin/palette styles, the classic four-room preset keeps
 using the single hand-tuned cutaway (`house-cutaway-*`), so it is pixel-identical to Phase 1.
 
 ## Grid geometry (v2)
@@ -139,3 +139,47 @@ scripts/sync-house-modules.sh && python3 scripts/house_modules/curtains.py build
 
 `swift test --filter HouseComposerTests` composes 2/3/4/5/6-room layouts; debug build ≈ 1–5 ms per layout
 (target < 30 ms). `HOUSE_COMPOSE_OUT=/dir swift test --filter writesSpikeImages` writes every layout × day/night × unlit/lit.
+## Full-redraw style packs
+
+Full-redraw (`kind: art`) packs live in `assets/house/styles/<id>/`:
+
+```
+manifest.json
+src/<prefix>-<module>-{full,cut,cutsrc}.jpg
+src/windows.json
+src/offsets.json
+modules/catalog.json
+modules/module-<module>-{day,night}-{unlit,lit}[-cut].png
+modules/curtain-<module>-{day,night}-{unlit,lit}.png
+```
+
+Each art pack owns its catalog, light/fixture anchors and curtain geometry; fixture
+IDs remain compatible with the default catalog. Palette packs still share the
+cozy-wood catalog. An art catalog lookup is confined to its own pack; a missing
+catalog or module PNG is logged before falling back to cozy-wood. Art packs have
+no `classic/` directory: classic four-room geometry is rendered through the module
+composer in previews, the full house and edit mode, never the default cutaway.
+Cards without a living-room preview are disabled as “Art in progress”.
+
+Build from the repository root (requires the existing pipeline's Pillow, NumPy,
+OpenCV and SciPy environment; no Swift dependencies):
+
+```bash
+python3 scripts/house_modules/build_style.py japanese --prefix jp
+python3 scripts/house_modules/build_style.py modern living bedroom
+python3 scripts/house_modules/build_style.py sheet japanese /tmp/japanese-anchors.png
+```
+
+The default prefix is the style ID; Japanese sources use `jp`. Each module needs a
+full JPG and either cut or cutsrc JPG. `cutsrc` is a plain-wall source used to
+synthesize a low-wall image. Intermediate normalized art/corners go into `raw/`;
+`windows.json` sets the window bounds/exclusions, and `offsets.json` shifts fixture
+anchors before baking. Subset builds preserve other catalog entries and images.
+The sheet shows day/unlit anchors, cut walls and night/lit art side by side.
+
+`MijiaBarApp --house-style-snapshot <dir>` writes deterministic demo-only classic
+and composed day/night × unlit/lit images, edit-slot overlays, and closed-curtain
+night/lit images for installed cozy-wood/japanese/modern packs. It passes phases
+directly, without changing the clock or process environment. The six-room snapshot
+showcase extends to a third row because living occupies two cells; this does not
+change the editor's 3×2 limit. Snapshot rendering is opt-in, not part of a build.

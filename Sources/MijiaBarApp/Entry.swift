@@ -27,6 +27,8 @@ enum Entry {
             MainActor.assumeIsolated { Snapshot.houseWindow(dir: a[i + 1]) }
         } else if let i = a.firstIndex(of: "--house-fixtures-snapshot"), i + 1 < a.count {
             MainActor.assumeIsolated { Snapshot.houseFixtures(dir: a[i + 1]) }
+        } else if let i = a.firstIndex(of: "--house-style-snapshot"), i + 1 < a.count {
+            MainActor.assumeIsolated { Snapshot.houseStyles(dir: a[i + 1]) }
         } else {
             MijiaBarApp.main()
         }

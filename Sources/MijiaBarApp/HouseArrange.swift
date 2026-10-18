@@ -252,6 +252,13 @@ struct HouseArrangeView: View {
         // 同步合成：截图 CLI 的 RunLoop 等待很短，异步 Task 来不及
         // 经典四室实际走整图（平地），预览也按平地合成，避免和真实小屋不一致
         let shown = HouseLayoutSolver.isClassicGeometry(m.house.homes[home]?.layout) ? HouseLayoutSolver.setAllLevels(layout, flat: true) : layout
+        if !HouseStyles.info(m.houseStyle).hasClassicArt {
+            let start = CFAbsoluteTimeGetCurrent()
+            let source = HouseSceneSource.make(layout: shown, phase: phase, style: m.houseStyle)
+            preview = phase == .day ? source?.unlit : source?.lit
+            previewMs = (CFAbsoluteTimeGetCurrent() - start) * 1000
+            return
+        }
         if let result = HouseModuleAssets.compose(layout: shown, phase: phase, style: m.houseStyle) {
             previewMs = result.ms
             preview = result.image
@@ -264,7 +271,7 @@ struct HouseArrangeView: View {
 
 enum HouseModuleAssets {
     /// SPM .process may flatten House/modules/; look in style pack dirs first, then default.
-    static func resourceURL(_ name: String, _ ext: String, style: String? = nil) -> URL? {
+    static func resourceURL(_ name: String, _ ext: String, style: String? = nil, fallbackToDefault: Bool = true) -> URL? {
         let styleId = HouseStyles.resolve(style)
         if styleId != HouseStyles.defaultStyle {
             for sub in ["House/styles/\(styleId)/modules", "styles/\(styleId)/modules",
@@ -287,6 +294,7 @@ enum HouseModuleAssets {
                 let p = root.appendingPathComponent(rel)
                 if fm.fileExists(atPath: p.path) { return p }
             }
+            if HouseStyles.info(styleId).hasOwnCatalog || !fallbackToDefault { return nil }
         }
         if let u = Bundle.module.url(forResource: name, withExtension: ext, subdirectory: "House/modules")
             ?? Bundle.module.url(forResource: name, withExtension: ext, subdirectory: "modules")
@@ -310,8 +318,10 @@ enum HouseModuleAssets {
         let styleId = HouseStyles.resolve(style)
         let cacheKey = "\(styleId)|\(phase.assetName)"
         if let c = inputs[cacheKey] { return c }
-        guard let url = resourceURL("catalog", "json", style: HouseStyles.defaultStyle)
-                ?? resourceURL("catalog", "json", style: styleId) else {
+        let own = HouseStyles.info(styleId).hasOwnCatalog
+        let catalogURL = resourceURL("catalog", "json", style: own ? styleId : HouseStyles.defaultStyle)
+        if own && catalogURL == nil { fputs("HouseModuleAssets: missing catalog style=\(styleId); using cozy-wood\n", stderr) }
+        guard let url = catalogURL ?? resourceURL("catalog", "json", style: HouseStyles.defaultStyle) else {
             fputs("HouseModuleAssets: catalog.json not found\n", stderr); return nil
         }
         let cat: HouseModuleCatalog
@@ -322,8 +332,9 @@ enum HouseModuleAssets {
         func loadPNG(_ variants: [String: String], _ key: String) -> CGImage? {
             guard let name = variants[key] else { return nil }
             let base = URL(fileURLWithPath: name).deletingPathExtension().lastPathComponent
-            return resourceURL(base, "png", style: styleId).flatMap(HouseComposer.loadCGImage(from:))
-                ?? resourceURL(base, "png", style: HouseStyles.defaultStyle).flatMap(HouseComposer.loadCGImage(from:))
+            if let url = resourceURL(base, "png", style: styleId) { return HouseComposer.loadCGImage(from: url) }
+            if own { fputs("HouseModuleAssets: missing \(base).png style=\(styleId); using cozy-wood\n", stderr) }
+            return resourceURL(base, "png", style: HouseStyles.defaultStyle).flatMap(HouseComposer.loadCGImage(from:))
         }
         for (id, art) in cat.modules {
             guard let v = art.variants, let ui = loadPNG(v, "\(tag)-unlit"), let li = loadPNG(v, "\(tag)-lit") else {

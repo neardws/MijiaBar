@@ -10,6 +10,8 @@ public struct HouseStyleInfo: Equatable, Sendable, Identifiable {
     public var kind: Kind
     public var parent: String?
     public enum Kind: String, Sendable { case builtin, palette, art }
+    public var hasOwnCatalog: Bool { kind == .art }
+    public var hasClassicArt: Bool { kind != .art }
 }
 
 public enum HouseStyles {
@@ -19,6 +21,8 @@ public enum HouseStyles {
         .init(id: "cozy-wood", nameZh: "温馨木屋", nameEn: "Cozy wood", kind: .builtin, parent: nil),
         .init(id: "light-wood", nameZh: "浅木白墙", nameEn: "Light wood", kind: .palette, parent: "cozy-wood"),
         .init(id: "walnut", nameZh: "胡桃木", nameEn: "Walnut", kind: .palette, parent: "cozy-wood"),
+        .init(id: "japanese", nameZh: "和风", nameEn: "Japanese", kind: .art, parent: nil),
+        .init(id: "modern", nameZh: "现代", nameEn: "Modern", kind: .art, parent: nil),
     ]
 
     public static func info(_ id: String?) -> HouseStyleInfo {
