@@ -82,7 +82,8 @@ def main():
                     variants[f'{phase}-{kind}{"-cut" if cut else ""}'] = name
         catalog['modules'][mid] = dict(footprint=[fw, 1], size=list(g['size']), tip=list(g['T']),
                                        region=mod['region'], label=sp['label'], badges=sp['badges'],
-                                       lights=sp['lights'], variants=variants)
+                                       lights=sp['lights'], variants=variants,
+                                       **({'floorLabel': sp['floorLabel']} if 'floorLabel' in sp else {}))
         print(mid, g['size'])
     catalog['style'] = '+'.join(sorted(styles))
     (out / 'catalog.json').write_text(json.dumps(catalog, indent=1, ensure_ascii=False))

@@ -48,23 +48,28 @@ Pipeline (`scripts/house_modules/build.py`), same treatment as `gen-house-cutawa
    `<id>-day-full.jpg` plus a generator *edit* of that image, `<id>-day-cut.jpg` (both back walls cut to wainscot
    height, wall-mounted items removed, floor furniture unchanged). Optional `<id>-corners.json` overrides corners.
    * **Living (2×1)**: the generator will not paint a 2:1 room (it always comes out ≈1.5:1; stretching it shears
-     the furniture). `extend.py pair living living2` stitches two 1×1 sources instead — `living` (sofa, floor lamp,
-     window, sconce) for the left cell and `living2` (an edit of the same room with only the TV stand and a plant)
-     for the right cell, with a soft seam, brightness matching and a re-drawn front slab →
+     the furniture). `extend.py pair living livingR` stitches two sources instead — `living` (1×1: sofa, floor lamp,
+     window, sconce) for the left cell and `livingR` (a same-style long room, ≈1.45:1, with only a free-standing TV
+     stand and a plant) for the right cell. Because `livingR` is longer than one cell, its right 1.16 cells are taken
+     at 1:1 — nothing is stretched. Soft seam, brightness matching, a re-drawn front slab and NE top trim →
      `src/living-day-{full,cut}-canon.png`, which `build.py` uses directly.
    * The kitchen pendant was edited out of the source: a pendant hanging in mid-air would be sliced in half by a
      cut-wall strip, so the kitchen light is an invisible ceiling light with its pool on the table.
 2. **Fit**: auto-detect the room silhouette (outer edges, wall-top lines fitted by least squares so hanging items
    don't move the back corner, slab from the strongest brightness step), then warp floor / NW wall / NE wall /
    slabs with one homography each onto the canonical geometry; the wall map blends into the floor map over 36 px
-   above the floor's back edge so furniture standing against a wall doesn't kink. The `-cut` edit is ECC-aligned to
+   above the floor's back edge so furniture standing against a wall doesn't kink. Both maps are column-preserving
+   in that band (the wall map takes its horizontal position from the floor map along the back edge, the floor map
+   is extruded straight up), so camera differences between generated rooms no longer lean doors, shelves, TVs or
+   wainscot planks. The `-cut` edit is ECC-aligned to
    the full image; its low wall height is measured and the wall mapping rescaled so the wall top lands exactly on
    `CUT_H`. Cut alpha removes only what was wall in the full image (bright wallpaper there, dark in the edit), so
-   dark furniture sides survive.
+   dark furniture sides survive; near-black 1–3 px fringes left by the generator along the cut edge are peeled off.
 3. **Pixelize**: half-resolution LANCZOS + brightness/contrast + NEAREST ×2 + sharpen (classic parameters).
 4. **Night**: 3D LUT learned from the aligned classic `day-base → night-base` pair (pixel-aligned by construction),
    window glass replaced with night sky.
-5. **Bake**: the classic light functions (`light_field`, `band`, `paint_shade`, `paint_screen`, `paint_ac`).
+5. **Bake**: the classic light functions (`light_field`, `band`, `paint_shade`, `paint_screen`); AC airflow drifts
+   away from the wall the unit hangs on (`paint_ac` in `pipeline.py`).
    Wall-mounted lights (`"wall": "nw"|"ne"`, with an `anchor` point) are skipped in the `-cut` bake.
 
 **Hidden wall fixtures.** The composer finds the wall segment under a fixture's `anchor`; if that segment is cut,
@@ -80,7 +85,7 @@ generic `entry_light` (Phase 1 ids), kitchen `pendant`, bathroom `ceiling`, balc
 All seven modules now have generated art (`catalog.style = "generated"`). Without sources, `build.py` falls
 back to **geometry shells** (empty rooms) marked `shell-standin` — geometry review only, not final art.
 
-Regenerate: `python3 scripts/house_modules/extend.py pair living living2 && python3 scripts/house_modules/build.py
+Regenerate: `python3 scripts/house_modules/extend.py pair living livingR && python3 scripts/house_modules/build.py
 assets/house/modules --raw assets/house/modules/src --classic <dir with house-cutaway-{day,night}-base.png> &&
 scripts/sync-house-modules.sh`. `fitcheck.py <id> <fw>` writes a corner overlay + full/cut fit preview to /tmp.
 

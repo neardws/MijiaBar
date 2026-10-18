@@ -132,6 +132,8 @@ import CoreGraphics
                               .init(room: "l", module: "living", col: 0, row: 1)], "l").first { $0["id"] as? String == "sconce" }!
         #expect(sc2["hidden"] as? Bool == true)
         #expect(sc2["shade"] == nil)
+        // 壁灯被切时给地面 alt 点（App 把灯具位 / 设备徽章挪过去）
+        #expect((sc2["alt"] as? [Double])?.count == 2)
     }
 
     @Test func gridTipMovesRightAndForward() {
