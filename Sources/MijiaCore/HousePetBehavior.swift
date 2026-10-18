@@ -29,6 +29,11 @@ public struct HousePetPose: Equatable, Sendable {
     public var module: String
     public var room: String
     public var visible: Bool
+    public init(point: HousePetPoint, facing: String = "SE", action: String = "idle", frameIndex: Int = 0,
+                mirrored: Bool = false, jumpLift: Double = 0, module: String, room: String, visible: Bool = true) {
+        self.point = point; self.facing = facing; self.action = action; self.frameIndex = frameIndex
+        self.mirrored = mirrored; self.jumpLift = jumpLift; self.module = module; self.room = room; self.visible = visible
+    }
 }
 
 public final class HousePetBehavior: @unchecked Sendable {

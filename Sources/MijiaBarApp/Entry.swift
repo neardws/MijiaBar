@@ -29,6 +29,10 @@ enum Entry {
             MainActor.assumeIsolated { Snapshot.houseFixtures(dir: a[i + 1]) }
         } else if let i = a.firstIndex(of: "--house-style-snapshot"), i + 1 < a.count {
             MainActor.assumeIsolated { Snapshot.houseStyles(dir: a[i + 1]) }
+        } else if let i = a.firstIndex(of: "--house-pets-snapshot"), i + 1 < a.count {
+            let date = a.firstIndex(of: "--date").flatMap { $0 + 1 < a.count ? a[$0 + 1] : nil }
+            let photos = a.firstIndex(of: "--photos").flatMap { $0 + 1 < a.count ? a[$0 + 1] : nil } ?? ""
+            MainActor.assumeIsolated { Snapshot.housePets(dir: a[i + 1], dateString: date, photos: photos.split(separator: ",").map(String.init)) }
         } else if let i = a.firstIndex(of: "--house-decor-snapshot"), i + 1 < a.count {
             let date = a.firstIndex(of: "--date").flatMap { $0 + 1 < a.count ? a[$0 + 1] : nil }
             MainActor.assumeIsolated { Snapshot.houseDecor(dir: a[i + 1], dateString: date) }

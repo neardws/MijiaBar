@@ -1,7 +1,8 @@
-# House pets (Phase 3c, core)
+# House pets (Phase 3c)
 
-Pets are appearance only; no pet command controls a device. Part 1 supplies the
-core and command interfaces. The SwiftUI overlay and editor belong to part 2.
+Pets are appearance only; neither the overlay nor pet commands control a device.
+The core, CLI/MCP, SwiftUI overlay, editor and synthetic snapshot exporter share
+the same rig, palette analysis, world and behavior implementation.
 
 ## Storage and synchronization
 
@@ -154,8 +155,77 @@ accessor. CLI uses the same root search as `HouseDecorFiles.roots`. Use
 `HousePetFrameCache`, `HousePetWorld`, and `HousePetBehavior` alive between ticks;
 rebuild the world on layout/style/decor changes. Position the frame by its anchor,
 apply mirror and jump lift, and use the matching phase's frame cache. Menu embeds
-set `restOnly`; Reduce Motion may also use that mode. No SwiftUI changes or
-snapshot flags are included in part 1.
+set `restOnly`. The app retains its world between ticks, rebuilding on scene,
+layout/style/decor changes. Homes with configured pets use the composed module scene
+(including the default four-room layout), so walk grids, perches, decoration
+spots, clipping and lighting all use identical module coordinates.
+
+## App editor
+
+Open **Enlarge → Edit → Pets**, next to **Style & decor**. **Show pets** is
+independent of each pet's enabled toggle. Each card offers a name, six patterned
+previews, base/second/white/eye color wells, and **Roam freely** or a room restriction.
+**Add pet → Choose manually** starts an orange tabby & white cat. The three-pet
+limit counts disabled cats; remove a cat to free a slot. Remove and all other edits
+use the existing window's ⌘Z/redo stack, with fresh timestamps and deletion
+tombstones. An independent edit to the same pet invalidates stale undo; restoring
+a pet never creates a fourth cat after a concurrent addition.
+
+**Generate from photo…** opens a local image picker. Analysis runs off the main
+thread using `HousePetPhoto.load` (Vision foreground mask where available).
+The confirmation sheet holds only an in-memory thumbnail, shows an editable
+pixel-cat preview, and lets you add or cancel. Dismissing the sheet/editor releases
+the thumbnail; only the chosen palette, pattern and pet fields enter `house.json`.
+No photo path, thumbnail or Vision mask is persisted or uploaded.
+
+The shared `HousePetPainter` draws anchor-relative, mirrored, nearest-neighbor
+frames sorted by foot y, clipped to each composed module's `visible` polygons.
+Day-lit cats use `dayLit`. Night-unlit cats use `night`; night-lit cats multiply
+the day color by `night.mul` and a per-channel lit/unlit ratio (9×5 foot patch,
+clamped to 1…2.6), falling back to `nightLit` if sampling is unavailable.
+Ground shadows receive only the night multiplier, never lit-room boosts/addition.
+
+Only the pet layer ticks (8 fps in the window, at most 3 fps in the menu embed).
+The embed is rest-only; the menu-bar status icon does not animate. Reduce Motion
+and Low Power Mode show quantized static poses refreshed approximately every ten
+seconds. Window occlusion pauses pet ticks. Light/TV behavior comes from the
+existing room/device state, without extra polling or device writes.
+
+## Synthetic snapshots (manual only)
+
+```bash
+.build/debug/MijiaBarApp --house-pets-snapshot /tmp/house-pets --date 2026-10-18
+.build/debug/MijiaBarApp --house-pets-snapshot /tmp/house-pets --photos /path/a.jpg,/path/b.jpg
+```
+
+The exporter uses an in-memory mock model and the decor exporter's six-room
+layout/default decorations, never the real house file or real devices. `--date`
+accepts an ISO date or timestamp (default 2026-07-01). It writes:
+
+- `pets-<style>-<day|night>-<unlit|lit>.png` and `-2x.png`, for cozy-wood,
+  japanese and modern, with 橘子 sitting toward the TV, 煤球 walking (frame 2),
+  and 花花 grooming by day/sleeping on a bedroom perch at night.
+- `pets-actions-<style>.png`: nine room panels covering idle, walk SE/NE, sit,
+  groom, lookup, sleep, stretch and jump.
+- `pets-world-<style>.png`: walk cells (green), spots (orange), A* path (blue).
+- `pets-menubar-day.png`, `pets-menubar-night.png`: the real `HouseListEmbed`
+  rendering path, with a fixed date and rest-only behavior.
+- `pets-editor-light.png`, `pets-editor-dark.png`: the Pets editor with all three
+  demo cards (taller review canvas).
+- `photo-<n>.png`: source photo at 320 px tall, arrow, detected palette/pattern,
+  and sit/walk/sleep cats enlarged with nearest-neighbor sampling, via the real
+  photo pipeline. Only this requested before/after PNG contains photo content;
+  never commit it. No photo intermediates or sidecars are written.
+
+Scene exports call the same CoreGraphics painter as the live layer; UI exports
+use the existing `Snapshot.render` hosting/cacheDisplay path. Do not execute any
+snapshot flags in a sandbox that cannot launch GUI apps; build/tests alone do
+not establish visual acceptance. The maintainer runs and reviews these exports.
+
+`package.sh` copies the complete SwiftPM resource bundle, including the processed
+pet JSON/PNGs. `verify-app-bundle.sh` checks the rig, spots and all six encoded
+sheets. App loading uses `AppResources` with both nested and processed-flat
+resource lookups; no implicit package bundle accessor is used.
 
 Art regeneration belongs to `scripts/house_pets/` (added later by the art pipeline).
 Do not hand-edit encoded sheets or spot assets. After regenerating, run the

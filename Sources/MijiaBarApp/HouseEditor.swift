@@ -604,7 +604,8 @@ extension AppModel {
     func houseResetAll() { houseEdit(L("恢复自动", "Reset to automatic")) { $0.reset(home: houseHomeKey) } }
 
     /// 一次可撤销的编辑：立即写 house.json，记下改动前后的值
-    func houseEdit(_ label: String, _ f: (inout HouseFile) -> Void) {
+    @discardableResult
+    func houseEdit(_ label: String, _ f: (inout HouseFile) -> Void) -> Bool {
         let home = houseHomeKey
         var edit: HouseEdit?
         let ok = updateHouse { file in
@@ -613,6 +614,7 @@ extension AppModel {
             edit = HouseEdit.diff(label: label, home: home, before: before, after: file)
         }
         if ok { houseUndo.record(edit) }
+        return ok
     }
 
     func houseUndoStep(redo: Bool) {
