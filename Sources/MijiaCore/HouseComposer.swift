@@ -99,6 +99,10 @@ public enum HouseComposer {
         for (i, it) in items.enumerated() {
             let dx = Double(it.ox - originX), dy = Double(it.oy - originY)
             func tx(_ p: [Double]) -> [Double] { [p[0] + dx, p[1] + dy] }
+            // 错层：前面（右前 / 左前）邻格比本格高时，它的切墙顶在画面上也高出这么多，会压住本格靠前的地面。
+            // 地面上的点（徽章、alt 替代位）往上（= 往房间里面）挪同样的距离
+            let lift = Double(frontLift(it.placed, elev: elev))
+            func txFloor(_ p: [Double]) -> [Double] { [p[0] + dx, p[1] + dy - lift] }
             var lights: [[String: Any]] = []
             for L in it.art.lights {
                 var d: [String: Any] = ["id": L.id, "kind": L.kind ?? "lamp", "role": L.role ?? "light"]
@@ -113,7 +117,7 @@ public enum HouseComposer {
                     }
                 }
                 // alt：墙挂灯具被切时的地面替代位；吸顶灯（没有本体）的编辑位落点
-                if let a = L.alt, a.count >= 2 { d["alt"] = tx(a) }
+                if let a = L.alt, a.count >= 2 { d["alt"] = txFloor(a) }
                 switch L.reveal {
                 case .ellipse(let cx, let cy, let rx, let ry): d["reveal"] = [cx + dx, cy + dy, rx, ry]
                 case .room: d["reveal"] = "room"
@@ -136,7 +140,7 @@ public enum HouseComposer {
                 "region": silhouette(it.placed, ext: it.ext).map { [Double($0.x) + dx, Double($0.y) + dy] },
                 "level": HouseLevels.effective(it.placed.cell), "elevation": it.placed.elev,
                 "visible": polygons(visible),
-                "badges": it.art.badges.map(tx),
+                "badges": it.art.badges.map(txFloor),
                 "lights": lights,
                 "col": it.placed.cell.col, "row": it.placed.cell.row,
                 "walls": it.placed.segments.map { ["side": $0.side.rawValue, "height": $0.height] },
@@ -150,6 +154,14 @@ public enum HouseComposer {
     }
 
     // MARK: - 几何
+
+    /// 前方邻格（右前 col+fw、左前 row+1）比本格高出的最大像素；都不高 → 0
+    static func frontLift(_ p: HouseWallPlanner.Placed, elev: [[Int]: Int]) -> Int {
+        let c = p.cell.col, r = p.cell.row
+        var front: [[Int]] = [[c + p.fw, r]]
+        for dc in 0..<p.fw { front.append([c + dc, r + 1]) }
+        return front.compactMap { elev[$0] }.map { $0 - p.elev }.max().map { max(0, $0) } ?? 0
+    }
 
     /// 模块剪影（模块内坐标，左上原点）：两面后墙按实际高度 + 地板 + 前沿地台（错层时再加厚 ext）
     static func silhouette(_ p: HouseWallPlanner.Placed, ext: Int = 0) -> [(x: Int, y: Int)] {

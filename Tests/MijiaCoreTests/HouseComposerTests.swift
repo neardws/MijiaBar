@@ -170,6 +170,14 @@ import CoreGraphics
         // 自动图案：level 为空 → 后排左格 +1、前排左格 0
         let auto = try scene([.init(room: "a", module: "bedroom", col: 0, row: 0), .init(room: "l", module: "living", col: 0, row: 1)])
         #expect(auto["a"]?["level"] as? Int == 1 && auto["l"]?["level"] as? Int == 0)
+        // 前方邻格更高 → 本格徽章往里挪同样的高差（不会被高出来的切墙压住）；前方更低 → 不动
+        func badges(_ m: [String: Any]) -> [[Double]] { m["badges"] as! [[Double]] }
+        let lowBack = try scene([.init(room: "a", module: "bedroom", col: 0, row: 0, level: 0),
+                                 .init(room: "l", module: "living", col: 0, row: 1, level: 1)])
+        let fb = badges(flat["a"]!)[0][1] - top(flat["a"]!), lb = badges(lowBack["a"]!)[0][1] - top(lowBack["a"]!)
+        #expect(abs((fb - lb) - Double(HouseGrid.levelStep)) < 0.5)
+        let ub = badges(up["a"]!)[0][1] - top(up["a"]!)
+        #expect(abs(fb - ub) < 0.5)
     }
 
     @Test func levelPatternAndClamp() {
