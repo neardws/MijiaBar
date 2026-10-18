@@ -533,7 +533,11 @@
     "day-lit-cut": "module-bedroom-day-lit-cut.png",
     "night-unlit-cut": "module-bedroom-night-unlit-cut.png",
     "night-lit-cut": "module-bedroom-night-lit-cut.png"
-   }
+   },
+   "floorLabel": [
+    138,
+    230
+   ]
   },
   "study": {
    "footprint": [
@@ -592,8 +596,8 @@
      216
     ],
     [
-     226,
-     220
+     210,
+     233
     ],
     [
      122,
@@ -710,6 +714,10 @@
      "alt": [
       274,
       196
+     ],
+     "alt2": [
+      258,
+      220
      ]
     },
     {
@@ -763,7 +771,11 @@
     "day-lit-cut": "module-study-day-lit-cut.png",
     "night-unlit-cut": "module-study-night-unlit-cut.png",
     "night-lit-cut": "module-study-night-lit-cut.png"
-   }
+   },
+   "floorLabel": [
+    114,
+    213
+   ]
   },
   "generic": {
    "footprint": [
@@ -822,8 +834,8 @@
      216
     ],
     [
-     226,
-     220
+     210,
+     233
     ],
     [
      122,
@@ -863,7 +875,11 @@
     "day-lit-cut": "module-generic-day-lit-cut.png",
     "night-unlit-cut": "module-generic-night-unlit-cut.png",
     "night-lit-cut": "module-generic-night-lit-cut.png"
-   }
+   },
+   "floorLabel": [
+    178,
+    193
+   ]
   },
   "kitchen": {
    "footprint": [
@@ -1148,63 +1164,63 @@
      "wall": "nw",
      "display": [
       [
-       174.8,
-       68.2
+       176.8,
+       71.6
       ],
       [
-       175.6,
-       65.5
+       177.7,
+       68.3
       ],
       [
-       177.4,
-       63.7
+       180.0,
+       66.2
       ],
       [
-       179.3,
-       63.9
+       182.2,
+       66.5
       ],
       [
-       180.1,
-       66.0
+       183.2,
+       69.0
       ],
       [
-       179.3,
-       68.7
+       182.2,
+       72.3
       ],
       [
-       177.4,
-       70.5
+       180.0,
+       74.4
       ],
       [
-       175.6,
-       70.2
+       177.7,
+       74.1
       ]
      ],
      "led": [
-      172.6,
-      71.3
+      174.4,
+      75.4
      ],
      "body": [
       [
-       162.8,
-       63.2
+       162.5,
+       65.4
       ],
       [
-       186.8,
-       53.3
+       191.3,
+       53.5
       ],
       [
-       186.8,
-       73.7
+       191.3,
+       78.6
       ],
       [
-       162.8,
-       83.6
+       162.5,
+       90.5
       ]
      ],
      "anchor": [
-      174.8,
-      68.5
+      176.9,
+      72.0
      ],
      "alt": [
       197,
@@ -1221,7 +1237,11 @@
     "day-lit-cut": "module-bathroom-day-lit-cut.png",
     "night-unlit-cut": "module-bathroom-night-unlit-cut.png",
     "night-lit-cut": "module-bathroom-night-lit-cut.png"
-   }
+   },
+   "floorLabel": [
+    130,
+    220
+   ]
   },
   "balcony": {
    "footprint": [
@@ -1411,7 +1431,11 @@
     "day-lit-cut": "module-balcony-day-lit-cut.png",
     "night-unlit-cut": "module-balcony-night-unlit-cut.png",
     "night-lit-cut": "module-balcony-night-lit-cut.png"
-   }
+   },
+   "floorLabel": [
+    186,
+    197
+   ]
   }
  }
 }

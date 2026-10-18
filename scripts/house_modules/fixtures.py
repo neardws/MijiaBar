@@ -40,21 +40,25 @@ def flow_reveal(g, u, v, sx):
     x, y = P(g, u, v, 72)
     return [x + 10 * sx, y + 20, 44, 34]
 
-def ac_nw(g, alt=(0.28, 0.42)):
+def ac_nw(g, alt=(0.28, 0.42), alt2=None):
     """NW 墙壁挂空调（卧室源图里画的那台；客厅用 module_ac 同位置贴了一台）。
     所在墙被切掉时：空调本体不可见，App 在地上 alt 点显示一个空调徽章代替。"""
-    return {"id": "ac", "kind": "ac", "role": "ac", "slot": 0, "wall": "nw",
-            "vent": [P(g, 0.02, 0.6, 72), P(g, 0.02, 0.38, 72)], "led": P(g, 0.02, 0.34, 84),
-            "core": quad(g, 0.02, 0.46, 81, 50, 22), "reveal": flow_reveal(g, 0.02, 0.49, 1),
-            "anchor": P(g, 0.02, 0.46, 81), "alt": P(g, *alt)}
+    d = {"id": "ac", "kind": "ac", "role": "ac", "slot": 0, "wall": "nw",
+         "vent": [P(g, 0.02, 0.6, 72), P(g, 0.02, 0.38, 72)], "led": P(g, 0.02, 0.34, 84),
+         "core": quad(g, 0.02, 0.46, 81, 50, 22), "reveal": flow_reveal(g, 0.02, 0.49, 1),
+         "anchor": P(g, 0.02, 0.46, 81), "alt": P(g, *alt)}
+    if alt2: d["alt2"] = P(g, *alt2)
+    return d
 
-def ac_ne(g, u0, u1, alt):
+def ac_ne(g, u0, u1, alt, alt2=None):
     """NE 墙壁挂空调（卧室那台镜像过来、缩短，见 scripts/house_modules/add_ac.py）：u0..u1 = 出风口沿墙的范围。"""
     um = (u0 + u1) / 2
-    return {"id": "ac", "kind": "ac", "role": "ac", "slot": 0, "wall": "ne",
-            "vent": [P(g, u0, 0.02, 72), P(g, u1, 0.02, 72)], "led": P(g, u0 + 0.05, 0.02, 85),
-            "core": quad(g, um + 0.03, 0.02, 81, 40, 22), "reveal": flow_reveal(g, um, 0.02, -1),
-            "anchor": P(g, um, 0.02, 80), "alt": P(g, *alt)}
+    d = {"id": "ac", "kind": "ac", "role": "ac", "slot": 0, "wall": "ne",
+         "vent": [P(g, u0, 0.02, 72), P(g, u1, 0.02, 72)], "led": P(g, u0 + 0.05, 0.02, 85),
+         "core": quad(g, um + 0.03, 0.02, 81, 40, 22), "reveal": flow_reveal(g, um, 0.02, -1),
+         "anchor": P(g, um, 0.02, 80), "alt": P(g, *alt)}
+    if alt2: d["alt2"] = P(g, *alt2)
+    return d
 
 def curtain(g, name, wall, alt, alt2=None):
     """窗帘位：贴片（scripts/house_modules/curtains.py）在运行时叠在窗上，按开合度露出两侧的一部分；
@@ -123,17 +127,21 @@ def spec(module):
                   # alt2 = 床尾和地毯之间的地板（只有前排有房间时才需要挪）。composer 选挪动少的那个
                   curtain(g, 'bedroom', 'ne', (0.99, 0.34), alt2=(0.82, 0.82))]
         badges = b([(0.55, 0.8), (0.8, 0.55), (0.3, 0.85)])   # b3 挪到地毯左边（原位置和 b1 挨着、离空调 alt 太近）
+        floor_label = P(g, 0.65, 0.95, 0)   # 两面后墙都被切时：地毯右侧、床尾前的空地（不压枕头）
     elif module == 'study':
         lights = [ceiling(g, 'ceiling', 0.55, 0.55),
                   {"id": "monitor", "kind": "screen", "role": "tv", "slot": 0, "style": "monitor",
                    "screen": quad(g, 0.48, 0.12, 46, 24, 20), "throw": [-8, 35], "radius": 60,
                    "reveal": ell(g, 0.5, 0.35, 85, 65)},
-                  ac_ne(g, 0.71, 0.93, alt=(0.82, 0.27)),   # 窗右侧的 NE 外墙（书房在第一排时这面墙完整）
+                  # alt = 书桌右侧、NE 墙根；右边邻格同高时会被右前沿推到书桌前 → alt2 = 地毯前的空地
+                  ac_ne(g, 0.71, 0.93, alt=(0.82, 0.27), alt2=(0.95, 0.5)),  # alt2 = 书桌右前方空地（右邻同高时用）
                   curtain(g, 'study', 'ne', (0.38, 0.4))]    # alt = 书桌前的空地（不落在椅子上）
-        badges = b([(0.55, 0.85), (0.85, 0.6), (0.3, 0.7)])
+        badges = b([(0.55, 0.85), (0.9, 0.75), (0.3, 0.7)])   # b1 挪开，给空调 alt2 腾空地
+        floor_label = P(g, 0.45, 0.9, 0)   # 两面后墙都被切时：地毯左侧空地
     elif module == 'generic':
         lights = [ceiling(g, 'entry_light', 0.5, 0.55)]
-        badges = b([(0.55, 0.85), (0.85, 0.6), (0.3, 0.7)])
+        badges = b([(0.55, 0.85), (0.9, 0.75), (0.3, 0.7)])
+        floor_label = P(g, 0.5, 0.55, 0)
     elif module == 'kitchen':
         # 吊灯本体不画（剖面里吊在半空，切墙时会被竖条切成半个）：按看不见灯具的吸顶灯处理，光池落在餐桌上
         lights = [ceiling(g, 'pendant', 0.37, 0.37), fridge(), curtain(g, 'kitchen', 'nw', (0.1, 0.85))]   # alt = 窗下 NW 墙根
@@ -143,10 +151,12 @@ def spec(module):
     elif module == 'bathroom':
         lights = [ceiling(g, 'ceiling', 0.5, 0.5), water_heater(g)]
         badges = b(SPREAD)
+        floor_label = P(g, 0.55, 0.9, 0)   # 两面后墙都被切时：浴缸前的空地
     elif module == 'balcony':
         lights = [dict(lamp(g, 'wall_lamp', 0.02, 0.69, 72, wall='nw', kind='sconce'), radius=80, pool=ell(g, 0.3, 0.7, 100, 40),
                      alt=P(g, 0.4, 0.97)), washer(g)]   # alt = 洗衣机左前方的空地（墙根被洗衣机和藤椅占了）
         badges = b(SPREAD)
+        floor_label = P(g, 0.55, 0.55, 0)   # 两面后墙都被切时：阳台地板中央
     else:
         raise KeyError(module)
     d = dict(label=lab, badges=badges, lights=lights)

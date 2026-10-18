@@ -287,7 +287,13 @@ private func resolve(_ ds: [Device], _ cfg: HomeHouse? = nil, hidden: Set<String
                 .flatMap { L -> [(String, [Double])] in ["alt", "alt2"].compactMap { k in (L[k] as? [Double]).map { ("\(L["id"] as? String ?? "?").\(k)", $0) } } }
             for (i, (id, a)) in alts.enumerated() {
                 for b in badges { #expect(dist(a, b) >= 38, "\(m) \(id) alt \(a) vs badge \(b)") }
-                for (id2, a2) in alts[(i + 1)...] { #expect(dist(a, a2) >= 38, "\(m) \(id) vs \(id2)") }
+                // alt / alt2 是同一灯具的备选，不会同时画；只要求和其他灯具的位拉开
+                let fixture = id.split(separator: ".").first.map(String.init) ?? id
+                for (id2, a2) in alts[(i + 1)...] {
+                    let fixture2 = id2.split(separator: ".").first.map(String.init) ?? id2
+                    if fixture == fixture2 { continue }
+                    #expect(dist(a, a2) >= 38, "\(m) \(id) vs \(id2)")
+                }
             }
         }
     }

@@ -118,7 +118,9 @@ their light — the floor pool comes from the full-wall lit image, which is what
 pool, so they carry an `alt` floor point where the app shows an AC badge instead (curtains / water heater / wall lamp
 too). Each `alt` is hand-picked clear floor near the fixture's wall — not on furniture, ≥38px from the module's
 badge spots and from other alts (`moduleAltSpotsClearOfBadges`). The composer keeps it (lifted with the floor) and only
-nudges it ≤12px if a composed badge lands within 30px; ceiling-light edit spots still dodge badges upward. Only the segment that
+nudges it ≤12px if a composed badge lands within 30px; ceiling-light edit spots still dodge badges upward.
+An optional `alt2` is used when `floorPointLift` would push `alt` inward onto furniture (bedroom curtain, study AC).
+Modules also carry a `floorLabel` used when both back walls are cut, so the room name sits on clear floor, not the bed. Only the segment that
 actually holds the fixture matters (living's sconce is on NE segment 0; a room behind segment 1 doesn't hide it).
 
 Fixture ids: living `floor_lamp`/`sconce`/`tv`/`ac`, bedroom `bedside`/`ac`, study `ceiling`/`monitor`/`ac`,

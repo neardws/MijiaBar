@@ -253,6 +253,26 @@ import CoreGraphics
     }
 
     /// 地面房间名标签不压徽章位；除了挤的阳台，也不压吸顶灯 / 被切灯具的 alt 位置框（含 App 里前右格放玄关的布局）
+    /// 两面后墙都被切时，卧室名标签落在 floorLabel（地毯右侧空地），不压在枕头上
+    @Test func bedroomFloorLabelClearsBedWhenBothWallsCut() throws {
+        let (cat, images) = try Self.load("day")
+        #expect(cat.modules["bedroom"]?.floorLabel != nil, "bedroom needs a floorLabel")
+        #expect(cat.modules["study"]?.floorLabel != nil, "study needs a floorLabel")
+        // composed2：卧室在 (1,1)，前面有厨房、左边有卫生间 → NW / NE 都切
+        let lay: [HouseLayoutCell] = [
+            .init(room: "k", module: "kitchen", col: 0, row: 0), .init(room: "l", module: "living", col: 1, row: 0),
+            .init(room: "w", module: "bathroom", col: 0, row: 1), .init(room: "b", module: "bedroom", col: 1, row: 1),
+            .init(room: "y", module: "balcony", col: 2, row: 1)]
+        let r = HouseComposer.compose(.init(layout: lay, catalog: cat, images: images))
+        let j = try JSONSerialization.jsonObject(with: r.sceneJSON) as! [String: Any]
+        let m = try #require((j["modules"] as? [String: [String: Any]])?["b"])
+        let lab = try #require(m["label"] as? [Double])
+        let badges = try #require(m["badges"] as? [[Double]])
+        // 地板徽章 y≈403；枕头在床上 y≈320–350。标签应贴近地板徽章带
+        let badgeY = badges.map { $0[1] }.min()!
+        #expect(lab[1] > badgeY - 50, "bedroom label \(lab) still on pillows (badgeY=\(badgeY))")
+    }
+
     @Test func floorLabelsClearBadgesAndAltSpots() throws {
         let (cat, images) = try Self.load("day")
         var all = Self.layouts

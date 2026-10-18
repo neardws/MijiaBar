@@ -85,51 +85,59 @@ class Washer:
 
 # ---------------- 热水器（卫生间 NW 墙，横置储水式电热水器） ----------------
 class Heater:
-    Yc = 0.175 * S
-    L = 0.15 * S                       # 罐体长度（沿墙）
-    R = 11.2
-    Xc = 12.5
-    Zc = 74 * CZ
+    Yc = 0.18 * S
+    L = 0.18 * S                       # 罐体长度（沿墙）— 像素化后要读得出圆柱和挂带
+    R = 13.8
+    Xc = 14.0
+    Zc = 72 * CZ
     def scene(s, p):
         c = np.array([s.Xc, s.Yc, s.Zc])
-        tank = sd_cyl_y(p, c, s.R, s.L / 2, 3.2)
-        # 两端装饰圈（浅灰端盖）
-        caps = np.maximum(tank - 0.15, -sd_cyl_y(p, c, s.R + 1, s.L / 2 - 3.0))
-        # 挂墙支架带
-        straps = np.minimum(sd_cyl_y(p, c + np.array([0, s.L / 2 - 8, 0]), s.R + 0.4, 0.9, 0.3),
-                            sd_cyl_y(p, c - np.array([0, s.L / 2 - 8, 0]), s.R + 0.4, 0.9, 0.3))
+        tank = sd_cyl_y(p, c, s.R, s.L / 2, 3.6)
+        # 两端装饰圈（更深的端盖 + 凸起的装饰环）
+        caps = np.maximum(tank - 0.2, -sd_cyl_y(p, c, s.R + 1.2, s.L / 2 - 3.6))
+        rings = np.minimum(sd_cyl_y(p, c + np.array([0, s.L / 2 - 2.2, 0]), s.R + 0.55, 0.55, 0.2),
+                           sd_cyl_y(p, c - np.array([0, s.L / 2 - 2.2, 0]), s.R + 0.55, 0.55, 0.2))
+        # 挂墙支架带（更宽、更深，像素里能看出两根）
+        straps = np.minimum(sd_cyl_y(p, c + np.array([0, s.L / 2 - 9.5, 0]), s.R + 0.7, 1.3, 0.35),
+                            sd_cyl_y(p, c - np.array([0, s.L / 2 - 9.5, 0]), s.R + 0.7, 1.3, 0.35))
         straps = np.maximum(straps, -(p[:, 0] - 0.0))
-        # 正面圆形显示窗（凸起表盘）
-        dc = np.array([s.Xc + s.R - 0.2, s.Yc - 3.0, s.Zc + 0.8])
-        bezel = np.maximum(sd_cyl_x(p, dc, 5.4, 0.9, 0.5), -sd_cyl_x(p, dc + np.array([1.0, 0, 0]), 4.2, 0.6))
-        screen = sd_cyl_x(p, dc + np.array([0.75, 0, 0]), 4.1, 0.25, 0.1)
-        knob = sd_cyl_x(p, np.array([s.Xc + s.R - 0.6, s.Yc + 6.5, s.Zc - 1.6]), 1.6, 1.0, 0.4)
-        # 下方两根进 / 出水管 + 阀门
+        # 挂带上的铆钉（小圆点，像素化后是深色格）
+        riv = 1e9
+        for dy in (s.L / 2 - 9.5, -(s.L / 2 - 9.5)):
+            for ang in (-0.55, 0.0, 0.55):
+                rx = s.Xc + (s.R + 0.5) * np.cos(ang); rz = s.Zc + (s.R + 0.5) * np.sin(ang)
+                riv = np.minimum(riv, sd_cyl_x(p, np.array([rx, s.Yc + dy, rz]), 0.55, 0.7, 0.15))
+        # 正面圆形显示窗（更大的凸起表盘）
+        dc = np.array([s.Xc + s.R - 0.15, s.Yc - 3.5, s.Zc + 1.0])
+        bezel = np.maximum(sd_cyl_x(p, dc, 6.6, 1.1, 0.55), -sd_cyl_x(p, dc + np.array([1.1, 0, 0]), 5.1, 0.7))
+        screen = sd_cyl_x(p, dc + np.array([0.85, 0, 0]), 4.9, 0.3, 0.12)
+        knob = sd_cyl_x(p, np.array([s.Xc + s.R - 0.5, s.Yc + 7.8, s.Zc - 2.0]), 1.9, 1.15, 0.45)
+        # 下方两根进 / 出水管 + 阀门（更粗、带弯头）
         pipes = 1e9
-        for dy in (-6.5, 6.5):
-            pc = np.array([s.Xc - 1.0, s.Yc + dy, s.Zc - s.R - 6.0])
-            pipes = np.minimum(pipes, sd_cyl_z(p, pc, 0.9, 6.5, 0.3))
-            pipes = np.minimum(pipes, sd_cyl_z(p, pc - np.array([0, 0, 3.0]), 1.5, 0.9, 0.4))
-        bend = np.minimum(sd_cyl_x(p, np.array([s.Xc / 2 - 0.5, s.Yc - 6.5, s.Zc - s.R - 12.0]), 0.9, s.Xc / 2, 0.3),
-                          sd_cyl_x(p, np.array([s.Xc / 2 - 0.5, s.Yc + 6.5, s.Zc - s.R - 12.0]), 0.9, s.Xc / 2, 0.3))
-        return _u((tank, ENAMEL), (caps, PLASTIC), (straps, STRAP), (bezel, CHROME), (screen, SCREEN),
-                  (knob, CHROME), (pipes, PIPE), (bend, PIPE))
+        for dy in (-7.5, 7.5):
+            pc = np.array([s.Xc - 1.2, s.Yc + dy, s.Zc - s.R - 7.0])
+            pipes = np.minimum(pipes, sd_cyl_z(p, pc, 1.15, 7.5, 0.35))
+            pipes = np.minimum(pipes, sd_cyl_z(p, pc - np.array([0, 0, 3.5]), 1.85, 1.1, 0.45))
+        bend = np.minimum(sd_cyl_x(p, np.array([s.Xc / 2 - 0.5, s.Yc - 7.5, s.Zc - s.R - 14.0]), 1.1, s.Xc / 2, 0.35),
+                          sd_cyl_x(p, np.array([s.Xc / 2 - 0.5, s.Yc + 7.5, s.Zc - s.R - 14.0]), 1.1, s.Xc / 2, 0.35))
+        return _u((tank, ENAMEL), (caps, PLASTIC), (rings, CHROME), (straps, STRAP), (riv, CHROME),
+                  (bezel, CHROME), (screen, SCREEN), (knob, CHROME), (pipes, PIPE), (bend, PIPE))
     def material(s, p, n, ids):
-        # 像素化后只剩 ~11 格高：搪瓷压一点亮度、端盖 / 挂带更深，罐体的圆柱明暗和轮廓才读得出来
+        # 像素化后 ~14 格高：搪瓷压一点亮度、端盖 / 挂带更深，圆柱明暗和挂带轮廓才读得出来
         alb, spec, shin, env = material(p, n, ids)
-        m = ids == ENAMEL; alb[m] = (0.86, 0.84, 0.80); spec[m] = 0.16; env[m] = 0.03
-        alb[ids == PLASTIC] = (0.60, 0.60, 0.60); alb[ids == STRAP] = (0.34, 0.34, 0.36)
+        m = ids == ENAMEL; alb[m] = (0.84, 0.82, 0.78); spec[m] = 0.18; env[m] = 0.03
+        alb[ids == PLASTIC] = (0.52, 0.52, 0.52); alb[ids == STRAP] = (0.30, 0.30, 0.32)
         return alb, spec, shin, env
     def bbox(s, T):
         pts = [proj(np.array([x, y, z]), T) for x in (0, s.Xc + s.R + 2) for y in (s.Yc - s.L / 2, s.Yc + s.L / 2)
-               for z in (s.Zc - s.R - 14, s.Zc + s.R + 1)]
+               for z in (s.Zc - s.R - 16, s.Zc + s.R + 2)]
         xs, ys = [q[0] for q in pts], [q[1] for q in pts]
         return int(min(xs)) - 8, int(min(ys)) - 6, int(max(xs)) + 12, int(max(ys)) + 10
     def anchors(s, T):
-        dc = np.array([s.Xc + s.R + 0.8, s.Yc - 3.0, s.Zc + 0.8])
+        dc = np.array([s.Xc + s.R + 0.9, s.Yc - 3.5, s.Zc + 1.0])
         P = lambda q: [round(float(c), 1) for c in proj(q, T)]
-        ring = [P(dc + np.array([0, 3.7 * np.cos(a), 3.7 * np.sin(a)])) for a in np.linspace(0, 2 * np.pi, 8, endpoint=False)]
-        led = P(np.array([s.Xc + s.R - 0.4, s.Yc + 2.6, s.Zc - 2.4]))
+        ring = [P(dc + np.array([0, 4.5 * np.cos(a), 4.5 * np.sin(a)])) for a in np.linspace(0, 2 * np.pi, 8, endpoint=False)]
+        led = P(np.array([s.Xc + s.R - 0.3, s.Yc + 3.2, s.Zc - 2.8]))
         c = np.array([s.Xc, s.Yc, s.Zc])
         body = [P(c + np.array([s.R, s.L / 2, s.R])), P(c + np.array([s.R, -s.L / 2, s.R])),
                 P(c + np.array([s.R, -s.L / 2, -s.R])), P(c + np.array([s.R, s.L / 2, -s.R]))]
