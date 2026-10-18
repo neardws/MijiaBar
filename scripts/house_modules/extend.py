@@ -1,9 +1,10 @@
 """2x1 客厅：生成器画不出 2:1 的长房间（总是 ~1.5:1，硬拉伸会把家具拉歪）。
-做法：两张 1x1 源图拼接——左格 = living（沙发、落地灯、窗、壁灯），右格 = living2（同一房间的编辑版：
-只有电视柜和绿植）。右格取源图的列 [S0, 1] 映射到 2x1 的列 [SEAM0, 2]（避开它左后墙根部的阴影），
-接缝处平滑过渡并按地板亮度对齐色调，左前沿（地台）用左格的剖面重画，盖住两张图的厚度差。
+做法：两张源图拼接——左格 = living（1x1：沙发、落地灯、窗、壁灯），右格 = livingR（同风格的长房间，约 1.45:1，
+只有离墙摆放的电视柜和绿植）。右格是长房间时按 1:1 取它右端 2-SEAM0 格（不拉伸）；源图只有 1x1 时退回
+列 [S0, 1] → [SEAM0, 2] 的拉伸映射。接缝处平滑过渡并按地板亮度对齐色调，左前沿（地台）和 NE 墙顶压条
+用左格的剖面重画，盖住两张图的厚度 / 压条差。
 产物 src/living-day-{full,cut}-canon.png（s=2 规范 RGBA），build.py 直接使用。
-用法：python3 scripts/house_modules/extend.py pair living living2
+用法：python3 scripts/house_modules/extend.py pair living livingR
 """
 import sys, json, numpy as np, cv2
 from PIL import Image
@@ -49,6 +50,27 @@ def fix_front_edge(rgb, g, col, s=2, rim=10):
     wgt = (np.clip((col - 0.6) / 0.2, 0, 1) * zone)[..., None]
     return rgb * (1 - wgt) + paint * wgt
 
+def fix_top_edge(rgb, g, col, s=2, depth=16):
+    """NE 墙顶的压条：右格源图的墙顶压条和左格不一样（或者被裁掉），用左格 col∈[0.2,0.75] 的
+    “到墙顶的竖直距离 → 颜色”中位数剖面重画 col>0.75 的墙顶一条（0.6~0.85 羽化）。"""
+    h, w = rgb.shape[:2]
+    ys, xs = np.mgrid[0:h, 0:w].astype(np.float32)
+    T, R = np.array(g['T'], np.float32) * s, np.array(g['R'], np.float32) * s
+    top_y = (T[1] - WALL_H * s) + (xs - T[0]) * (R[1] - T[1]) / (R[0] - T[0])
+    d = np.round(ys - top_y).astype(int)
+    zone = (xs >= T[0]) & (xs <= R[0]) & (d >= 0) & (d < depth)
+    prof = {}
+    ref = zone & (col > 0.2) & (col < 0.75)
+    for k in range(depth):
+        m = ref & (d == k)
+        if m.any(): prof[k] = np.median(rgb[m].reshape(-1, 3), 0)
+    paint = rgb.astype(np.float32).copy()
+    for k, c in prof.items(): paint[zone & (d == k)] = c
+    blur = cv2.GaussianBlur(rgb.astype(np.float32), (0, 0), 2)
+    paint = paint + 0.4 * (rgb.astype(np.float32) - blur)
+    wgt = (np.clip((col - 0.6) / 0.25, 0, 1) * zone)[..., None]
+    return rgb * (1 - wgt) + paint * wgt
+
 SEAM0, SEAM1, S0 = 0.84, 0.94, 0.14
 
 def stage_pair(mid, fw=2, mid2=None):
@@ -70,6 +92,11 @@ def stage_pair(mid, fw=2, mid2=None):
             else:
                 # 右格：源图的列 [S0, 1] → 2x1 的列 [SEAM0, 2]（避开源图左后墙根部），沿列方向轻微拉伸
                 k = (1 - S0) / (2 - SEAM0); c0 = S0 - SEAM0 * k   # 2x1 列 0 对应的源列
+                a2 = float(np.linalg.norm(np.subtract(c['R'], c['B'])) / np.linalg.norm(np.subtract(c['L'], c['B'])))
+                if a2 >= 2 - SEAM0 + 0.1:
+                    # 右格源图本身是长房间（a2 格宽）：按 1:1 取它右端 2-SEAM0 格，不拉伸
+                    c0 = 1 - 2 / a2
+                print(m, 'a2', round(a2, 3), 'c0', round(c0, 3))
                 vc = dict(c)
                 for a_, b_ in (('B', 'R'), ('top', 'rt'), ('L', 'F'), ('lb', 'bottom')):
                     pa, pb = np.array(c[a_]), np.array(c[b_])
@@ -99,6 +126,8 @@ def stage_pair(mid, fw=2, mid2=None):
         wgt = wgt * wgt * (3 - 2 * wgt)
         rgb = A[..., :3] * (1 - wgt) + Bm[..., :3] * wgt
         rgb = fix_front_edge(rgb, g, col)
+        if v == 'full':
+            rgb = fix_top_edge(rgb, g, col)
         sil = pl.silhouette_mask(g, 2, cut=False)
         alpha = sil.copy()
         if v == 'cut':

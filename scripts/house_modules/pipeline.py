@@ -174,6 +174,21 @@ def _inv_map(Hm, w, h):
 CUT_BG_LUM = 9  # 剖面版：墙区里和外部连通、比这更暗的像素算背景
 BLEND = 36  # 墙区靠近地板后沿的一条带里，坐标场从“地面”平滑过渡到“墙面”，挡在墙前的家具不会在后沿处折断
 
+def _extrude(floor_map, edge_row, h):
+    """地板映射在后沿以上的“竖直延伸”：每一列取后沿那一点的源坐标，往上按地板映射在该点的竖直比例直走。
+    （直接外推地板单应在源图有透视 / 两侧不对称时会让竖线歪斜——护墙板、电视、书架会斜。）"""
+    fx, fy = floor_map
+    w = fx.shape[1]
+    cols = np.arange(w)
+    ye = np.clip(np.round(edge_row).astype(int), 1, h - 2)
+    x0 = fx[ye, cols]; y0 = fy[ye, cols]
+    vs = fy[ye + 1, cols] - fy[ye - 1, cols]
+    vs = vs / 2
+    ys = np.arange(h, dtype=np.float32)[:, None]
+    ex = np.broadcast_to(x0[None, :], (h, w)).astype(np.float32)
+    ey = (y0[None, :] + (ys - edge_row[None, :]) * vs[None, :]).astype(np.float32)
+    return ex, ey
+
 def warp_to_canonical(img: np.ndarray, corners: dict, g, cut=False, s=2, border=cv2.BORDER_REPLICATE, full_rgb=None) -> Image.Image:
     src = planes_src(corners); dst = planes_dst(g, s); masks = region_masks(g, s)
     w, h = g['size'][0] * s, g['size'][1] * s
@@ -188,13 +203,21 @@ def warp_to_canonical(img: np.ndarray, corners: dict, g, cut=False, s=2, border=
         t = np.clip((xs - a[0]) / (b[0] - a[0]), 0, 1)
         edge_y = a[1] + (b[1] - a[1]) * t
         wgt = np.clip((edge_y - ys) / (BLEND * s), 0, 1)
-        fx, fy = maps['floor']; wx, wy = maps[k]
+        fx, fy = _extrude(maps['floor'], edge_y[0], h)
+        # 墙面映射的横向位置改用地板映射在后沿上的位置：两个单应在后沿上的参数化不一致（源图透视 / 房间不对称时
+        # 能差几十像素），混合带里会把家具和护墙板拉斜。墙面纵向仍按墙的单应（保持竖直）。
+        wx0, wy0 = maps[k]
+        ye = np.clip(np.round(edge_y[0]).astype(int), 0, h - 1); cols = np.arange(w)
+        wx = fx
+        wy = (fy[ye, cols][None, :] + (wy0 - wy0[ye, cols][None, :])).astype(np.float32)
         mk = masks[k]
         mx[mk] = ((1 - wgt) * fx + wgt * wx)[mk]; my[mk] = ((1 - wgt) * fy + wgt * wy)[mk]
     out = cv2.remap(img.astype(np.float32), mx, my, interpolation=cv2.INTER_CUBIC, borderMode=border)
     alpha = cut_alpha(out, g, s, full_rgb) if cut else silhouette_mask(g, s, cut=False)
     rgba = np.dstack([np.clip(out, 0, 255).astype(np.uint8), (alpha * 255).astype(np.uint8)])
     return Image.fromarray(rgba, 'RGBA')
+
+FRINGE_LUM = 24
 
 def cut_alpha(rgb: np.ndarray, g, s=2, full_rgb=None) -> np.ndarray:
     """剖面版的 alpha：墙区里和画布外连通的“背景”去掉。
@@ -217,7 +240,15 @@ def cut_alpha(rgb: np.ndarray, g, s=2, full_rgb=None) -> np.ndarray:
         bg = wallzone & above & (((lum < 60) & (flum - lum > 30)) | (lum < 4))
     n, lab = cv2.connectedComponents((bg | ~sil).astype(np.uint8))
     keep = set(np.unique(lab[0, :])) - {0}
-    return sil & ~(np.isin(lab, list(keep)) & bg)
+    alpha = sil & ~(np.isin(lab, list(keep)) & bg)
+    # 去黑边：生成器剖面版在切口 / 家具剪影外缘常留 1~2px 近黑锯齿（JPEG 背景渗色），叠到别的房间上很显眼。
+    # 墙区里贴着透明区的近黑像素剥掉，最多 3 圈（家具自己的描边是深棕，亮度高于阈值，保留）。
+    k3 = np.ones((3, 3), np.uint8)
+    for _ in range(3):
+        edge_px = alpha & (cv2.dilate((~alpha).astype(np.uint8), k3) > 0) & wallzone & (lum < FRINGE_LUM)
+        if not edge_px.any(): break
+        alpha = alpha & ~edge_px
+    return alpha
 
 def align_to(ref: np.ndarray, img: np.ndarray, region: np.ndarray | None = None) -> np.ndarray:
     """生成器的编辑版和原图可能有几像素漂移：ECC 求仿射，返回 2x3 矩阵（img → ref）。"""
@@ -285,8 +316,27 @@ def bake_module(base_rgb: np.ndarray, phase: str, mod: dict, cut: bool, bodies: 
     for light in (lights if bodies else []):
         if 'shade' in light: bakelib.paint_shade(lit, light['shade'], phase)
         if light['kind'] == 'screen': bakelib.paint_screen(lit, light['screen'], phase, light.get('style', 'tv'))
-        if light['kind'] == 'ac': bakelib.paint_ac(lit, light, phase)
+        if light['kind'] == 'ac': paint_ac(lit, light, phase)
     return unlit, lit
+
+def paint_ac(img: np.ndarray, light: dict, phase: str):
+    """空调送风点：和经典版 bakelib.paint_ac 一样的点阵，但按空调所在的墙决定往哪边飘——
+    NE 墙（面朝左前）往左下，NW 墙（面朝右前）往右下。"""
+    (x0, y0), (x1, y1) = light["vent"]
+    sx = 1.2 if light.get("wall") == "nw" else -1.2
+    rng = np.random.default_rng(7)
+    PX_ = bakelib.PX
+    for i in range(18):
+        t = (i + 0.5) / 18
+        bx, by = x0 + (x1 - x0) * t, y0 + (y1 - y0) * t
+        for k in range(1, 6):
+            if rng.random() < 0.55:
+                x = int(bx + k * sx * 2.0 + rng.integers(-1, 2)) // PX_ * PX_
+                y = int(by + k * 5 + rng.integers(-1, 2)) // PX_ * PX_
+                a = 0.75 - k * 0.11
+                img[y:y + PX_, x:x + PX_] = img[y:y + PX_, x:x + PX_] * (1 - a) + np.array([0.62, 0.86, 1.0]) * a
+    lx, ly = light["led"]
+    img[ly:ly + PX_, lx:lx + PX_] = [0.45, 1.0, 0.75]
 
 def measure_low_wall(cut_img: np.ndarray, cc: dict, g) -> float:
     """剖面版的矮墙在规范图里有多高（中位数；家具冒出来的列会被中位数压掉）。"""
