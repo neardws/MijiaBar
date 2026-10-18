@@ -326,7 +326,7 @@
      ],
      "at": [
       362,
-      272
+      268
      ],
      "default": null
     },
@@ -366,8 +366,8 @@
       "S"
      ],
      "at": [
-      90,
-      205
+      268,
+      206
      ],
      "default": null
     },
@@ -624,18 +624,6 @@
    ],
    "decor": [
     {
-     "id": "foot",
-     "surface": "floor",
-     "sizes": [
-      "S"
-     ],
-     "at": [
-      240,
-      236
-     ],
-     "default": null
-    },
-    {
      "id": "dresser",
      "surface": "floor",
      "sizes": [
@@ -643,8 +631,8 @@
       "M"
      ],
      "at": [
-      118,
-      180
+      126,
+      184
      ],
      "default": "spider_plant"
     },
@@ -924,8 +912,8 @@
       "M"
      ],
      "at": [
-      82,
-      206
+      96,
+      178
      ],
      "default": "book_stack"
     },
@@ -936,8 +924,8 @@
       "S"
      ],
      "at": [
-      306,
-      204
+      190,
+      200
      ],
      "default": null
     },
@@ -1081,25 +1069,10 @@
       "L"
      ],
      "at": [
-      200,
-      222
+      186,
+      202
      ],
      "default": null
-    },
-    {
-     "id": "corner",
-     "surface": "floor",
-     "sizes": [
-      "S",
-      "M",
-      "L"
-     ],
-     "at": [
-      300,
-      196
-     ],
-     "default": null,
-     "holiday": true
     },
     {
      "id": "door",
@@ -1109,8 +1082,8 @@
       "M"
      ],
      "at": [
-      70,
-      196
+      110,
+      170
      ],
      "default": "spider_plant"
     },
@@ -1339,20 +1312,8 @@
       "M"
      ],
      "at": [
-      80,
-      210
-     ],
-     "default": null
-    },
-    {
-     "id": "counter",
-     "surface": "floor",
-     "sizes": [
-      "S"
-     ],
-     "at": [
-      300,
-      212
+      96,
+      174
      ],
      "default": null
     },
@@ -1569,8 +1530,8 @@
       "M"
      ],
      "at": [
-      300,
-      206
+      226,
+      176
      ],
      "default": null
     },
@@ -1581,8 +1542,8 @@
       "S"
      ],
      "at": [
-      80,
-      206
+      160,
+      198
      ],
      "default": "succulent"
     },
@@ -1816,8 +1777,8 @@
       "M"
      ],
      "at": [
-      250,
-      230
+      224,
+      196
      ],
      "default": null,
      "holiday": true
@@ -1830,21 +1791,9 @@
      ],
      "at": [
       150,
-      236
+      190
      ],
      "default": "cat_bed"
-    },
-    {
-     "id": "washer",
-     "surface": "floor",
-     "sizes": [
-      "S"
-     ],
-     "at": [
-      112,
-      210
-     ],
-     "default": null
     },
     {
      "id": "wall_nw",

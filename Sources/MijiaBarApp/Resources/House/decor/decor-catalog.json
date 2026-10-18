@@ -59,8 +59,8 @@
     "night": "decor-spider_plant-night.png"
    },
    "anchor": [
-    22,
-    40
+    30,
+    58
    ]
   },
   {
@@ -77,8 +77,8 @@
     "night": "decor-succulent-night.png"
    },
    "anchor": [
-    12,
-    16
+    18,
+    24
    ]
   },
   {
@@ -95,8 +95,8 @@
     "night": "decor-bonsai-night.png"
    },
    "anchor": [
-    16,
-    28
+    18,
+    34
    ]
   },
   {
@@ -179,8 +179,8 @@
     }
    },
    "anchor": [
-    8,
-    16
+    10,
+    18
    ]
   },
   {
@@ -203,8 +203,8 @@
     }
    },
    "anchor": [
-    10,
-    14
+    12,
+    16
    ]
   },
   {
@@ -221,8 +221,8 @@
     "night": "decor-book_stack-night.png"
    },
    "anchor": [
-    16,
-    18
+    20,
+    22
    ]
   },
   {
@@ -239,8 +239,8 @@
     "night": "decor-cat_bed-night.png"
    },
    "anchor": [
-    18,
-    14
+    20,
+    16
    ],
    "petSpot": true
   },
@@ -277,8 +277,8 @@
     "night": "decor-food_bowl-night.png"
    },
    "anchor": [
-    24,
-    12
+    32,
+    18
    ],
    "petSpot": true
   },
@@ -346,8 +346,8 @@
     }
    },
    "anchor": [
-    14,
-    18
+    18,
+    24
    ],
    "season": "springFestival",
    "text": true
@@ -366,8 +366,8 @@
     "night": "decor-rabbit_lamp-night.png"
    },
    "anchor": [
-    16,
-    32
+    18,
+    38
    ],
    "season": "midAutumn"
   },
@@ -385,8 +385,8 @@
     "night": "decor-pumpkin-night.png"
    },
    "anchor": [
-    14,
-    20
+    18,
+    24
    ],
    "season": "halloween"
   },

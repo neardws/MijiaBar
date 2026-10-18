@@ -1,5 +1,6 @@
 import Foundation
 import CoreGraphics
+import ImageIO
 import Testing
 @testable import MijiaCore
 
@@ -55,7 +56,7 @@ import Testing
             #expect(Set(catalog.modules.keys) == Set(reference.modules.keys))
             for (module, art) in catalog.modules {
                 let slots = art.decor ?? [], expected = reference.modules[module]?.decor ?? []
-                #expect((4...6).contains(slots.count), "\(style)/\(module) needs 4...6 decor slots")
+                #expect((3...6).contains(slots.count), "\(style)/\(module) needs 3...6 decor slots")
                 #expect(Set(slots.map(\.id)).count == slots.count)
                 #expect(Set(slots.map(\.id)) == Set(expected.map(\.id)))
                 for slot in slots {
@@ -66,6 +67,47 @@ import Testing
                     let other = try #require(expected.first { $0.id == slot.id })
                     #expect(slot.surface == other.surface && slot.wall == other.wall && Set(slot.sizes) == Set(other.sizes))
                     if let id = slot.default { let item = try #require(items.items.first { $0.id == id }); #expect(item.fits(slot)) }
+                }
+            }
+        }
+    }
+
+    @Test func floorSlotFootprintsStayInsideFrontEdge() throws {
+        let items = try Self.catalog()
+        for style in ["cozy-wood", "japanese", "modern"] {
+            for (module, art) in try Self.modules(style).modules.sorted(by: { $0.key < $1.key }) {
+                let tip = try #require(art.tip.count == 2 ? art.tip : nil)
+                let width = try #require(art.footprint.first)
+                let left = (x: Double(tip[0] - 160), y: Double(tip[1] + 66))
+                let front = (x: Double(tip[0] + (width - 1) * 160), y: Double(tip[1] + (width + 1) * 66))
+                let right = (x: Double(tip[0] + width * 160), y: Double(tip[1] + width * 66))
+                func frontY(_ position: Double) -> Double? {
+                    var heights: [Double] = []
+                    for (start, end) in [(left, front), (front, right)] where start.x <= position && position <= end.x {
+                        heights.append(start.y + (position - start.x) * (end.y - start.y) / (end.x - start.x))
+                    }
+                    return heights.min()
+                }
+                for slot in art.decor ?? [] where slot.surface == "floor" || slot.surface == "rug" {
+                    let at = try #require(slot.at.count == 2 ? slot.at : nil)
+                    let name = "\(style)/\(module)/\(slot.id)"
+                    let edge = try #require(frontY(at[0]), "\(name) anchor is outside the front edge's x range")
+                    let clearance = edge - at[1]
+                    #expect(clearance >= 36, "\(name) anchor clearance is \(clearance) px; needs >= 36 (shortfall \(36 - clearance) px)")
+                    for item in items.items where item.fits(slot) {
+                        let itemName = "\(name)/\(item.id)"
+                        let anchor = try #require(item.anchor.count == 2 ? item.anchor : nil)
+                        let file = try #require(item.sprites["day"]?.file(), "\(itemName) has no day sprite")
+                        let source = try #require(CGImageSourceCreateWithURL(Self.decorDir.appendingPathComponent(file) as CFURL, nil), "\(itemName) cannot load \(file)")
+                        let image = try #require(CGImageSourceCreateImageAtIndex(source, 0, nil), "\(itemName) cannot decode \(file)")
+                        let x0 = at[0] - anchor[0], x1 = x0 + Double(image.width)
+                        let bottom = at[1] - anchor[1] + Double(image.height)
+                        for position in [x0, x1, at[0]] {
+                            if let edge = frontY(position) {
+                                #expect(bottom <= edge, "\(itemName) overshoots front edge by \(bottom - edge) px at x=\(position) (bottom=\(bottom), frontY=\(edge))")
+                            }
+                        }
+                    }
                 }
             }
         }
