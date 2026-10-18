@@ -232,12 +232,38 @@ import Testing
                 } else if format == kCVPixelFormatType_OneComponent32Float {
                     for (column, value) in [Float(-0.1), 0.5, 1.2].enumerated() { pointer.assumingMemoryBound(to: Float.self)[column] = value }
                 } else {
-                    for (column, value) in [Float16(0), 0.5, 1].enumerated() { pointer.assumingMemoryBound(to: UInt16.self)[column] = value.bitPattern }
+                    for (column, bits) in [UInt16(0x0000), 0x3800, 0x3C00].enumerated() { pointer.assumingMemoryBound(to: UInt16.self)[column] = bits }
                 }
             }
             CVPixelBufferUnlockBaseAddress(buffer, [])
             #expect(HousePetForeground.decode(buffer) == [0, 128, 255, 0, 128, 255])
         }
+    }
+    @Test func halfMaskKnownBitPatternsMatchFloatMasks() throws {
+        let cases: [(UInt16, Float)] = [
+            (0x0000, 0), (0x3C00, 1), (0x3800, 0.5), (0xC000, -2),
+            (0x7C00, .infinity), (0x0001, 5.960464477539063e-8),
+            (0x8000, -0.0), (0x8001, -5.960464477539063e-8),
+            (0x03FF, 0.00006097555160522461), (0x0400, 0.00006103515625),
+            (0x3555, 0.333251953125), (0x7BFF, 65504),
+            (0xFC00, -.infinity), (0x7E00, .nan), (0x7C01, .nan)
+        ]
+        var masks: [[UInt8]] = []
+        for format in [kCVPixelFormatType_OneComponent16Half, kCVPixelFormatType_OneComponent32Float] {
+            var optional: CVPixelBuffer?
+            #expect(CVPixelBufferCreate(kCFAllocatorDefault, cases.count, 1, format, nil, &optional) == kCVReturnSuccess)
+            let buffer = try #require(optional)
+            CVPixelBufferLockBaseAddress(buffer, [])
+            let base = try #require(CVPixelBufferGetBaseAddress(buffer))
+            for (column, value) in cases.enumerated() {
+                if format == kCVPixelFormatType_OneComponent16Half { base.assumingMemoryBound(to: UInt16.self)[column] = value.0 }
+                else { base.assumingMemoryBound(to: Float.self)[column] = value.1 }
+            }
+            CVPixelBufferUnlockBaseAddress(buffer, [])
+            masks.append(try #require(HousePetForeground.decode(buffer)))
+        }
+        #expect(masks[0] == masks[1])
+        #expect(masks[0] == [0, 255, 128, 0, 0, 0, 0, 0, 0, 0, 85, 255, 0, 0, 0])
     }
     @Test func erosionAndAnimalEllipseDropBackgroundEdges() {
         var mask = [UInt8](repeating: 0, count: 10000)

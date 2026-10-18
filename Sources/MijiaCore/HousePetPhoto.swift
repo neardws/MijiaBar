@@ -265,6 +265,18 @@ public enum HousePetForeground {
             return horizontal * horizontal + vertical * vertical <= 1 ? 255 : 0
         }
     }
+    private static func decodeHalf(_ bits: UInt16) -> Float {
+        let sign = UInt32(bits & 0x8000) << 16, exponent = UInt32((bits >> 10) & 0x1F)
+        var mantissa = UInt32(bits & 0x03FF)
+        if exponent == 0 {
+            guard mantissa != 0 else { return Float(bitPattern: sign) }
+            var normalizedExponent: UInt32 = 113
+            while mantissa & 0x0400 == 0 { mantissa <<= 1; normalizedExponent -= 1 }
+            return Float(bitPattern: sign | (normalizedExponent << 23) | ((mantissa & 0x03FF) << 13))
+        }
+        if exponent == 0x1F { return Float(bitPattern: sign | 0x7F800000 | (mantissa << 13)) }
+        return Float(bitPattern: sign | ((exponent + 112) << 23) | (mantissa << 13))
+    }
     public static func decode(_ buffer: CVPixelBuffer) -> [UInt8]? {
         CVPixelBufferLockBaseAddress(buffer, .readOnly); defer { CVPixelBufferUnlockBaseAddress(buffer, .readOnly) }
         guard let base = CVPixelBufferGetBaseAddress(buffer) else { return nil }
@@ -276,7 +288,7 @@ public enum HousePetForeground {
             let value: Float
             if format == kCVPixelFormatType_OneComponent8 { value = Float(row.assumingMemoryBound(to: UInt8.self)[column]) / 255 }
             else if format == kCVPixelFormatType_OneComponent32Float { value = row.assumingMemoryBound(to: Float.self)[column] }
-            else { value = Float(Float16(bitPattern: row.assumingMemoryBound(to: UInt16.self)[column])) }
+            else { value = decodeHalf(row.assumingMemoryBound(to: UInt16.self)[column]) }
             return value.isFinite ? UInt8((min(1, max(0, value)) * 255).rounded()) : 0
         }
     }
