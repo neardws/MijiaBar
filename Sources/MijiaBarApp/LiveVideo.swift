@@ -33,6 +33,8 @@ final class LiveManager: ObservableObject {
     private var viewers = 0
     private var stopTask: Task<Void, Never>?
     private var startTask: Task<Int, Error>?
+    /// 每次启动加一：启动途中换了设备 / 被停掉时，旧的启动结果作废
+    private var generation = 0
     static let streamName = "cam"
     static let idleGrace: UInt64 = 20_000_000_000
 
@@ -92,12 +94,19 @@ final class LiveManager: ObservableObject {
         if let port, did == d.did, proc?.isRunning == true { return port }
         if let t = startTask, did == d.did { return try await t.value }
         stopNow()
-        did = d.did
+        did = d.did; generation += 1
+        let gen = generation
         let t = Task { await Self.wake(d, cloud: cloud); return try await self.launch(d, session) }
         startTask = t
-        defer { startTask = nil }
-        do { let p = try await t.value; port = p; return p }
-        catch { stopNow(); throw error }
+        do {
+            let p = try await t.value
+            // 启动期间换了设备（另一个窗口在看别的摄像头）或被停掉：launch 会自己收拾进程，这里只报错
+            guard gen == generation else { throw CancellationError() }
+            startTask = nil; port = p; return p
+        } catch {
+            if gen == generation { startTask = nil; stopNow() }
+            throw error
+        }
     }
 
     /// 观看者离开：没人看了就在宽限期后停止
@@ -114,6 +123,7 @@ final class LiveManager: ObservableObject {
 
     func stopNow() {
         stopTask?.cancel(); stopTask = nil
+        startTask?.cancel(); startTask = nil; generation += 1
         if let p = proc, p.isRunning { p.terminate() }
         proc = nil; port = nil; did = nil
         try? FileManager.default.removeItem(at: Self.configURL)
@@ -129,6 +139,7 @@ final class LiveManager: ObservableObject {
     }
 
     private func launch(_ d: Device, _ s: Session?) async throws -> Int {
+        try Task.checkCancellation()
         guard let bin = Self.helperURL else { throw LiveError.noHelper }
         guard let s, let pass = s.passToken, !pass.isEmpty else { throw LiveError.noAuth }
         guard let src = Self.streamURL(d, s) else { throw LiveError.noIP }
@@ -170,7 +181,8 @@ final class LiveManager: ObservableObject {
                 try? FileManager.default.removeItem(at: cfg)
                 return port
             }
-            try await Task.sleep(nanoseconds: 100_000_000)
+            // 被取消（stopNow / 换了设备）：结束自己这个进程。配置文件由 stopNow 删除——新进程可能正用着同一路径
+            do { try await Task.sleep(nanoseconds: 100_000_000) } catch { p.terminate(); throw error }
         }
         try? FileManager.default.removeItem(at: cfg)
         let msg = p.isRunning ? "timeout" : "exit \(p.terminationStatus)"
@@ -368,10 +380,13 @@ struct LivePlayerView: View {
         Task {
             do {
                 let p = try await LiveManager.shared.acquire(device, session: m.session, cloud: m.controller.cloud)
+                guard holding else { return }   // 启动期间视图已经停止（stop() 已经释放过）
                 port = p; if phase == .starting { phase = .loading }
             } catch {
                 if Self.realInMock { print("start error \(error.localizedDescription)") }
-                phase = .error(error.localizedDescription); holding = false
+                guard holding else { return }   // 已经 stop() 过，不要重复释放
+                // 被另一路直播顶掉（同一时间只有一个助手进程）：显示为暂停，点重试即可抢回来
+                phase = error is CancellationError ? .paused : .error(error.localizedDescription); holding = false
                 LiveManager.shared.release()
             }
         }
@@ -505,6 +520,7 @@ struct LiveControls: View {
 @MainActor
 enum LiveWindow {
     static var windows: [String: NSWindow] = [:]
+    private static var closeObservers: [String: NSObjectProtocol] = [:]
     static func open(_ d: Device, model: AppModel) {
         if let w = windows[d.did] { w.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true); return }
         let root = LivePlayerView(device: d, cornerRadius: 0).environmentObject(model)
@@ -518,10 +534,11 @@ enum LiveWindow {
         w.contentView = NSHostingView(rootView: root)
         w.center()
         windows[d.did] = w
-        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: w, queue: .main) { _ in
+        closeObservers[d.did] = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: w, queue: .main) { _ in
             MainActor.assumeIsolated {
                 windows[d.did]?.contentView = nil
                 windows[d.did] = nil
+                if let o = closeObservers.removeValue(forKey: d.did) { NotificationCenter.default.removeObserver(o) }
             }
         }
         w.makeKeyAndOrderFront(nil)

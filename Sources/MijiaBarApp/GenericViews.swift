@@ -155,6 +155,8 @@ struct SettingsView: View {
                         Text(L("默认隐藏：离线设备，以及云端最后在线时间超过 30 天的设备。右键设备可以手动隐藏/取消隐藏、收藏和重命名。",
                                "Hidden by default: offline devices and devices not seen online for 30+ days. Right-click a device to hide, favorite or rename."))
                             .font(.system(size: 11)).foregroundStyle(.secondary)
+                        SwitchRow(title: L("在设备列表顶部显示小屋", "Show the house above the device list"),
+                                  isOn: Binding(get: { m.prefs.showHouse != false }, set: { v in withAnimation(Motion.smooth) { m.prefs.showHouse = v ? nil : false } }))
                     }
                     group(L("摄像头直播", "Camera live view")) {
                         let ok = m.mock || m.session?.canLiveStream == true

@@ -35,7 +35,8 @@ public enum PropValue: Codable, Hashable, Sendable, CustomStringConvertible {
         switch self {
         case .bool(let b): return b ? "true" : "false"
         case .int(let i): return "\(i)"
-        case .double(let d): return d == d.rounded() ? String(Int(d)) : String(format: "%.1f", d)
+        // Int(d) 遇到 NaN / 超出 Int 范围会直接崩溃，所以用 Int(exactly:)
+        case .double(let d): return Int(exactly: d).map(String.init) ?? (d.isFinite ? String(format: "%.1f", d) : "\(d)")
         case .string(let s): return s
         case .null: return "-"
         }
@@ -46,7 +47,7 @@ public enum PropValue: Codable, Hashable, Sendable, CustomStringConvertible {
         case "bool": return .bool(boolValue ?? false)
         case "float": return doubleValue.map { .double($0) } ?? self
         case "string": return .string(description)
-        default: return doubleValue.map { .int(Int($0.rounded())) } ?? self
+        default: return doubleValue.flatMap { Int(exactly: $0.rounded()) }.map { .int($0) } ?? self
         }
     }
     public init(from decoder: Decoder) throws {

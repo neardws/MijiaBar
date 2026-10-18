@@ -78,21 +78,36 @@ public struct DeviceSpec: Codable, Hashable, Sendable {
 public final class SpecStore: @unchecked Sendable {
     public static let shared = SpecStore()
     private var mem: [String: DeviceSpec] = [:]
+    /// 正在下载的规格：同型号的多台设备同时打开时只下载一次
+    private var inflight: [String: Task<DeviceSpec?, Error>] = [:]
     private var indexTask: Task<[String: String], Error>?
     private let lock = NSLock()
 
     public func spec(for model: String) async throws -> DeviceSpec? {
         if let s = lock.withLock({ mem[model] }) { return s }
         let file = Paths.specs.appendingPathComponent(model + ".json")
-        if let d = try? Data(contentsOf: file), let s = try? JSONDecoder().decode(DeviceSpec.self, from: d) {
+        if let d = try? Data(contentsOf: file), let s = try? JSONDecoder().decode(DeviceSpec.self, from: d), !s.services.isEmpty {
             lock.withLock { mem[model] = s }; return s
         }
+        let task: Task<DeviceSpec?, Error> = lock.withLock {
+            if let t = inflight[model] { return t }
+            let t = Task { try await self.download(model, to: file) }
+            inflight[model] = t; return t
+        }
+        defer { lock.withLock { inflight[model] = nil } }
+        return try await task.value
+    }
+
+    private func download(_ model: String, to file: URL) async throws -> DeviceSpec? {
         guard let urn = try await index()[model] else { return nil }
         var c = URLComponents(string: "https://miot-spec.org/miot-spec-v2/instance")!
         c.queryItems = [URLQueryItem(name: "type", value: urn)]
-        let (d, _) = try await URLSession.shared.data(from: c.url!)
+        let (d, r) = try await URLSession.shared.data(from: c.url!)
+        if let code = (r as? HTTPURLResponse)?.statusCode, code != 200 { throw CloudError.http(code) }
         guard let obj = try JSONSerialization.jsonObject(with: d) as? [String: Any] else { return nil }
         let s = DeviceSpec.parse(obj)
+        // 出错时服务器也可能返回 200 + 一段错误 JSON：没有任何服务的规格不缓存，下次再试
+        guard !s.services.isEmpty else { return nil }
         try? JSONEncoder().encode(s).write(to: file)
         lock.withLock { mem[model] = s }
         return s
@@ -112,7 +127,8 @@ public final class SpecStore: @unchecked Sendable {
         if let attrs = try? FileManager.default.attributesOfItem(atPath: file.path), let m = attrs[.modificationDate] as? Date,
            Date().timeIntervalSince(m) < 7 * 86400, let d = try? Data(contentsOf: file),
            let idx = try? JSONDecoder().decode([String: String].self, from: d) { return idx }
-        let (d, _) = try await URLSession.shared.data(from: URL(string: "https://miot-spec.org/miot-spec-v2/instances?status=all")!)
+        let (d, r) = try await URLSession.shared.data(from: URL(string: "https://miot-spec.org/miot-spec-v2/instances?status=all")!)
+        if let code = (r as? HTTPURLResponse)?.statusCode, code != 200 { throw CloudError.http(code) }
         let obj = try JSONSerialization.jsonObject(with: d) as? [String: Any] ?? [:]
         var best: [String: (String, Int, Bool)] = [:]
         for i in obj["instances"] as? [[String: Any]] ?? [] {
@@ -122,7 +138,8 @@ public final class SpecStore: @unchecked Sendable {
             best[m] = (t, v, rel)
         }
         let idx = best.mapValues { $0.0 }
-        try? JSONEncoder().encode(idx).write(to: file)
+        // 空索引不写盘，否则 7 天内所有设备都找不到规格
+        if !idx.isEmpty { try? JSONEncoder().encode(idx).write(to: file) }
         return idx
     }
 }
