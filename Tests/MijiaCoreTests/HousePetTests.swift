@@ -197,6 +197,32 @@ import Testing
         #expect(pose.point == light.point && pose.action == "sit")
     }
 
+    @Test func nightSleepSpreadsRosterOverDistinctSpots() throws {
+        let world = try Self.world(), rig = try Self.rig(), behavior = HousePetBehavior(rig: rig)
+        let pets = ["p_1232", "p_1230", "p_1231"].map { HousePet(id: $0) }
+        let spots = world.spots.filter { ["sleep", "perch"].contains($0.kind) }
+            .sorted { $0.priority == $1.priority ? $0.id < $1.id : $0.priority < $1.priority }
+        let top = try #require(spots.first), date = Date(timeIntervalSince1970: 1792270000)
+        let lowest = try #require(pets.min { $0.id < $1.id })
+        for restOnly in [true, false] {
+            let context = HousePetContext(night: true, lights: Dictionary(uniqueKeysWithValues: world.rooms.map { ($0, false) }),
+                                          rooms: world.rooms, petIDs: pets.map(\.id), changedAt: date, restOnly: restOnly)
+            let time = date.addingTimeInterval(600)
+            let poses = pets.map { behavior.pose($0, world: world, context: context, at: time) }
+            for (pet, pose) in zip(pets, poses) {
+                #expect(pose.visible && pose.action == "sleep")
+                #expect(spots.contains { $0.point == pose.point })
+                #expect(pose == HousePetBehavior(rig: rig).pose(pet, world: world, context: context, at: time))
+            }
+            #expect(behavior.pose(lowest, world: world, context: context, at: time).point == top.point)
+            for left in 0..<2 { for right in (left + 1)..<3 {
+                #expect(poses[left].point != poses[right].point)
+                #expect(poses[left].point.distance(to: poses[right].point) >= 3 * world.cellSize - 0.001)
+            } }
+            #expect(behavior.poses(pets, world: world, context: context, at: time) == Dictionary(uniqueKeysWithValues: zip(pets.map(\.id), poses)))
+        }
+    }
+
     @Test func multiplePetsStaySeparatedAtRest() throws {
         let world = try Self.world(), behavior = HousePetBehavior(rig: try Self.rig())
         let pets = (0..<3).map { HousePet(id: "p_123\($0)", homeRoom: "a") }
@@ -230,6 +256,84 @@ import Testing
             } }
             #expect(selected[0].point.distance(to: selected[1].point) == Double(spacing * 10))
         }
+    }
+
+    @Test func restOnlyRosterNeverPilesAtNight() throws {
+        let world = try Self.world(), rig = try Self.rig()
+        let behavior = HousePetBehavior(rig: rig), fresh = HousePetBehavior(rig: rig)
+        let pets = ["p_100001", "p_100002", "p_100003"].map { HousePet(id: $0) }
+        var violations = 0, moved = 0
+        for day in 0..<30 {
+            let date = Date(timeIntervalSince1970: 1792270000 + Double(day) * 86400)
+            for changedAt in [nil, date] as [Date?] {
+                let context = HousePetContext(night: true, lights: ["a": true], rooms: world.rooms,
+                                              petIDs: pets.map(\.id), changedAt: changedAt, restOnly: true)
+                let time = date.addingTimeInterval(600)
+                let singles = pets.map { behavior.pose($0, world: world, context: context, at: time) }
+                let poses = behavior.poses(pets, world: world, context: context, at: time)
+                #expect(poses == fresh.poses(Array(pets.reversed()), world: world, context: context, at: time))
+                for (index, pet) in pets.enumerated() {
+                    let pose = try #require(poses[pet.id]), original = singles[index]
+                    #expect(pose.visible)
+                    if pose.point != original.point {
+                        moved += 1
+                        #expect(pose.room == original.room)
+                        #expect(world.nodes.contains { $0.point == pose.point && $0.room == pose.room && $0.module == pose.module })
+                        var expected = original
+                        expected.point = pose.point; expected.module = pose.module; expected.room = pose.room
+                        #expect(pose == expected)
+                    }
+                    for other in pets.indices where other > index {
+                        if singles[index].visible && singles[other].visible,
+                           singles[index].point.distance(to: singles[other].point) < 3 * world.cellSize - 0.001 { violations += 1 }
+                        let otherPose = try #require(poses[pets[other].id])
+                        if pose.visible && otherPose.visible {
+                            #expect(pose.point.distance(to: otherPose.point) >= 3 * world.cellSize - 0.001)
+                        }
+                    }
+                }
+            }
+        }
+        #expect(violations > 0)
+        #expect(moved > 0)
+    }
+
+    @Test func rosterPosesMatchSinglePosesWhenAnimated() throws {
+        let world = try Self.world(), behavior = HousePetBehavior(rig: try Self.rig())
+        let pets = ["p_100001", "p_100002", "p_100003"].map { HousePet(id: $0) }
+        let date = Date(timeIntervalSince1970: 1792270000)
+        for night in [false, true] {
+            let context = HousePetContext(night: night, lights: ["a": true], rooms: world.rooms,
+                                          petIDs: pets.map(\.id), changedAt: date, restOnly: false)
+            for offset in [0.0, 1, 10, 600, 3600] {
+                let time = date.addingTimeInterval(offset)
+                let expected = Dictionary(uniqueKeysWithValues: pets.map { ($0.id, behavior.pose($0, world: world, context: context, at: time)) })
+                #expect(behavior.poses(pets, world: world, context: context, at: time) == expected)
+            }
+        }
+    }
+
+    @Test func restOnlyRosterRespectsHomeRoomAndOverrides() throws {
+        let world = try Self.world(), behavior = HousePetBehavior(rig: try Self.rig())
+        let pets = ["p_100001", "p_100002"].map { HousePet(id: $0, homeRoom: "a") }
+        let date = Date(timeIntervalSince1970: 1792270000)
+        let context = HousePetContext(night: true, rooms: world.rooms, petIDs: pets.map(\.id), restOnly: true)
+        let original = behavior.pose(pets[0], world: world, context: context, at: date)
+        let overrides = [pets[1].id: original]
+        let poses = behavior.poses(pets, world: world, context: context, at: date, overrides: overrides)
+        #expect(poses[pets[1].id] == original)
+        let moved = try #require(poses[pets[0].id])
+        #expect(moved.point != original.point && moved.room == "a")
+        let nearest = try #require(world.nodes.filter { $0.room == "a" && $0.point.distance(to: original.point) >= 3 * world.cellSize }
+            .sorted {
+                let left = $0.point.distance(to: original.point), right = $1.point.distance(to: original.point)
+                return left == right ? $0.id < $1.id : left < right
+            }.first)
+        var expected = original
+        expected.point = nearest.point; expected.module = nearest.module; expected.room = nearest.room
+        #expect(moved == expected)
+        var hidden = original; hidden.visible = false
+        #expect(behavior.poses(pets, world: world, context: context, at: date, overrides: [pets[1].id: hidden])[pets[0].id] == original)
     }
 
     @Test func masksAndMissingRoomSafety() throws {

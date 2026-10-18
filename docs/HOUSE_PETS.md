@@ -132,14 +132,21 @@ to subtract from screen y. +u faces SE, -u NW, +v SW, -v NE.
 Supply `HousePetContext` with existing room keys, active pet IDs, per-room lights,
 TV room keys, night state and `changedAt`/`changedRoom`. Keep the same timestamp
 until the next context change. Reactions begin from the baseline plan at that
-timestamp: dark night seeks sleep; TV seeks its TV spot; a light change produces
+timestamp: dark night with multiple pets assigns sorted IDs to reachable sleep/perch
+spots ordered by dark room, priority and ID, five cells apart (three-cell fallback)
+when enough exist, otherwise keeping the first-reachable-target spread; single pets
+still seek the first reachable sleep spot; TV seeks its TV spot; a light change produces
 2s lookup then a light-pool sit. `homeRoom` confines routes and rest locations.
-Sorted pet IDs partition rest spots at least three cells apart. TV/light/sleep
-reaction destinations use the same spacing, falling back to two, then one cell
+Sorted pet IDs partition rest spots five cells apart. TV/light and fallback sleep
+reaction destinations use the same spacing, falling back to three, two, then one cell
 only if there are too few spots for the roster. Pass the **same roster** to every
 pet. `restOnly=true` chooses the current/next rest spot and restricts actions to
 idle/sit/sleep, without changing the underlying full-scene day plan. `visible`
 also reflects pet/global enablement and missing-room safety.
+`poses(_:world:context:at:overrides:)` resolves visible rest-only crowding in sorted-ID
+order using the nearest same-room walkable node at three cells' separation, with
+two/one-cell fallbacks; explicit overrides stay fixed and reserve their positions.
+Animated poses and the single-pet API are unchanged.
 
 ## CLI and MCP
 

@@ -58,6 +58,33 @@ public final class HousePetBehavior: @unchecked Sendable {
     private static func seed(_ text: String) -> UInt64 {
         text.utf8.reduce(14695981039346656037) { ($0 ^ UInt64($1)) &* 1099511628211 }
     }
+    public func poses(_ pets: [HousePet], world: HousePetWorld, context: HousePetContext, at date: Date,
+                      overrides: [String: HousePetPose] = [:]) -> [String: HousePetPose] {
+        var result: [String: HousePetPose] = [:]
+        for pet in pets { result[pet.id] = overrides[pet.id] ?? pose(pet, world: world, context: context, at: date) }
+        guard context.restOnly else { return result }
+        var placed = pets.compactMap { overrides[$0.id] }.filter(\.visible).map(\.point)
+        for pet in pets.sorted(by: { $0.id < $1.id }) where overrides[pet.id] == nil {
+            guard var pose = result[pet.id], pose.visible else { continue }
+            if !placed.allSatisfy({ $0.distance(to: pose.point) >= 3 * world.cellSize }) {
+                let candidates = world.nodes.filter { $0.room == pose.room && (pet.homeRoom == nil || $0.room == pet.homeRoom) }
+                    .sorted {
+                        let left = $0.point.distance(to: pose.point), right = $1.point.distance(to: pose.point)
+                        return left == right ? $0.id < $1.id : left < right
+                    }
+                for cells in [3.0, 2.0, 1.0] {
+                    if let node = candidates.first(where: { node in placed.allSatisfy { $0.distance(to: node.point) >= cells * world.cellSize } }) {
+                        pose.point = node.point; pose.module = node.module; pose.room = node.room; pose.jumpLift = 0
+                        break
+                    }
+                }
+                result[pet.id] = pose
+            }
+            placed.append(pose.point)
+        }
+        return result
+    }
+
     public func pose(_ pet: HousePet, world: HousePetWorld, context: HousePetContext = .init(), at date: Date) -> HousePetPose {
         var calendar = Calendar(identifier: .gregorian); calendar.timeZone = context.timeZone
         let day = calendar.startOfDay(for: date), elapsed = max(0, date.timeIntervalSince(day))
@@ -133,7 +160,24 @@ public final class HousePetBehavior: @unchecked Sendable {
                         .filter { targetKind == "sleep" ? ["sleep", "perch"].contains($0.kind) : $0.kind == targetKind && (targetKind == "tv" ? context.tvRooms.contains(world.nodes[$0.node].room) : world.nodes[$0.node].room == room) }
                         .sorted { $0.priority == $1.priority ? $0.id < $1.id : $0.priority < $1.priority }
                     var target = available.first(where: { !world.path(from: start.node, to: $0.node, room: pet.homeRoom, allowedRooms: rooms).isEmpty }) ?? start.rest
-                    if roster.count > 1 {
+                    var distinct: [HousePetWorld.Spot] = []
+                    if targetKind == "sleep" && roster.count > 1 {
+                        let reachable = available.filter { !world.path(from: start.node, to: $0.node, room: pet.homeRoom, allowedRooms: rooms).isEmpty }
+                            .sorted {
+                                let leftDark = context.lights[world.nodes[$0.node].room] != true, rightDark = context.lights[world.nodes[$1.node].room] != true
+                                if leftDark != rightDark { return leftDark }
+                                return $0.priority == $1.priority ? $0.id < $1.id : $0.priority < $1.priority
+                            }
+                        for cells in [5.0, 3.0] {
+                            distinct = []
+                            for candidate in reachable where distinct.allSatisfy({ $0.point.distance(to: candidate.point) >= cells * world.cellSize - 0.001 }) {
+                                distinct.append(candidate)
+                            }
+                            if distinct.count >= roster.count { break }
+                        }
+                    }
+                    if distinct.count >= roster.count { target = distinct[rank] }
+                    else if roster.count > 1 {
                         let near = world.nodes.filter { rooms.contains($0.room) && (pet.homeRoom == nil || $0.room == pet.homeRoom) }
                             .sorted { $0.point.distance(to: target.point) == $1.point.distance(to: target.point) ? $0.id < $1.id : $0.point.distance(to: target.point) < $1.point.distance(to: target.point) }
                         var candidates = [target]
