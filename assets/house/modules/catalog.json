@@ -218,7 +218,11 @@
     "day-lit-cut": "module-living-day-lit-cut.png",
     "night-unlit-cut": "module-living-night-unlit-cut.png",
     "night-lit-cut": "module-living-night-lit-cut.png"
-   }
+   },
+   "floorLabel": [
+    194,
+    167
+   ]
   },
   "bedroom": {
    "footprint": [
@@ -477,7 +481,7 @@
      ],
      "alt": [
       186,
-      181
+      157
      ]
     },
     {
@@ -613,7 +617,7 @@
      ],
      "alt": [
       178,
-      177
+      153
      ]
     }
    ],
@@ -713,7 +717,7 @@
      ],
      "alt": [
       186,
-      157
+      133
      ]
     }
    ],
@@ -817,7 +821,7 @@
      ],
      "alt": [
       186,
-      174
+      150
      ]
     }
    ],
