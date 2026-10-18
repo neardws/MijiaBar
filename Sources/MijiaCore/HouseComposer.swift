@@ -417,33 +417,79 @@ public enum HouseComposer {
     /// 石砌基座的一面：a→b 是地面前沿（屏幕上斜线），从沿线往下 top…top+depth 像素。
     /// 一层 10px，石块 26px 宽、隔层错半块；灰缝 1px；顶上 2px 压顶阴影、底下 2px 地线。
     /// SW 面朝左前（迎光，亮），SE 面朝右前（暗）。像素风：不抗锯齿，石块明暗按位置哈希抖动。
+    /// 石块纹理（未剪切的平面图块）：按 (朝向, 昼夜, seed) 缓存——lit / unlit 两遍和每次重排都复用，
+    /// 合成时只做一次剪切贴图，不再逐块填几百个多边形
+    final class PlinthTiles: @unchecked Sendable {
+        private let lock = NSLock()
+        private var tiles: [String: CGImage] = [:]
+        func tile(sw: Bool, pal: Palette, seed: Int) -> CGImage? {
+            let key = "\(sw ? 1 : 0)-\(pal.night ? 1 : 0)-\(seed)"
+            lock.lock(); defer { lock.unlock() }
+            if let t = tiles[key] { return t }
+            guard let t = HouseComposer.stoneTile(sw: sw, pal: pal, seed: seed) else { return nil }
+            tiles[key] = t
+            return t
+        }
+    }
+    static let plinthTiles = PlinthTiles()
+    static let plinthTileW = 2 * HouseGrid.W / 2 + 26, plinthTileH = 2 * HouseGrid.levelStep + 8
+
+    /// 平面石墙：灰缝底色上 10px 一层、26px 一块、隔层错半块，每块按 seed/层/列哈希 ±8% 明暗，上沿一条高光。
+    /// 坐标从基座顶（压顶阴影上沿）算起，第一层从 3px 开始（上面 3px 是阴影）
+    static func stoneTile(sw: Bool, pal: Palette, seed: Int) -> CGImage? {
+        let w = plinthTileW, h = plinthTileH
+        guard let c = Canvas(width: w, height: h) else { return nil }
+        func rect(_ xa: Int, _ xb: Int, _ y0: Int, _ y1: Int, _ col: CGColor) {
+            guard xb > xa, y1 > y0 else { return }
+            c.poly([(xa, y0), (xb, y0), (xb, y1), (xa, y1)], fill: col)
+        }
+        rect(0, w, 0, h, sw ? pal.mortarSW : pal.mortarSE)
+        let course = 10, blockW = 26
+        var k = 0, cy = 3
+        while cy < h {
+            let ce = cy + course
+            var bx = k % 2 == 0 ? 0 : -blockW / 2
+            var j = 0
+            while bx < w {
+                let xa = max(0, bx), xb = min(w, bx + blockW)
+                var hh = UInt32(truncatingIfNeeded: (seed &* 73856093) ^ (k &* 19349663) ^ (j &* 83492791))
+                hh ^= hh >> 13; hh = hh &* 0x5bd1e995; hh ^= hh >> 15
+                let jitter = (Double(hh % 1000) / 1000 - 0.5) * 0.16
+                rect(xa + 1, xb, cy + 1, ce, pal.stone(sw ? pal.stoneSW : pal.stoneSE, jitter))
+                // 石块上沿一条高光（迎光面更明显）
+                rect(xa + 1, xb, cy + 1, cy + 2, pal.stone(sw ? pal.stoneSW : pal.stoneSE, jitter + (sw ? 0.14 : 0.07)))
+                bx += blockW; j += 1
+            }
+            cy = ce; k += 1
+        }
+        return c.ctx.makeImage()
+    }
+
+    /// 基座一面：a→b 是这面上沿所在的地台前沿（斜线），往下 top…top+depth。平面石块纹理沿前沿斜率剪切贴上，
+    /// 再画压顶阴影（3px）和地线（2px）
     static func plinth(_ c: Canvas, from a: (x: Int, y: Int), to b: (x: Int, y: Int), top: Int, depth: Int, sw: Bool, pal: Palette, seed: Int) {
         guard depth > 0, b.x != a.x else { return }
         let x0 = min(a.x, b.x), x1 = max(a.x, b.x)
-        func yEdge(_ x: Int) -> Int { a.y + Int((Double(x - a.x) * Double(b.y - a.y) / Double(b.x - a.x)).rounded()) }
+        let slope = Double(b.y - a.y) / Double(b.x - a.x)
+        func yEdge(_ x: Int) -> Int { a.y + Int((Double(x - a.x) * slope).rounded()) }
         func band(_ xa: Int, _ xb: Int, _ y0: Int, _ y1: Int, _ col: CGColor) {
             guard xb > xa, y1 > y0 else { return }
             c.poly([(xa, yEdge(xa) + y0), (xb, yEdge(xb) + y0), (xb, yEdge(xb) + y1), (xa, yEdge(xa) + y1)], fill: col)
         }
         let y0 = top, y1 = top + depth
-        band(x0, x1, y0, y1, sw ? pal.mortarSW : pal.mortarSE)
-        let course = 10, blockW = 26
-        var k = 0, cy = y0 + 3
-        while cy < y1 - 2 {
-            let ce = min(cy + course, y1 - 2)
-            var bx = x0 - (k % 2 == 0 ? 0 : blockW / 2)
-            var j = 0
-            while bx < x1 {
-                let xa = max(x0, bx), xb = min(x1, bx + blockW)
-                var h = UInt32(truncatingIfNeeded: (seed &* 73856093) ^ (k &* 19349663) ^ (j &* 83492791))
-                h ^= h >> 13; h = h &* 0x5bd1e995; h ^= h >> 15
-                let jitter = (Double(h % 1000) / 1000 - 0.5) * 0.16
-                band(xa + 1, xb, cy + 1, ce, pal.stone(sw ? pal.stoneSW : pal.stoneSE, jitter))
-                // 石块上沿一条高光（迎光面更明显）
-                band(xa + 1, xb, cy + 1, cy + 2, pal.stone(sw ? pal.stoneSW : pal.stoneSE, jitter + (sw ? 0.14 : 0.07)))
-                bx += blockW; j += 1
-            }
-            cy = ce; k += 1
+        if let tile = plinthTiles.tile(sw: sw, pal: pal, seed: seed) {
+            let ctx = c.ctx
+            ctx.saveGState()
+            let clip = CGMutablePath()
+            clip.addLines(between: [c.pt(x0, yEdge(x0) + y0), c.pt(x1, yEdge(x1) + y0), c.pt(x1, yEdge(x1) + y1), c.pt(x0, yEdge(x0) + y1)])
+            clip.closeSubpath()
+            ctx.addPath(clip); ctx.clip()
+            // 纹理像素 (tx, 自上而下 ty) → 画布 (x0+tx, yEdge(x0)+top+slope*tx+ty)；CG 坐标 y 朝上
+            let th = CGFloat(tile.height)
+            let yE0 = Double(yEdge(x0) + y0)
+            ctx.concatenate(CGAffineTransform(a: 1, b: CGFloat(-slope), c: 0, d: 1, tx: CGFloat(x0), ty: c.h - CGFloat(yE0) - th))
+            ctx.draw(tile, in: CGRect(x: 0, y: 0, width: CGFloat(tile.width), height: th))
+            ctx.restoreGState()
         }
         band(x0, x1, y0, y0 + 3, pal.plinthShadow)     // 模块地台下沿的阴影
         band(x0, x1, y1 - 2, y1, pal.ground)           // 地线
