@@ -8,7 +8,7 @@ App 按开合度只露出外侧的一部分（窗帘位置 0..100，100 = 全开
   python3 scripts/house_modules/curtains.py preview OUT_DIR     # 画框线检查
   python3 scripts/house_modules/curtains.py build [OUT_DIR]       # 写 Resources/House[/modules]/curtain-*.png，打印 json 定义
 """
-import sys, json
+import os, sys, json
 sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent))
 from pathlib import Path
 import numpy as np, cv2
@@ -133,6 +133,13 @@ def patch(name):
         # 模块：夜景按同一张冻结的昼→夜 LUT 映射（和 build.py 一致）；lit 直接取 lit 底图里侧帘每个亮度级的平均色
         import pipeline as pl
         night_flat = pl.apply_night(flat.astype(np.float32), pl.night_lut(None, None))
+    lumw = np.array([.3, .59, .11])
+    body = inside & (t > .15) & (t < .85)
+    def match(rgb, im):
+        # 整片帘子的平均亮度对齐同一张图里原侧帘的平均亮度（褶纹里亮级占比比原侧帘多，不对齐就像背光）
+        g = float((im[side] @ lumw).mean() / max(1e-3, (rgb[body] @ lumw).mean()))
+        if os.environ.get('CURTAIN_STATS'): print(name, 'gain', round(g, 3), file=sys.stderr)
+        return rgb * min(1.0, g)
     out = {}
     for v in VARIANTS:
         im = imgs[v]
@@ -142,12 +149,10 @@ def patch(name):
             if kind == 'lit': rgb = level_colors(im)
         else:
             rgb = flat * side_ratio(im, day)
+        rgb = match(rgb, im)
         rgb[trow == 0] *= .62
         rgb[trow == 1] *= 1.06
         rgb[brow == 0] *= .8
-        if v.startswith('day'):
-            glow = np.exp(-((t - .4) / .35) ** 2) * (1 - np.abs(s - .5) * 1.2)
-            rgb = rgb * (1 + .1 * glow[..., None]) + np.array([.03, .02, 0]) * glow[..., None]
         a = np.zeros((h, w, 4), np.uint8)
         a[..., :3] = (np.clip(rgb, 0, 1) * 255 + .5).astype(np.uint8)
         a[..., 3] = (inside & ~(valley & (brow == 0))) * 255

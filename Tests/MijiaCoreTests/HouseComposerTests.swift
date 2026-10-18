@@ -173,7 +173,7 @@ import CoreGraphics
         #expect(cut["hidden"] as? Bool == true && cut["patch"] == nil && cut["rect"] == nil && (cut["alt"] as? [Double])?.count == 2)
         // 热水器在卫生间 NW 墙：左边有房间 → 隐藏
         let wh = try light([.init(room: "w", module: "bathroom", col: 0, row: 0)], "w", "water_heater")
-        #expect(wh["hidden"] == nil && (wh["display"] as? [[Double]])?.count == 4 && (wh["led"] as? [Double])?.count == 2)
+        #expect(wh["hidden"] == nil && ((wh["display"] as? [[Double]])?.count ?? 0) >= 3 && (wh["led"] as? [Double])?.count == 2)
         let wh2 = try light([.init(room: "g", module: "generic", col: 0, row: 0), .init(room: "w", module: "bathroom", col: 1, row: 0)], "w", "water_heater")
         #expect(wh2["hidden"] as? Bool == true && wh2["display"] == nil && (wh2["alt"] as? [Double])?.count == 2)
         // 冰箱 / 洗衣机落地：不挂墙，任何布局都画；洗衣机门跟着平移
@@ -181,7 +181,7 @@ import CoreGraphics
         #expect(fr["hidden"] == nil && fr["body"] != nil && fr["pool"] == nil)
         let wa = try light([.init(room: "y", module: "balcony", col: 0, row: 0)], "y", "washer")
         let door = try #require(wa["door"] as? [String: Any])
-        #expect((door["c"] as? [Double])?.count == 2 && door["r"] as? Double == 5.6)
+        #expect((door["c"] as? [Double])?.count == 2 && (door["r"] as? Double ?? 0) > 4 && (door["ry"] as? Double ?? 0) > 4)
     }
 
     @Test func gridTipMovesRightAndForward() {

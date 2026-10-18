@@ -265,12 +265,29 @@ private func resolve(_ ds: [Device], _ cfg: HomeHouse? = nil, hidden: Set<String
                         }
                     }
                     if ["fridge", "water-heater", "washer"].contains(role) {
-                        #expect((L["display"] as? [[Double]])?.count == 4 && L["body"] != nil, "\(dir) \(m) \(role)")
+                        #expect(((L["display"] as? [[Double]])?.count ?? 0) >= 3 && L["body"] != nil, "\(dir) \(m) \(role)")
                         #expect(L["pool"] == nil && L["reveal"] == nil, "\(dir) \(m) \(role) 不烘焙光")
                     }
                     if role == "washer" { #expect((L["door"] as? [String: Any])?["r"] != nil, "\(dir) washer door") }
                     if role == "water-heater" { #expect(L["wall"] != nil && L["alt"] != nil && L["led"] != nil, "\(dir) heater") }
                 }
+            }
+        }
+    }
+
+    /// 墙挂灯具 / 家电被切掉时的徽章兜底位（alt）：素材里挑好的空地，离徽章位、彼此都留够一个徽章（36px）的距离
+    @Test func moduleAltSpotsClearOfBadges() throws {
+        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Sources/MijiaBarApp/Resources/House/modules/catalog.json")
+        let o = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [String: Any]
+        let dist = { (a: [Double], b: [Double]) in hypot(a[0] - b[0], a[1] - b[1]) }
+        for (m, mod) in o["modules"] as! [String: [String: Any]] {
+            let badges = mod["badges"] as? [[Double]] ?? []
+            let alts = (mod["lights"] as? [[String: Any]] ?? []).filter { ($0["kind"] as? String) != "ceiling" }
+                .flatMap { L -> [(String, [Double])] in ["alt", "alt2"].compactMap { k in (L[k] as? [Double]).map { ("\(L["id"] as? String ?? "?").\(k)", $0) } } }
+            for (i, (id, a)) in alts.enumerated() {
+                for b in badges { #expect(dist(a, b) >= 38, "\(m) \(id) alt \(a) vs badge \(b)") }
+                for (id2, a2) in alts[(i + 1)...] { #expect(dist(a, a2) >= 38, "\(m) \(id) vs \(id2)") }
             }
         }
     }

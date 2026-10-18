@@ -138,10 +138,11 @@ struct HouseEditSlots: View {
 
     private static func rect(_ l: HouseLightSpec) -> CGRect? {
         // 合成场景：墙挂灯具随墙被切掉 / 吸顶灯 → 用 alt 点（地面替代位 / 光斑上方），和徽章位同样大小
-        if let a = l.alt, a.count >= 2, l.hidden == true || l.corePolygon == nil {
+        // 窗帘 / 家电：没有烘焙的本体，用 body / quad（hitPolygon）框住画里的那件东西
+        if let a = l.alt, a.count >= 2, l.hidden == true || l.hitPolygon == nil {
             return CGRect(x: a[0] - 26, y: a[1] - 44, width: 52, height: 52)
         }
-        if let poly = l.corePolygon, !poly.isEmpty {
+        if let poly = l.hitPolygon, !poly.isEmpty {
             let xs = poly.map { $0[0] }, ys = poly.map { $0[1] }
             let r = CGRect(x: xs.min()!, y: ys.min()!, width: xs.max()! - xs.min()!, height: ys.max()! - ys.min()!)
             return r.insetBy(dx: min(0, (r.width - 44) / 2), dy: min(0, (r.height - 40) / 2)).insetBy(dx: -8, dy: -8)

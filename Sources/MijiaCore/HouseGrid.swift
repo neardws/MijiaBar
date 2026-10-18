@@ -108,6 +108,8 @@ public struct HouseModuleLight: Codable, Equatable, Sendable {
     public var anchor: [Double]?
     /// 本体被切掉时的替代位置（地面点）：App 在这里画一个设备徽章（空调）
     public var alt: [Double]?
+    /// 第二个替代位：alt 在合成布局里会被前排切墙挡住（要沿地面往里挪、可能挪到家具上）时，composer 改用挪动更少的这一个
+    public var alt2: [Double]?
     /// 空调出风口下沿（两点）：开机时 App 在这里画动态送风（不烘焙进 lit，免得同屋别的灯把它“露”出来）
     public var vent: [[Double]]?
     /// 窗帘贴片：图名前缀（+ -day/-night-unlit/-lit）、贴片矩形 [x, y, w, h]、两半分界 x、窗帘四边形
@@ -131,6 +133,8 @@ public struct HouseDoor: Codable, Equatable, Sendable {
     public var s: [Double]
     public var t: [Double]
     public var r: Double
+    /// 门面竖直方向的半径（像素画里圆门在门面上不是正圆时），缺省 = r
+    public var ry: Double? = nil
 }
 
 public enum HouseModuleReveal: Codable, Equatable, Sendable {

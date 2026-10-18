@@ -1189,17 +1189,18 @@ struct HouseApplianceOverlay: View {
                              Color(red: 0.98, green: 0.92, blue: 0.7), Color(red: 0.6, green: 0.9, blue: 0.6)]
         var out: [(CGRect, Color)] = []
         let r = door.r - 1.6
+        let ky = door.ry.map { ($0 - 1.6) / max(0.5, r) } ?? 1   // 门玻璃竖向半径 / 横向半径
         for i in 0..<4 {
             let a = t * 2.6 + Double(i) * .pi / 2
             let rr = r * (i % 2 == 0 ? 0.75 : 0.45)
-            let fx = cos(a) * rr, fy = sin(a) * rr
+            let fx = cos(a) * rr, fy = sin(a) * rr * ky
             let x = door.c[0] + door.s[0] * fx + door.t[0] * fy
             let y = door.c[1] + door.s[1] * fx + door.t[1] * fy
             out.append((cell(x, y), cols[i]))
         }
         // 泡沫：门下半圈
         for k in 0..<2 {
-            let fx = (Double(k) - 0.5) * r * 0.9, fy = -r * 0.7 + sin(t * 5 + Double(k)) * 0.8
+            let fx = (Double(k) - 0.5) * r * 0.9, fy = -r * 0.7 * ky + sin(t * 5 + Double(k)) * 0.8
             out.append((cell(door.c[0] + door.s[0] * fx + door.t[0] * fy, door.c[1] + door.s[1] * fx + door.t[1] * fy), Color.white.opacity(0.85)))
         }
         return out
@@ -1221,6 +1222,7 @@ struct HouseApplianceOverlay: View {
                 // 火光：显示窗里几格黄 / 红随机闪
                 let b = path.boundingRect
                 let seed = Int(t * 8)
+                var g = g; g.clip(to: path)   // 圆形表盘：火光格不出表盘
                 for i in 0..<3 {
                     let h = (seed &* 31 &+ i &* 17) % 7
                     let x = b.minX + 1 + Double((h * 5 + i * 3) % max(1, Int(b.width) - 2))

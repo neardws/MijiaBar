@@ -92,12 +92,18 @@ Pipeline (`scripts/house_modules/build.py`), same treatment as `gen-house-cutawa
    * **Curtain patches** (`curtains.py build`): one "fully closed" patch per curtained window (classic living / bedroom /
      study; modules living / bedroom / study / kitchen) × day/night × unlit/lit. Fabric = 4-level palette k-means'd from the
      existing side curtains + vertical folds, header and wavy hem; module night = the frozen day→night LUT, lit = the lit
-     art's own per-level side-curtain colours (so it never over-exposes). Occlusion polygons keep the study monitor / plant in
+     art's own per-level side-curtain colours (so it never over-exposes). Every variant is then scaled so its mean luminance
+     matches the original side curtains in the same image (the fold pattern alone over-weights the bright level and read as
+     backlit). Occlusion polygons keep the study monitor / plant in
      front. The app slides the two halves in from the window edges by curtain position (2px-aligned x ranges).
      `curtains.py geometry <name>` gives `patch / rect / mid / quad` for `fixtures.py` without reading images.
-   * **Water heater + washer** (`add_appliances.py canon && LAMA=big-lama.pt add_appliances.py paint`): procedural
-     pixel boxes in the 2x canon — wall-mounted heater (display window, LED seat, knob, pipes) on the bathroom NW wall,
-     front-loader (door glass, panel display) on the balcony after LaMa-removing the plants there. Rerun `build.py` after.
+   * **Water heater + washer** (`add_appliances.py canon && LAMA=big-lama.pt add_appliances.py paint`): small 3D
+     SDF models (`appliance_models.py`) rendered with the module art's own orthographic camera (`appliance_render.py`:
+     rounded edges, AO, soft shadow onto wall / floor, Blinn highlights, environment reflection, warm room tint, dark
+     outline ring), supersampled into the 2x canon so they go through the same pixelize as the painted furniture —
+     a horizontal enamel storage heater (straps, chrome-bezel round gauge, knob, pipes + valves) on the bathroom NW wall,
+     a front-loader (chrome door ring + glass, gasket, drawer, dial, display recess) on the balcony after LaMa-removing
+     the plants there. Overlay anchors (`display`, `led`, `door` with `r`/`ry`) come from the same models. Rerun `build.py` after.
    * Live-state fixtures (`curtain`, `fridge`, `water-heater`, `washer`) are listed in `catalog.json` lights but are
      **never baked**: `pipeline.bake_module` only bakes roles `light` / `tv` / `ac`, and the app only reveals lit art for those.
 5. **Bake**: the classic light functions (`light_field`, `band`, `paint_shade`, `paint_screen`); AC airflow (dashed
@@ -109,7 +115,10 @@ Pipeline (`scripts/house_modules/build.py`), same treatment as `gen-house-cutawa
 the fixture's body went with the wall: the scene marks it `"hidden": true` and drops its `shade`/`screen`/`core`
 polygons (nothing paints a body that isn't there; the tap target falls back to the reveal ellipse). Lamps keep
 their light — the floor pool comes from the full-wall lit image, which is what's under the strip. ACs have no
-pool, so they carry an `alt` floor point where the app shows an AC badge instead. Only the segment that
+pool, so they carry an `alt` floor point where the app shows an AC badge instead (curtains / water heater / wall lamp
+too). Each `alt` is hand-picked clear floor near the fixture's wall — not on furniture, ≥38px from the module's
+badge spots and from other alts (`moduleAltSpotsClearOfBadges`). The composer keeps it (lifted with the floor) and only
+nudges it ≤12px if a composed badge lands within 30px; ceiling-light edit spots still dodge badges upward. Only the segment that
 actually holds the fixture matters (living's sconce is on NE segment 0; a room behind segment 1 doesn't hide it).
 
 Fixture ids: living `floor_lamp`/`sconce`/`tv`/`ac`, bedroom `bedside`/`ac`, study `ceiling`/`monitor`/`ac`,
