@@ -102,17 +102,22 @@ private func resolve(_ ds: [Device], _ cfg: HomeHouse? = nil, hidden: Set<String
         #expect(k("miaomiaoce.sensor_ht.t2") == .badge)
         #expect(k("lumi.gateway.mgl03") == .badge)
         #expect(k("isa.camera.hlc7") == .badge)
-        // 已有灯具位美术的只有灯 / 屏幕 / 空调；其余 A 类先显示徽章
+        #expect(k("minij.washer.v5") == .fixture(.washer))
+        #expect(k("zimi.waterheater.e1") == .fixture(.waterHeater))
+        // 已有灯具位美术：灯 / 屏幕 / 空调 / 窗帘 / 冰箱 / 热水器 / 洗衣机；落地电器（风扇等）先显示徽章
         #expect(k("lumi.acpartner.mcn02").hasFixtureArt && !k("zhimi.fan.za5").hasFixtureArt && !k("cuco.plug.v3").hasFixtureArt)
+        for model in ["lumi.curtain.hagl05", "viomi.fridge.x3", "minij.washer.v5", "zimi.waterheater.e1"] { #expect(k(model).hasFixtureArt, "\(model)") }
         // 每个灯具位都有 kind，而且是已实现的
         for m in HouseModule.allCases { for f in HouseCatalog.fixtures(m) { #expect(HouseCatalog.fixtureKind(m, f.id)?.implemented == true) } }
         #expect(HouseCatalog.fixtureKind(.living, "ac") == .ac && HouseCatalog.fixtureKind(.study, "monitor") == .screen)
+        #expect(HouseCatalog.fixtureKind(.bedroom, "curtain") == .curtain && HouseCatalog.fixtureKind(.kitchen, "fridge") == .fridge)
+        #expect(HouseCatalog.fixtureKind(.bathroom, "water_heater") == .waterHeater && HouseCatalog.fixtureKind(.balcony, "washer") == .washer)
     }
 
     @Test func fixtureSetValidation() {
-        #expect(HouseCatalog.fixtureSetProblems(.study, lightIds: ["ceiling", "monitor", "ac"]).isEmpty)
-        #expect(HouseCatalog.fixtureSetProblems(.study, lightIds: ["ceiling", "monitor"]) == ["study: missing fixture ac"])
-        #expect(HouseCatalog.fixtureSetProblems(.study, lightIds: ["ceiling", "monitor", "ac", "fan"]) == ["study: unknown fixture fan"])
+        #expect(HouseCatalog.fixtureSetProblems(.study, lightIds: ["ceiling", "monitor", "ac", "curtain"]).isEmpty)
+        #expect(HouseCatalog.fixtureSetProblems(.study, lightIds: ["ceiling", "monitor", "curtain"]) == ["study: missing fixture ac"])
+        #expect(HouseCatalog.fixtureSetProblems(.study, lightIds: ["ceiling", "monitor", "ac", "curtain", "fan"]) == ["study: unknown fixture fan"])
     }
 
     @Test func tvNeverLandsOnStudyMonitor() {
@@ -245,6 +250,27 @@ private func resolve(_ ds: [Device], _ cfg: HomeHouse? = nil, hidden: Set<String
                 for L in lights where (L["role"] as? String) == "ac" {
                     #expect(L["wall"] != nil && L["anchor"] != nil && L["alt"] != nil && L["vent"] != nil, "\(dir) \(m) ac")
                 }
+                for L in lights {
+                    let role = L["role"] as? String ?? ""
+                    if role == "curtain" {
+                        // 窗帘贴片：四个状态的 PNG 都在，rect 偶数对齐（2px 像素格），mid 在窗内
+                        let rect = try #require(L["rect"] as? [Double], "\(dir) \(m) curtain rect")
+                        #expect(rect.count == 4 && rect.allSatisfy { $0.truncatingRemainder(dividingBy: 2) == 0 }, "\(dir) \(m) rect")
+                        let mid = try #require(L["mid"] as? Double)
+                        #expect(mid > rect[0] && mid < rect[0] + rect[2], "\(dir) \(m) mid")
+                        #expect(L["wall"] != nil && L["anchor"] != nil && L["alt"] != nil && (L["quad"] as? [[Double]])?.count == 4, "\(dir) \(m) curtain")
+                        let patch = try #require(L["patch"] as? String)
+                        for v in ["day-unlit", "day-lit", "night-unlit", "night-lit"] {
+                            #expect(FileManager.default.fileExists(atPath: root.appendingPathComponent("\(dir)/\(patch)-\(v).png").path), "\(dir) \(patch)-\(v)")
+                        }
+                    }
+                    if ["fridge", "water-heater", "washer"].contains(role) {
+                        #expect((L["display"] as? [[Double]])?.count == 4 && L["body"] != nil, "\(dir) \(m) \(role)")
+                        #expect(L["pool"] == nil && L["reveal"] == nil, "\(dir) \(m) \(role) 不烘焙光")
+                    }
+                    if role == "washer" { #expect((L["door"] as? [String: Any])?["r"] != nil, "\(dir) washer door") }
+                    if role == "water-heater" { #expect(L["wall"] != nil && L["alt"] != nil && L["led"] != nil, "\(dir) heater") }
+                }
             }
         }
     }
@@ -258,6 +284,85 @@ private func resolve(_ ds: [Device], _ cfg: HomeHouse? = nil, hidden: Set<String
             let lights = (modules[m.rawValue]?["lights"] as? [[String: Any]] ?? []).compactMap { $0["id"] as? String }
             #expect(HouseCatalog.fixtureSetProblems(m, lightIds: lights).isEmpty, "\(m)")
             #expect((modules[m.rawValue]?["badges"] as? [[Double]])?.count == HouseCatalog.badgeCount(m), "\(m) badges")
+            // 经典整图的窗帘贴片（四个状态）都在 Resources/House
+            for L in modules[m.rawValue]?["lights"] as? [[String: Any]] ?? [] where (L["role"] as? String) == "curtain" {
+                let patch = try #require(L["patch"] as? String)
+                for v in ["day-unlit", "day-lit", "night-unlit", "night-lit"] {
+                    #expect(FileManager.default.fileExists(atPath: url.deletingLastPathComponent().appendingPathComponent("\(patch)-\(v).png").path), "\(patch)-\(v)")
+                }
+                #expect((L["rect"] as? [Double])?.count == 4 && L["mid"] != nil && (L["quad"] as? [[Double]])?.count == 4, "\(m)")
+            }
+        }
+    }
+}
+
+@Suite struct HouseApplianceFixtureTests {
+    @Test func categoriesForNewAppliances() {
+        #expect(DeviceCategory.guess("lumi.curtain.hagl05") == .curtain)
+        #expect(DeviceCategory.guess("viomi.fridge.x3") == .fridge)
+        #expect(DeviceCategory.guess("minij.washer.v5") == .washer)
+        #expect(DeviceCategory.guess("viomi.dishwasher.v01") == .kitchen)
+        #expect(DeviceCategory.guess("dreame.hairdryer.v1") != .washer)
+        #expect(DeviceCategory.guess("zimi.waterheater.e1") == .waterHeater)
+        #expect(DeviceCategory.guess("zhimi.heater.za1") == .heater)
+    }
+
+    @Test func appliancesLandOnTheirSlots() {
+        let ds = [dev("c1", "客厅窗帘", "lumi.curtain.hagl05", room: "客厅"), dev("c2", "卧室窗帘", "lumi.curtain.hagl05", room: "主卧"),
+                  dev("c3", "书房窗帘", "lumi.curtain.hagl05", room: "书房"), dev("c4", "第二个窗帘", "lumi.curtain.hagl05", room: "客厅")]
+        let h = resolve(ds)
+        for m in [HouseModule.living, .bedroom, .study] { #expect(h.rooms.first { $0.module == m }?.device(at: .fixture("curtain")) != nil, "\(m)") }
+        // 同一房间第二个窗帘：位置已占 → 徽章
+        #expect(h.rooms.first { $0.module == .living }?.devices.first { $0.did == "c4" }?.spot == .badge("b1"))
+        // 厨房 / 卫生间 / 阳台只有自定义布局（模块合成）里有
+        let layout: [HouseLayoutCell] = [.init(room: "name:厨房", module: "kitchen", col: 0, row: 0), .init(room: "name:卫生间", module: "bathroom", col: 1, row: 0),
+                                         .init(room: "name:阳台", module: "balcony", col: 2, row: 0)]
+        let ap = [dev("f", "冰箱", "viomi.fridge.x3", room: "厨房"), dev("k", "厨房窗帘", "lumi.curtain.hagl05", room: "厨房"),
+                  dev("w", "热水器", "zimi.waterheater.e1", room: "卫生间"), dev("x", "洗衣机", "minij.washer.v5", room: "阳台")]
+        let c = HouseResolver.resolve(devices: ap, config: nil, isHidden: { _ in false }, name: { $0.name }, layout: layout)
+        #expect(c.rooms[0].device(at: .fixture("fridge"))?.did == "f")
+        #expect(c.rooms[0].device(at: .fixture("curtain"))?.did == "k")
+        #expect(c.rooms[1].device(at: .fixture("water_heater"))?.did == "w")
+        #expect(c.rooms[2].device(at: .fixture("washer"))?.did == "x")
+    }
+
+    private func S(_ t: String, _ props: [SpecProperty]) -> DeviceSpec {
+        DeviceSpec(type: "", description: "", services: [SpecService(iid: 2, type: "urn:miot-spec-v2:service:\(t):0", description: t, properties: props, actions: [])])
+    }
+    private func P(_ iid: Int, _ t: String, _ f: String, range: [Double]? = nil, opts: [ValueOption]? = nil) -> SpecProperty {
+        SpecProperty(siid: 2, iid: iid, type: "urn:miot-spec-v2:property:\(t):0", description: t, format: f, access: ["read"], unit: nil, range: range, options: opts)
+    }
+
+    @Test func curtainPositionFromSpec() {
+        let spec = S("curtain", [P(2, "current-position", "uint8", range: [0, 100, 1])])
+        #expect(HouseDeviceState.curtainPosition(DeviceState(values: ["2.2": .int(50)], spec: spec, legacy: false, source: "t")) == 0.5)
+        #expect(HouseDeviceState.curtainPosition(DeviceState(values: ["2.2": .int(130)], spec: spec, legacy: false, source: "t")) == 1)
+        #expect(HouseDeviceState.curtainPosition(DeviceState(values: [:], spec: spec, legacy: false, source: "t")) == nil)
+        #expect(HouseDeviceState.curtainPosition(nil) == nil)
+        // 只有 target-position 时也认
+        let t = S("curtain", [P(3, "target-position", "uint8", range: [0, 10, 1])])
+        #expect(HouseDeviceState.curtainPosition(DeviceState(values: ["2.3": .int(2)], spec: t, legacy: false, source: "t")) == 0.2)
+    }
+
+    @Test func busyFromStatusOptions() {
+        let spec = S("washer", [P(2, "status", "uint8", opts: [ValueOption(value: 1, description: "Idle"), ValueOption(value: 2, description: "Washing"),
+                                                              ValueOption(value: 3, description: "Heating")])])
+        func st(_ v: Int) -> DeviceState { DeviceState(values: ["2.2": .int(v)], spec: spec, legacy: false, source: "t") }
+        #expect(!HouseDeviceState.busy(st(1), otherwise: true))
+        #expect(HouseDeviceState.busy(st(2), otherwise: false))
+        #expect(HouseDeviceState.busy(st(3), otherwise: false))
+        #expect(HouseDeviceState.busy(st(9), otherwise: true))   // 未知选项 → otherwise
+        #expect(HouseDeviceState.busy(nil, otherwise: true) && !HouseDeviceState.busy(nil, otherwise: false))
+    }
+
+    @Test func curtainRangesCloseFromBothSides() {
+        #expect(HouseDeviceState.curtainVisibleRanges(x0: 100, x1: 200, mid: 150, closed: 0).isEmpty)
+        #expect(HouseDeviceState.curtainVisibleRanges(x0: 100, x1: 200, mid: 150, closed: 1) == [100...200])
+        let half = HouseDeviceState.curtainVisibleRanges(x0: 100, x1: 200, mid: 150, closed: 0.5)
+        #expect(half == [100...126, 176...200])
+        // 2px 对齐
+        for r in HouseDeviceState.curtainVisibleRanges(x0: 100, x1: 200, mid: 151, closed: 0.33) {
+            #expect(r.lowerBound.truncatingRemainder(dividingBy: 2) == 0 && r.upperBound.truncatingRemainder(dividingBy: 2) == 0)
         }
     }
 }

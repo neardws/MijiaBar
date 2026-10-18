@@ -263,6 +263,10 @@ func zhCategory(_ c: DeviceCategory) -> String {
     case .purifier: return L("净水器", "Water purifier")
     case .other: return L("设备", "Device")
     case .airPurifier: return L("空气净化器", "Air purifier")
+    case .curtain: return L("窗帘", "Curtain")
+    case .fridge: return L("冰箱", "Fridge")
+    case .washer: return L("洗衣机", "Washer")
+    case .waterHeater: return L("热水器", "Water heater")
     }
 }
 

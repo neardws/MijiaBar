@@ -128,8 +128,17 @@ public enum HouseComposer {
                 case .room: d["reveal"] = "room"
                 case nil: break
                 }
-                for (k, poly) in [("shade", L.shade), ("screen", L.screen), ("core", L.core), ("vent", L.vent)] where !hidden {
+                for (k, poly) in [("shade", L.shade), ("screen", L.screen), ("core", L.core), ("vent", L.vent),
+                                  ("quad", L.quad), ("display", L.display), ("body", L.body)] where !hidden {
                     if let poly { d[k] = poly.map(tx) }
+                }
+                if !hidden {
+                    // 窗帘贴片 / 家电指示灯：跟着模块平移（墙被切掉时和本体一起不画）
+                    if let p = L.patch { d["patch"] = p }
+                    if let r = L.rect, r.count == 4 { d["rect"] = [r[0] + dx, r[1] + dy, r[2], r[3]] }
+                    if let m = L.mid { d["mid"] = m + dx }
+                    if let l = L.led, l.count >= 2 { d["led"] = tx(l) }
+                    if let door = L.door { d["door"] = ["c": tx(door.c), "s": door.s, "t": door.t, "r": door.r] }
                 }
                 lights.append(d)
             }

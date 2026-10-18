@@ -110,6 +110,27 @@ public struct HouseModuleLight: Codable, Equatable, Sendable {
     public var alt: [Double]?
     /// 空调出风口下沿（两点）：开机时 App 在这里画动态送风（不烘焙进 lit，免得同屋别的灯把它“露”出来）
     public var vent: [[Double]]?
+    /// 窗帘贴片：图名前缀（+ -day/-night-unlit/-lit）、贴片矩形 [x, y, w, h]、两半分界 x、窗帘四边形
+    public var patch: String?
+    public var rect: [Double]?
+    public var mid: Double?
+    public var quad: [[Double]]?
+    /// 家电显示屏 / 指示灯（冰箱、热水器、洗衣机），App 按状态点亮
+    public var display: [[Double]]?
+    public var led: [Double]?
+    /// 洗衣机滚筒门：圆心、门面上 1px 宽 / 高的屏幕位移、玻璃半径（px）
+    public var door: HouseDoor?
+    /// 家电本体（点击区域；不参与灯光）
+    public var body: [[Double]]?
+    /// 只有灯 / 屏幕 / 空调烘焙了光（lit 图里有它的光）；其他灯具位的状态全由 App 动态画
+    public var bakesLight: Bool { ["light", "tv", "ac"].contains(role ?? "light") }
+}
+
+public struct HouseDoor: Codable, Equatable, Sendable {
+    public var c: [Double]
+    public var s: [Double]
+    public var t: [Double]
+    public var r: Double
 }
 
 public enum HouseModuleReveal: Codable, Equatable, Sendable {

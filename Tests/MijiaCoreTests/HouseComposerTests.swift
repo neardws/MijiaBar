@@ -153,6 +153,37 @@ import CoreGraphics
         #expect((sc2["alt"] as? [Double])?.count == 2)
     }
 
+    @Test func curtainAndApplianceSlotsFollowTheirWalls() throws {
+        let (cat, images) = try Self.load()
+        func light(_ layout: [HouseLayoutCell], _ room: String, _ id: String) throws -> [String: Any] {
+            let r = HouseComposer.compose(.init(layout: layout, catalog: cat, images: images))
+            let j = try JSONSerialization.jsonObject(with: r.sceneJSON) as! [String: Any]
+            let lights = ((j["modules"] as! [String: Any])[room] as! [String: Any])["lights"] as! [[String: Any]]
+            return try #require(lights.first { $0["id"] as? String == id }, "\(room) \(id)")
+        }
+        // 客厅窗帘在 NE 外墙：前面一排可见，贴片 rect / mid 跟着模块平移
+        let solo = try light([.init(room: "l", module: "living", col: 0, row: 0)], "l", "curtain")
+        #expect(solo["hidden"] == nil && solo["patch"] as? String == "curtain-living" && (solo["quad"] as? [[Double]])?.count == 4)
+        let shifted = try light([.init(room: "g", module: "generic", col: 0, row: 0), .init(room: "l", module: "living", col: 1, row: 0)], "l", "curtain")
+        let r0 = try #require(solo["rect"] as? [Double]), r1 = try #require(shifted["rect"] as? [Double])
+        let m0 = try #require(solo["mid"] as? Double), m1 = try #require(shifted["mid"] as? Double)
+        #expect(r1[0] - r0[0] == m1 - m0 && r1[2] == r0[2] && r1[3] == r0[3])
+        // 后面有房间 → NE 墙被切 → 窗帘不画贴片、给 alt（徽章兜底）
+        let cut = try light([.init(room: "b", module: "bedroom", col: 0, row: 0), .init(room: "l", module: "living", col: 0, row: 1)], "l", "curtain")
+        #expect(cut["hidden"] as? Bool == true && cut["patch"] == nil && cut["rect"] == nil && (cut["alt"] as? [Double])?.count == 2)
+        // 热水器在卫生间 NW 墙：左边有房间 → 隐藏
+        let wh = try light([.init(room: "w", module: "bathroom", col: 0, row: 0)], "w", "water_heater")
+        #expect(wh["hidden"] == nil && (wh["display"] as? [[Double]])?.count == 4 && (wh["led"] as? [Double])?.count == 2)
+        let wh2 = try light([.init(room: "g", module: "generic", col: 0, row: 0), .init(room: "w", module: "bathroom", col: 1, row: 0)], "w", "water_heater")
+        #expect(wh2["hidden"] as? Bool == true && wh2["display"] == nil && (wh2["alt"] as? [Double])?.count == 2)
+        // 冰箱 / 洗衣机落地：不挂墙，任何布局都画；洗衣机门跟着平移
+        let fr = try light([.init(room: "g", module: "generic", col: 0, row: 0), .init(room: "k", module: "kitchen", col: 1, row: 0)], "k", "fridge")
+        #expect(fr["hidden"] == nil && fr["body"] != nil && fr["pool"] == nil)
+        let wa = try light([.init(room: "y", module: "balcony", col: 0, row: 0)], "y", "washer")
+        let door = try #require(wa["door"] as? [String: Any])
+        #expect((door["c"] as? [Double])?.count == 2 && door["r"] as? Double == 5.6)
+    }
+
     @Test func gridTipMovesRightAndForward() {
         let a = HouseGrid.tip(col: 0, row: 0)
         let b = HouseGrid.tip(col: 1, row: 0)

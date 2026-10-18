@@ -89,6 +89,17 @@ Pipeline (`scripts/house_modules/build.py`), same treatment as `gen-house-cutawa
 4. **Night**: 3D LUT learned from the aligned classic `day-base → night-base` pair (pixel-aligned by construction),
    window glass replaced with night sky. The LUT is frozen in `assets/house/modules/night-lut.npz` (learned before the
    classic bases got the AC units); delete it to re-learn.
+   * **Curtain patches** (`curtains.py build`): one "fully closed" patch per curtained window (classic living / bedroom /
+     study; modules living / bedroom / study / kitchen) × day/night × unlit/lit. Fabric = 4-level palette k-means'd from the
+     existing side curtains + vertical folds, header and wavy hem; module night = the frozen day→night LUT, lit = the lit
+     art's own per-level side-curtain colours (so it never over-exposes). Occlusion polygons keep the study monitor / plant in
+     front. The app slides the two halves in from the window edges by curtain position (2px-aligned x ranges).
+     `curtains.py geometry <name>` gives `patch / rect / mid / quad` for `fixtures.py` without reading images.
+   * **Water heater + washer** (`add_appliances.py canon && LAMA=big-lama.pt add_appliances.py paint`): procedural
+     pixel boxes in the 2x canon — wall-mounted heater (display window, LED seat, knob, pipes) on the bathroom NW wall,
+     front-loader (door glass, panel display) on the balcony after LaMa-removing the plants there. Rerun `build.py` after.
+   * Live-state fixtures (`curtain`, `fridge`, `water-heater`, `washer`) are listed in `catalog.json` lights but are
+     **never baked**: `pipeline.bake_module` only bakes roles `light` / `tv` / `ac`, and the app only reveals lit art for those.
 5. **Bake**: the classic light functions (`light_field`, `band`, `paint_shade`, `paint_screen`); AC airflow (dashed
    pixel streams + particles + green LED, `acsprite.paint_airflow`) drifts away from the wall the unit hangs on. An AC's
    `reveal` is the airflow area right under the vent, so the lit airflow actually shows when the AC is on.
@@ -108,9 +119,10 @@ All seven modules now have generated art (`catalog.style = "generated"`). Withou
 back to **geometry shells** (empty rooms) marked `shell-standin` — geometry review only, not final art.
 
 Regenerate: `python3 scripts/house_modules/extend.py pair living livingR && LAMA=big-lama.pt python3
-scripts/house_modules/retouch.py living && … retouch.py study && … retouch.py kitchen && python3 scripts/house_modules/add_ac.py modules && python3 scripts/house_modules/build.py
+scripts/house_modules/retouch.py living && … retouch.py study && … retouch.py kitchen && python3 scripts/house_modules/add_ac.py modules && python3 scripts/house_modules/add_appliances.py canon && LAMA=big-lama.pt python3 scripts/house_modules/add_appliances.py paint && python3 scripts/house_modules/build.py
 assets/house/modules --raw assets/house/modules/src --classic <dir with house-cutaway-{day,night}-base.png> &&
-scripts/sync-house-modules.sh`. `fitcheck.py <id> <fw>` writes a corner overlay + full/cut fit preview to /tmp.
+scripts/sync-house-modules.sh && python3 scripts/house_modules/curtains.py build`. Screenshots of every live-state fixture:
+`MijiaBarApp --house-fixtures-snapshot <dir>` (classic curtains open/half/closed, two composed layouts × day/night × on/off, `crops.json`). `fitcheck.py <id> <fw>` writes a corner overlay + full/cut fit preview to /tmp.
 
 ## Timing
 

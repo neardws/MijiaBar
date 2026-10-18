@@ -56,6 +56,48 @@ def ac_ne(g, u0, u1, alt):
             "core": quad(g, um + 0.03, 0.02, 81, 40, 22), "reveal": flow_reveal(g, um, 0.02, -1),
             "anchor": P(g, um, 0.02, 80), "alt": P(g, *alt)}
 
+def curtain(g, name, wall, alt):
+    """窗帘位：贴片（scripts/house_modules/curtains.py）在运行时叠在窗上，按开合度露出两侧的一部分；
+    anchor = 窗中心（判断所在墙段是否被切），墙被切时 App 在 alt 地面点显示窗帘徽章。"""
+    from curtains import geometry
+    d = geometry(name)
+    q = d['quad']
+    cx = round((q[0][0] + q[1][0]) / 2); cy = round((q[0][1] + q[1][1] + q[2][1] + q[3][1]) / 4)
+    return {"id": "curtain", "kind": "curtain", "role": "curtain", "slot": 0, "wall": wall, **d,
+            "anchor": [cx, cy], "alt": P(g, *alt)}
+
+def face_quad(g, u, v0, v1, z0, z1):
+    """NW 墙前（u = 离墙深度）一块竖直面：v0..v1 × z0..z1 的四个角（左上、右上、右下、左下）"""
+    return [P(g, u, v1, z1), P(g, u, v0, z1), P(g, u, v0, z0), P(g, u, v1, z0)]
+
+def water_heater(g):
+    """卫生间 NW 墙壁挂热水器（scripts/house_modules/add_appliances.py 画的箱体：u 0..0.06, v 0.07..0.21, z 54..90）。
+    display = 正面圆角显示窗（App 动态画：待机蓝、加热时火光闪），led = 指示灯。"""
+    d, v0, v1, z0, z1 = 0.06, 0.07, 0.21, 54, 90
+    vc, zc = (v0 + v1) / 2, z0 + (z1 - z0) * 0.62
+    return {"id": "water_heater", "kind": "water-heater", "role": "water-heater", "slot": 0, "wall": "nw",
+            "display": face_quad(g, d, vc - 0.025, vc + 0.025, zc - 4, zc + 4),
+            "led": P(g, d, v1 - (v1 - v0) * 0.71, z0 + (z1 - z0) * 0.275),
+            "body": face_quad(g, d, v0, v1, z0, z1),
+            "anchor": P(g, d, vc, (z0 + z1) / 2), "alt": P(g, 0.3, 0.3)}
+
+def washer(g):
+    """阳台洗衣机（NW 墙根，u 0..0.16, v 0.70..0.86, z 0..34）：door = 滚筒门 {c 圆心, s 轴, t 轴, r 玻璃半径}，
+    s/t 轴 = 门所在正面上每 1px 宽 / 高对应的屏幕位移（App 在门里画转动的衣物）；display = 面板显示屏。"""
+    d, v0, v1, z0, z1 = 0.16, 0.70, 0.86, 0, 34
+    fw = (v1 - v0) * W / 2
+    sc = lambda s, t: P(g, d, v1 - (v1 - v0) * s, z0 + (z1 - z0) * t)
+    return {"id": "washer", "kind": "washer", "role": "washer", "slot": 0,
+            "door": {"c": sc(0.5, 0.43), "s": [1, -FH / W], "t": [0, -1], "r": 5.6},
+            "display": [sc(0.56, 0.95), sc(0.86, 0.95), sc(0.86, 0.86), sc(0.56, 0.86)],
+            "body": [sc(0, 1), sc(1, 1), sc(1, 0), sc(0, 0)]}
+
+def fridge():
+    """厨房冰箱（源图里本来就有）：上门右侧一块显示屏，App 按在线 / 开关点亮。"""
+    return {"id": "fridge", "kind": "fridge", "role": "fridge", "slot": 0,
+            "display": [[144, 132], [150, 130], [150, 134], [144, 136]],
+            "body": [[130, 128], [160, 118], [160, 152], [130, 162]]}
+
 # 1x1 模块的徽章位：地板中心周围三点（左、右、前），彼此 ≥ 60px，离相邻房间的徽章位也够远
 SPREAD = [(0.28, 0.66), (0.66, 0.28), (0.74, 0.74)]
 
@@ -75,34 +117,37 @@ def spec(module):
                    # 屏幕平行于 NE 墙，按规范图实测的平行四边形
                    "screen": [[316, 176], [363, 196], [363, 232], [316, 213]], "throw": [-40, 40], "radius": 85,
                    "reveal": ell(g, 1.35, 0.9, 120, 75)},
-                  ac_nw(g)]   # 沙发上方的 NW 外墙（composed 布局里客厅在最左列时这面墙完整）
+                  ac_nw(g),   # 沙发上方的 NW 外墙（composed 布局里客厅在最左列时这面墙完整）
+                  curtain(g, 'living', 'ne', (0.95, 0.3))]
         badges = b([(0.5, 0.75), (0.95, 0.62), (1.4, 0.9), (1.8, 0.75)])   # 电视柜挪到右格中间后重新排开
         floor_label = P(g, 0.35, 0.3, 0)   # 两面后墙都被切时：沙发前的空地（避开徽章位）
     elif module == 'bedroom':
-        lights = [dict(lamp(g, 'bedside', 0.07, 0.09, 44), pool=ell(g, 0.2, 0.3, 100, 40)), ac_nw(g)]
+        lights = [dict(lamp(g, 'bedside', 0.07, 0.09, 44), pool=ell(g, 0.2, 0.3, 100, 40)), ac_nw(g),
+                  curtain(g, 'bedroom', 'ne', (0.62, 0.3))]
         badges = b([(0.55, 0.8), (0.8, 0.55), (0.35, 0.65)])
     elif module == 'study':
         lights = [ceiling(g, 'ceiling', 0.55, 0.55),
                   {"id": "monitor", "kind": "screen", "role": "tv", "slot": 0, "style": "monitor",
                    "screen": quad(g, 0.48, 0.12, 46, 24, 20), "throw": [-8, 35], "radius": 60,
                    "reveal": ell(g, 0.5, 0.35, 85, 65)},
-                  ac_ne(g, 0.71, 0.93, alt=(0.82, 0.27))]   # 窗右侧的 NE 外墙（书房在第一排时这面墙完整）
+                  ac_ne(g, 0.71, 0.93, alt=(0.82, 0.27)),   # 窗右侧的 NE 外墙（书房在第一排时这面墙完整）
+                  curtain(g, 'study', 'ne', (0.45, 0.3))]
         badges = b([(0.55, 0.85), (0.85, 0.6), (0.3, 0.7)])
     elif module == 'generic':
         lights = [ceiling(g, 'entry_light', 0.5, 0.55)]
         badges = b([(0.55, 0.85), (0.85, 0.6), (0.3, 0.7)])
     elif module == 'kitchen':
         # 吊灯本体不画（剖面里吊在半空，切墙时会被竖条切成半个）：按看不见灯具的吸顶灯处理，光池落在餐桌上
-        lights = [ceiling(g, 'pendant', 0.37, 0.37)]
+        lights = [ceiling(g, 'pendant', 0.37, 0.37), fridge(), curtain(g, 'kitchen', 'nw', (0.3, 0.85))]
         # 徽章位分散在地板中部一圈（原来挤在前沿两个角，编辑模式里和前面房间的徽章位叠在一起）
         badges = b(SPREAD)
         floor_label = P(g, 0.84, 0.5, 0)   # 两面后墙都被切时标签放这（右侧空地，避开餐桌）
     elif module == 'bathroom':
-        lights = [ceiling(g, 'ceiling', 0.5, 0.5)]
+        lights = [ceiling(g, 'ceiling', 0.5, 0.5), water_heater(g)]
         badges = b(SPREAD)
     elif module == 'balcony':
         lights = [dict(lamp(g, 'wall_lamp', 0.02, 0.69, 72, wall='nw', kind='sconce'), radius=80, pool=ell(g, 0.3, 0.7, 100, 40),
-                     alt=P(g, 0.2, 0.4))]
+                     alt=P(g, 0.2, 0.4)), washer(g)]
         badges = b(SPREAD)
     else:
         raise KeyError(module)

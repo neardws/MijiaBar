@@ -312,7 +312,8 @@ def bake_module(base_rgb: np.ndarray, phase: str, mod: dict, cut: bool, bodies: 
     lit = unlit.copy()
     gain = 2.5 if phase == 'night' else 1.0
     room = bakelib.poly_mask((w, h), mod['region'], feather=1.0)
-    lights = [L for L in mod['lights'] if not (cut and L.get('wall'))]
+    # 只有灯 / 屏幕 / 空调烘焙光；窗帘、冰箱、热水器、洗衣机的状态都由 App 动态画
+    lights = [L for L in mod['lights'] if not (cut and L.get('wall')) and L.get('role', 'light') in ('light', 'tv', 'ac')]
     for light in lights:
         f = bakelib.light_field(light, X, Y) * light.get('strength', 1.0)
         f = bakelib.band(np.clip(f, 0, 1), 7) * room * bakelib.reveal_mask(light, (w, h))

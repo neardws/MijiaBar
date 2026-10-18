@@ -738,3 +738,127 @@ struct HouseSceneDropModifier: ViewModifier {
         }
     }
 }
+
+
+// MARK: - 截图：窗帘 / 冰箱 / 热水器 / 洗衣机（`MijiaBar --house-fixtures-snapshot <dir>`）
+
+extension AppModel {
+    /// 演示数据之外再加几台「画进房间」的家电（只给小屋截图用，不改 README 的设备列表）
+    func addHouseFixtureDemo() {
+        func dev(_ id: String, _ n: String, _ model: String, _ room: String) -> Device {
+            Device(did: id, name: n, model: model, isOnline: true, homeId: "h1", homeName: "", roomName: room)
+        }
+        devices += [
+            dev("f1", L("客厅窗帘", "Living room curtain"), "lumi.curtain.demo", L("客厅", "Living room")),
+            dev("f2", L("卧室窗帘", "Bedroom curtain"), "lumi.curtain.demo", L("主卧", "Bedroom")),
+            dev("f3", L("书房窗帘", "Study curtain"), "lumi.curtain.demo", L("书房", "Study")),
+            dev("f4", L("冰箱", "Fridge"), "viomi.fridge.demo", L("厨房", "Kitchen")),
+            dev("f5", L("热水器", "Water heater"), "zimi.waterheater.demo", L("卫生间", "Bathroom")),
+            dev("f6", L("洗衣机", "Washer"), "mijia.washer.demo", L("阳台", "Balcony")),
+            dev("f7", L("厨房窗帘", "Kitchen curtain"), "lumi.curtain.demo", L("厨房", "Kitchen")),
+        ]
+        func P(_ s: Int, _ i: Int, _ t: String, _ f: String, _ acc: [String] = ["read", "write"], range: [Double]? = nil, opts: [ValueOption]? = nil) -> SpecProperty {
+            SpecProperty(siid: s, iid: i, type: "urn:miot-spec-v2:property:\(t):0", description: t, format: f, access: acc, unit: nil, range: range, options: opts)
+        }
+        func S(_ i: Int, _ t: String, _ p: [SpecProperty]) -> SpecService { SpecService(iid: i, type: "urn:miot-spec-v2:service:\(t):0", description: t, properties: p, actions: []) }
+        let curtain = DeviceSpec(type: "", description: "", services: [S(2, "curtain", [P(2, 2, "current-position", "uint8", ["read"], range: [0, 100, 1]),
+                                                                                        P(2, 3, "target-position", "uint8", range: [0, 100, 1])])])
+        for id in ["f1", "f2", "f3", "f7"] { states[id] = DeviceState(values: ["2.2": .int(0), "2.3": .int(0)], spec: curtain, legacy: false, source: "cloud") }
+        states["f4"] = DeviceState(values: [:], spec: DeviceSpec(type: "", description: "", services: [S(2, "fridge", [P(2, 1, "temperature", "int8", ["read"])])]), legacy: false, source: "cloud")
+        let wh = DeviceSpec(type: "", description: "", services: [S(2, "water-heater", [P(2, 1, "on", "bool"),
+            P(2, 2, "status", "uint8", ["read"], opts: [ValueOption(value: 0, description: "Idle"), ValueOption(value: 1, description: "Heating")])])])
+        states["f5"] = DeviceState(values: ["2.1": .bool(true), "2.2": .int(1)], spec: wh, legacy: false, source: "cloud")
+        let washer = DeviceSpec(type: "", description: "", services: [S(2, "washer", [P(2, 1, "on", "bool"),
+            P(2, 2, "status", "uint8", ["read"], opts: [ValueOption(value: 1, description: "Idle"), ValueOption(value: 2, description: "Busy")])])])
+        states["f6"] = DeviceState(values: ["2.1": .bool(true), "2.2": .int(2)], spec: washer, legacy: false, source: "cloud")
+    }
+}
+
+extension Snapshot {
+    /// 每台家电开 / 关的场景图 + crops.json（每个灯具位在场景里的矩形，box 上裁特写用）+ 合成整屋窗口截图
+    static func houseFixtures(dir: String) {
+        NSApplication.shared.setActivationPolicy(.accessory)
+        let out = URL(fileURLWithPath: dir)
+        try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
+        let m = AppModel(mock: true)
+        m.addHouseFixtureDemo()
+        let home = m.houseHomeKey
+        m.houseEdit("hide camera") { $0.setDevice(home: home, did: "d10") { $0.visible = false } }
+        var crops: [String: [Double]] = [:]
+        func set(_ rooms: [HouseRoom], _ f: (inout HouseDevice) -> Void) -> [HouseRoom] {
+            rooms.map { r in
+                var r = r
+                r.devices = r.devices.map { d in var d = d; f(&d); return d }
+                r.lighting = .from(r.devices)
+                return r
+            }
+        }
+        func curtains(_ rooms: [HouseRoom], _ open: Double) -> [HouseRoom] {
+            set(rooms) { if $0.category == .curtain { $0.level = open; $0.on = open > 0.02 } }
+        }
+        func appliances(_ rooms: [HouseRoom], on: Bool) -> [HouseRoom] {
+            set(rooms) { if [.fridge, .washer, .waterHeater].contains($0.category) { $0.on = on; $0.busy = on } }
+        }
+        func scene(_ name: String, _ rooms: [HouseRoom], _ phase: HousePhase, layout: [HouseLayoutCell]?) {
+            let size = HouseSceneSource.make(layout: layout, phase: phase)?.artSize ?? CGSize(width: 960, height: 540)
+            render(HouseCutawaySceneView(rooms: rooms, phase: phase, showLabels: false, layout: layout), out.appendingPathComponent("\(name).png"), size: size)
+        }
+        func record(_ prefix: String, layout: [HouseLayoutCell]?, rooms: [HouseRoom]) {
+            guard let src = HouseSceneSource.make(layout: layout, phase: .day) else { return }
+            for r in rooms {
+                guard let mod = src.module(for: r) else { continue }
+                for l in mod.lights where !l.bakesLight && l.hidden != true {
+                    let pts = (l.quad ?? []) + (l.body ?? []) + (l.display ?? [])
+                    guard !pts.isEmpty else { continue }
+                    let xs = pts.map { $0[0] }, ys = pts.map { $0[1] }
+                    crops["\(prefix)/\(r.module.rawValue)/\(l.id)"] = [xs.min()!, ys.min()!, xs.max()! - xs.min()!, ys.max()! - ys.min()!]
+                }
+            }
+        }
+        // 经典整图：客厅 / 卧室 / 书房窗帘 全关 / 半开 / 全开
+        let classic = m.houseRooms
+        record("classic", layout: nil, rooms: classic)
+        for phase in [HousePhase.day, .night] {
+            let lit = phase == .night ? set(classic) { if $0.category == .light { $0.on = true } } : classic
+            for (tag, v) in [("closed", 0.0), ("half", 0.5), ("open", 1.0)] {
+                scene("classic-\(phase.assetName)-curtain-\(tag)", curtains(lit, v), phase, layout: nil)
+            }
+        }
+        // 合成布局 A：卧室 / 卫生间 / 阳台 + 客厅（两格）/ 厨房（后排墙都在，前排靠墙的位被切掉 → 徽章兜底）
+        // 合成布局 B：厨房 / 客厅（两格）+ 卫生间 / 卧室 / 阳台（厨房窗帘、客厅窗帘、热水器所在的墙都在）
+        let key = { (mod: HouseModule, room: String) in m.houseResolved.rooms.first { $0.module == mod }?.key ?? "name:" + room }
+        let bed = key(.bedroom, L("主卧", "Bedroom")), liv = key(.living, L("客厅", "Living room"))
+        let bath = "name:" + L("卫生间", "Bathroom"), balc = "name:" + L("阳台", "Balcony"), kit = "name:" + L("厨房", "Kitchen")
+        let layouts: [(String, [HouseLayoutCell])] = [
+            ("composed", [.init(room: bed, module: "bedroom", col: 0, row: 0), .init(room: bath, module: "bathroom", col: 1, row: 0),
+                          .init(room: balc, module: "balcony", col: 2, row: 0), .init(room: liv, module: "living", col: 0, row: 1),
+                          .init(room: kit, module: "kitchen", col: 2, row: 1)]),
+            ("composed2", [.init(room: kit, module: "kitchen", col: 0, row: 0), .init(room: liv, module: "living", col: 1, row: 0),
+                           .init(room: bath, module: "bathroom", col: 0, row: 1), .init(room: bed, module: "bedroom", col: 1, row: 1),
+                           .init(room: balc, module: "balcony", col: 2, row: 1)]),
+        ]
+        for (name, lay) in layouts {
+            m.houseEdit("layout") { $0.setLayout(home: home, layout: lay) }
+            let composed = m.houseRooms
+            record(name, layout: lay, rooms: composed)
+            for phase in [HousePhase.day, .night] {
+                let lit = phase == .night ? set(composed) { if $0.category == .light { $0.on = true } } : composed
+                scene("\(name)-\(phase.assetName)-on", curtains(appliances(lit, on: true), 1), phase, layout: lay)
+                scene("\(name)-\(phase.assetName)-off", curtains(appliances(lit, on: false), 1), phase, layout: lay)
+                scene("\(name)-\(phase.assetName)-curtain-closed", curtains(appliances(lit, on: true), 0), phase, layout: lay)
+                scene("\(name)-\(phase.assetName)-curtain-half", curtains(appliances(lit, on: true), 0.5), phase, layout: lay)
+            }
+            // 热水器：开着但没在加热（显示窗蓝色）
+            scene("\(name)-night-heater-idle", set(composed) { if $0.category == .waterHeater { $0.on = true; $0.busy = false } }, .night, layout: lay)
+        }
+        // 窗口：合成整屋（演示状态：热水器加热、洗衣机在洗、窗帘关着）
+        for (suffix, name) in [("light", NSAppearance.Name.aqua), ("dark", NSAppearance.Name.darkAqua)] {
+            appearance = NSAppearance(named: name)
+            render(HousePilotHost().environmentObject(m), out.appendingPathComponent("composed-window-\(suffix).png"), size: HouseWindow.normalSize)
+        }
+        if let data = try? JSONSerialization.data(withJSONObject: crops, options: [.prettyPrinted, .sortedKeys]) {
+            try? data.write(to: out.appendingPathComponent("crops.json"))
+        }
+        exit(0)
+    }
+}
