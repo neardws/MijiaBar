@@ -54,12 +54,19 @@ public enum HousePetPhoto {
     private static func median(_ values: [Double]) -> Double { let sorted = values.sorted(); return sorted[sorted.count / 2] }
     private static func medianRGB(_ samples: [Sample]) -> [Double] { (0..<3).map { channel in median(samples.map { $0.rgb[channel] }) } }
     private static func hex(_ rgb: [Double]) -> String { "#" + rgb.map { String(format: "%02X", Int((min(1, max(0, $0)) * 255).rounded())) }.joined() }
-    private static func boost(_ rgb: [Double], saturation: Double, minimum: Double) -> [Double] {
+    private static func boost(_ rgb: [Double], saturation: Double, minimum: Double, minimumSaturation: Double = 0) -> [Double] {
         let value = rgb.max()!
         guard value > 0 else { return .init(repeating: minimum, count: 3) }
-        let current = (value - rgb.min()!) / value, boosted = min(1, current * saturation)
+        let current = (value - rgb.min()!) / value, boosted = min(1, max(minimumSaturation, current * saturation))
         let scale = current > 0 ? boosted / current : 0, raised = max(value, minimum)
         return rgb.map { raised * max(0, 1 - (1 - $0 / value) * scale) }
+    }
+    private static func neutralizeNearBlack(_ rgb: [Double]) -> [Double] {
+        let value = rgb.max()!
+        guard value > 0 && value < 0.28 else { return rgb }
+        let saturation = (value - rgb.min()!) / value
+        guard saturation > 0.18 else { return rgb }
+        return rgb.map { value * (1 - (1 - $0 / value) * 0.18 / saturation) }
     }
     public static func eyeColour(_ samples: [[UInt8]]) -> String? {
         let colours = samples.filter { $0.count == 3 }.map { $0.map { Double($0) / 255 } }.filter {
@@ -173,7 +180,7 @@ public enum HousePetPhoto {
         let warmCoat = diagnostics.warm >= 0.35 && pattern != "colorpoint"
         let primary = pattern == "colorpoint" ? cream : pattern == "calico" || warmCoat ? warm : pattern == "bicolor" ? coat : dominant
         var base = medianRGB(primary.isEmpty ? dominant : primary)
-        if pattern == "calico" { base = boost(base, saturation: 1.35, minimum: 0.62) }
+        if pattern == "calico" { base = boost(base, saturation: 1.5, minimum: 0.66, minimumSaturation: 0.45) }
         else if warmCoat { base = boost(base, saturation: 1.15, minimum: 0.50) }
         let warmLightness = warm.isEmpty ? 0 : median(warm.map { $0.lab[0] })
         let darkerWarm = clusters.map { $0.filter(\.warm) }.filter { !$0.isEmpty && median($0.map { $0.lab[0] }) < warmLightness - 10 }.first ?? []
@@ -182,8 +189,8 @@ public enum HousePetPhoto {
         var white = whites.isEmpty ? [0.96, 0.94, 0.91] : medianRGB(whites)
         for _ in 0..<32 where lab(white)[0] < 88 { white = white.map { min(1, $0 + 0.01) } }
         let detectedEye = eyeColour(eyeSamples)
-        return .init(palette: .init(base: hex(base), second: hex(second), white: hex(white),
-                                   eye: eye ?? detectedEye ?? (pattern == "colorpoint" ? "#4E8FE0" : (!warm.isEmpty ? "#9CC43E" : "#E9C24A"))),
+        return .init(palette: .init(base: hex(neutralizeNearBlack(base)), second: hex(neutralizeNearBlack(second)), white: hex(white),
+                                   eye: eye ?? detectedEye ?? (pattern == "colorpoint" ? "#4E8FE0" : (warmCoat || pattern == "calico" ? "#D8A53C" : (!warm.isEmpty ? "#9CC43E" : "#E9C24A")))),
                      pattern: pattern, species: species, confidence: min(0.95, 0.55 + fraction(dominant) * 0.4), diagnostics: diagnostics)
     }
 

@@ -13,6 +13,58 @@ import Testing
         let value = UInt32(hex.dropFirst(), radix: 16)!
         return [Int((value >> 16) & 255), Int((value >> 8) & 255), Int(value & 255)]
     }
+    @Test func nearBlackCoatsLoseBrownCastWithoutChangingValueOrHue() throws {
+        let coats: [[UInt8]] = [[38, 26, 17], [27, 18, 12], [0, 0, 0], [30, 29, 28], [71, 50, 36], [72, 50, 36]]
+        for coat in coats {
+            let result = try photo { _, _ in coat }
+            for (colour, factor) in [(result.palette.base, 1.0), (result.palette.second, 0.65)] {
+                let channels = rgb(colour), value = Double(coat[0]) * factor
+                let saturation = coat[0] > 0 ? Double(coat[0] - coat[2]) / Double(coat[0]) : 0
+                let scale = value < 0.28 * 255 && saturation > 0.18 ? 0.18 / saturation : 1
+                let expected = coat.map { Int((value - Double(coat[0] - $0) * factor * scale).rounded()) }
+                #expect(channels == expected)
+            }
+        }
+    }
+    @Test func brownTuxedoBecomesNeutralBlack() throws {
+        let result = try photo { col, _ in col < 36 ? [245, 240, 232] : [38, 26, 17] }
+        #expect(result.pattern == "bicolor")
+        #expect(result.palette.base == "#26221F")
+        #expect(result.palette.second == "#1A1816")
+    }
+    @Test func paleCalicoGingerGainsSaturationAndValue() throws {
+        let gingers: [[UInt8]] = [[158, 118, 88], [210, 180, 150]]
+        for ginger in gingers {
+            let result = try photo { col, row in
+                let index = row * 80 + col
+                return index < 128 ? ginger : index < 640 ? [25, 24, 27] : [245, 240, 232]
+            }
+            let base = rgb(result.palette.base), value = Double(base.max()!)
+            #expect(result.pattern == "calico")
+            #expect(value >= 168)
+            #expect((value - Double(base.min()!)) / value >= 0.445)
+            if ginger[0] == 158 { #expect(result.palette.base == "#A86839") }
+        }
+    }
+    @Test func warmCoatEyeFallbackIsAmberAndOverridesStayIntact() throws {
+        let orange = try photo { _, _ in [225, 145, 55] }
+        let orangeWhite = try photo { col, _ in col < 20 ? [245, 240, 232] : [225, 145, 55] }
+        let calico = try photo { col, _ in col < 24 ? [245, 240, 232] : col < 56 ? [25, 24, 27] : [210, 180, 150] }
+        #expect(orange.pattern == "tabby" && orangeWhite.pattern == "tabbyWhite" && calico.pattern == "calico")
+        for result in [orange, orangeWhite, calico] {
+            #expect(result.palette.eye == "#D8A53C")
+            #expect(!result.usedEyePose)
+        }
+        let neutral = try photo { _, _ in [128, 128, 128] }
+        let traceWarm = try photo { col, _ in col < 4 ? [225, 145, 55] : [128, 128, 128] }
+        #expect(neutral.palette.eye == "#E9C24A")
+        #expect(traceWarm.palette.eye == "#9CC43E")
+        let iris: [[UInt8]] = [[75, 140, 190]]
+        let detected = try HousePetPhoto.analyze(rgba: [225, 145, 55, 255], width: 1, height: 1, eyeSamples: iris)
+        let explicit = try HousePetPhoto.analyze(rgba: [225, 145, 55, 255], width: 1, height: 1, eye: "#123456", eyeSamples: iris)
+        #expect(detected.palette.eye == HousePetPhoto.eyeColour(iris))
+        #expect(explicit.palette.eye == "#123456")
+    }
     @Test func orangeWhiteTabbyKeepsOrangeAndStripes() throws {
         let result = try photo { col, row in row > 58 ? [245, 240, 232] : col % 20 < 5 ? [130, 85, 35] : [225, 145, 55] }
         let base = rgb(result.palette.base)
