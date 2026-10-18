@@ -26,6 +26,7 @@ let houseUsage = """
   mijiabar house decor set <room/slot> <item|none|auto> [--home H]
   mijiabar house decor on|off | seasonal on|off | items | reset
   mijiabar house pets list [--json] | on | off
+  mijiabar house pets analyze <photo> [--json]
   mijiabar house pets add [--photo PATH] [--name N] [--pattern P] [--palette base=#RRGGBB,second=#RRGGBB,white=#RRGGBB,eye=#RRGGBB] [--room R]
   mijiabar house pets set <id|name> [--photo PATH] [--name N] [--pattern P] [--palette ...] [--room R|auto] [--enabled true|false]
   mijiabar house pets remove <id|name>
@@ -411,7 +412,14 @@ nonisolated(unsafe) let houseSchema: [String: Any] = [
         let r = try houseSync(pos.first)
         if asJSON || pos.first != nil { print(json(r)) } else { print("\(r["sync"] ?? "") · \(r["file"] ?? "")") }
     case "schema": print(json(houseSchema))
-    case "pets", "pet": print(json(try await housePets(pos: housePetArguments(rest), rest: rest)))
+    case "pets", "pet":
+        let arguments = try housePetArguments(rest)
+        let result = try await housePets(pos: arguments, rest: rest)
+        if arguments.first == "analyze", !asJSON, let analysis = result["analysis"] as? [String: Any] {
+            for field in ["pattern", "palette", "species", "confidence", "usedVisionMask", "usedEyePose"] {
+                if let value = analysis[field] { print("\(field): \(value is [String: Any] ? json(value) : String(describing: value))") }
+            }
+        } else { print(json(result)) }
     case "style":
         print(json(try await houseStyle(pos: pos, rest: rest, asJSON: asJSON)))
     case "decor":

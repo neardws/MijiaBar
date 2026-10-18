@@ -204,8 +204,27 @@ import Testing
             let context = HousePetContext(night: night, petIDs: pets.map(\.id), changedAt: date, restOnly: true)
             for offset in stride(from: 0, to: 1800, by: 17) {
                 let poses = pets.map { behavior.pose($0, world: world, context: context, at: date.addingTimeInterval(Double(offset))) }
-                for left in 0..<2 { for right in (left + 1)..<3 { #expect(poses[left].point.distance(to: poses[right].point) >= world.cellSize - 0.001) } }
+                for left in 0..<2 { for right in (left + 1)..<3 { #expect(poses[left].point.distance(to: poses[right].point) >= world.cellSize * 3 - 0.001) } }
             }
+        }
+    }
+
+    @Test func reactionPetsKeepThreeCellsForTVAndLight() throws {
+        let world = try Self.world(), behavior = HousePetBehavior(rig: try Self.rig())
+        let pets = (0..<3).map { HousePet(id: "p_123\($0)", homeRoom: "a") }, date = Date(timeIntervalSince1970: 1792270000)
+        for tv in [false, true] {
+            let context = HousePetContext(lights: ["a": !tv], tvRooms: tv ? ["a"] : [], petIDs: pets.map(\.id), changedAt: date, changedRoom: "a", restOnly: true)
+            let poses = pets.map { behavior.pose($0, world: world, context: context, at: date.addingTimeInterval(300)) }
+            for left in 0..<2 { for right in (left + 1)..<3 { #expect(poses[left].point.distance(to: poses[right].point) >= world.cellSize * 3 - 0.001) } }
+        }
+    }
+
+    @Test func spacingFallsBackOnlyForSmallRooms() {
+        for (extent, spacing) in [(6, 3), (4, 2), (2, 1)] {
+            let spots = (0...extent).map { HousePetWorld.Spot(id: "\($0)", kind: "sit", node: $0, point: .init(x: Double($0) * 10, y: 0), facing: "SE", priority: 1) }
+            let selected = HousePetBehavior.separatedSpots(spots, count: 3, cellSize: 10)
+            #expect(selected.count == 3)
+            #expect(selected[0].point.distance(to: selected[1].point) == Double(spacing * 10))
         }
     }
 

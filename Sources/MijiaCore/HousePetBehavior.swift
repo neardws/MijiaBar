@@ -71,19 +71,13 @@ public final class HousePetBehavior: @unchecked Sendable {
         if plans.count > 24 { plans.removeAll(); retainedWorlds.removeAll() }
         retainedWorlds[identity] = world
         func reservedSpots() -> [HousePetWorld.Spot] {
-            var candidates = world.spots.filter { rooms.contains(world.nodes[$0.node].room) && $0.kind != "light" }
-            for room in rooms.sorted() {
-                var added = 0
-                for node in world.nodes where node.room == room {
-                    if candidates.allSatisfy({ $0.point.distance(to: node.point) >= world.cellSize * 1.01 }) {
-                        candidates.append(.init(id: "~\(node.id)", kind: "sit", node: node.id, point: node.point, facing: "SE", priority: 4)); added += 1
-                        if added >= roster.count { break }
-                    }
-                }
-            }
             var separated: [HousePetWorld.Spot] = []
-            for candidate in candidates {
-                if separated.allSatisfy({ $0.point.distance(to: candidate.point) >= world.cellSize }) { separated.append(candidate) }
+            for room in rooms.sorted() {
+                var candidates = world.spots.filter { world.nodes[$0.node].room == room && $0.kind != "light" }
+                for node in world.nodes where node.room == room {
+                    candidates.append(.init(id: "~\(node.id)", kind: "sit", node: node.id, point: node.point, facing: "SE", priority: 4))
+                }
+                separated += Self.separatedSpots(candidates, count: roster.count, cellSize: world.cellSize)
             }
             let own = separated.enumerated().filter { $0.offset % roster.count == rank }.map(\.element)
                 .filter { pet.homeRoom == nil || world.nodes[$0.node].room == pet.homeRoom }
@@ -133,14 +127,15 @@ public final class HousePetBehavior: @unchecked Sendable {
                         .filter { targetKind == "sleep" ? ["sleep", "perch"].contains($0.kind) : $0.kind == targetKind && (targetKind == "tv" ? context.tvRooms.contains(world.nodes[$0.node].room) : world.nodes[$0.node].room == room) }
                         .sorted { $0.priority == $1.priority ? $0.id < $1.id : $0.priority < $1.priority }
                     var target = available.first(where: { !world.path(from: start.node, to: $0.node, room: pet.homeRoom, allowedRooms: rooms).isEmpty }) ?? start.rest
-                    if rank > 0 {
+                    if roster.count > 1 {
                         let near = world.nodes.filter { rooms.contains($0.room) && (pet.homeRoom == nil || $0.room == pet.homeRoom) }
                             .sorted { $0.point.distance(to: target.point) == $1.point.distance(to: target.point) ? $0.id < $1.id : $0.point.distance(to: target.point) < $1.point.distance(to: target.point) }
-                        var separated: [HousePetWorld.Node] = []
-                        for node in near where node.room == world.nodes[target.node].room && node.point.distance(to: target.point) >= world.cellSize && separated.allSatisfy({ $0.point.distance(to: node.point) >= world.cellSize }) {
-                            separated.append(node); if separated.count >= rank { break }
+                        var candidates = [target]
+                        for node in near where node.room == world.nodes[target.node].room && !world.path(from: target.node, to: node.id, room: pet.homeRoom, allowedRooms: rooms).isEmpty {
+                            candidates.append(.init(id: target.id, kind: target.kind, node: node.id, point: node.point, facing: target.facing, priority: target.priority))
                         }
-                        if separated.count >= rank { let node = separated[rank - 1]; target = .init(id: target.id, kind: target.kind, node: node.id, point: node.point, facing: target.facing, priority: target.priority) }
+                        let separated = Self.separatedSpots(candidates, count: roster.count, cellSize: world.cellSize)
+                        if separated.indices.contains(rank) { target = separated[rank] }
                     }
                     let path = world.path(from: start.node, to: target.node, room: pet.homeRoom, allowedRooms: rooms)
                     var segments: [Segment] = [], time = startTime
@@ -171,6 +166,18 @@ public final class HousePetBehavior: @unchecked Sendable {
                      facing: selected.facing, action: selected.action, frameIndex: frame.index, mirrored: frame.mirrored,
                      jumpLift: selected.action == "jump" ? 4 * 28 * progress * (1 - progress) : 0, module: node.module, room: node.room,
                      visible: pet.enabled && !pet.deleted && context.enabled)
+    }
+
+    static func separatedSpots(_ candidates: [HousePetWorld.Spot], count: Int, cellSize: Double) -> [HousePetWorld.Spot] {
+        var selected: [HousePetWorld.Spot] = []
+        for cells in [3.0, 2.0, 1.0] {
+            selected = []
+            for candidate in candidates where selected.allSatisfy({ $0.point.distance(to: candidate.point) >= cellSize * cells - 0.001 }) {
+                selected.append(candidate)
+            }
+            if selected.count >= count { break }
+        }
+        return selected
     }
 
     private static func travel(path: [Int], from start: HousePetPoint, target: HousePetWorld.Spot, world: HousePetWorld,

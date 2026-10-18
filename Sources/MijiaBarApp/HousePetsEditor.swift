@@ -199,14 +199,11 @@ struct HousePetsEditor: View {
 struct HousePetPhotoDraft: Identifiable, @unchecked Sendable {
     let id = UUID()
     let image: CGImage
+    let mask: [UInt8]
     let result: HousePetPhoto.Result
     static func load(_ url: URL) throws -> Self {
-        let result = try HousePetPhoto.load(from: url)
-        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
-              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true,
-                    kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceThumbnailMaxPixelSize: 512,
-                    kCGImageSourceShouldCache: false] as CFDictionary) else { throw HousePetError.invalid }
-        return .init(image: image, result: result)
+        let analysis = try HousePetPhoto.loadAnalysis(from: url)
+        return .init(image: analysis.image, mask: analysis.mask, result: analysis.result)
     }
 }
 

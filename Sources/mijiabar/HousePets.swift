@@ -38,9 +38,10 @@ func housePetArguments(_ args: [String]) throws -> [String] {
     case "set": allowed = ["--home", "--photo", "--name", "--pattern", "--palette", "--room", "--enabled"]
     case "remove": allowed = ["--home"]
     case "preview": allowed = ["--home", "--out", "--action", "--phase"]
+    case "analyze": allowed = []
     default: throw HousePetError.invalid
     }
-    guard seen.isSubset(of: allowed), positionals.count == (["set", "remove", "preview"].contains(operation) ? 2 : 1) || positionals.isEmpty else { throw HousePetError.invalid }
+    guard seen.isSubset(of: allowed), positionals.count == (["set", "remove", "preview", "analyze"].contains(operation) ? 2 : 1) || positionals.isEmpty else { throw HousePetError.invalid }
     return positionals.isEmpty ? ["list"] : positionals
 }
 
@@ -75,8 +76,12 @@ func housePetPreview(pet: HousePet, rig: HousePetRig, directory: URL, output: UR
 
 @MainActor private func housePetsOperation(pos: [String], rest: [String]) async throws -> [String: Any] {
     let operation = pos.first ?? "list"
-    guard ["list", "add", "set", "remove", "preview", "on", "off"].contains(operation),
-          pos.count == (["set", "remove", "preview"].contains(operation) ? 2 : 1) || pos.isEmpty else { throw HousePetError.invalid }
+    guard ["list", "add", "set", "remove", "preview", "analyze", "on", "off"].contains(operation),
+          pos.count == (["set", "remove", "preview", "analyze"].contains(operation) ? 2 : 1) || pos.isEmpty else { throw HousePetError.invalid }
+    if operation == "analyze" {
+        let result = try HousePetPhoto.load(from: URL(fileURLWithPath: pos[1]))
+        return ["ok": true, "analysis": try housePetJSON(result)]
+    }
     let file = HouseStore.load(), requested = opt(rest, "--home")
     let home: String
     if let requested, file.homes[requested] != nil { home = requested }

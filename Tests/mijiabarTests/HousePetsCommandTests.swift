@@ -8,6 +8,8 @@ import MijiaCore
     @Test func parsesPetFlagsWithoutConsumingNamesAsPositionals() throws {
         #expect(try housePetArguments([]) == ["list"])
         #expect(try housePetArguments(["--json"]) == ["list"])
+        #expect(try housePetArguments(["analyze", "/tmp/two words.jpg", "--json"]) == ["analyze", "/tmp/two words.jpg"])
+        #expect(try housePetArguments(["analyze", "/tmp/cat.jpg"]) == ["analyze", "/tmp/cat.jpg"])
         #expect(try housePetArguments(["add", "--photo", "/tmp/cat.jpg", "--name", "Two Words", "--palette", "base=#AABBCC"]) == ["add"])
         #expect(try housePetArguments(["set", "Mochi", "--enabled", "false", "--room", "auto"]) == ["set", "Mochi"])
         #expect(try housePetArguments(["preview", "p_1234", "--out", "/tmp/pet.png", "--action", "sit", "--phase", "night"]) == ["preview", "p_1234"])
@@ -15,7 +17,8 @@ import MijiaCore
     @Test func rejectsMalformedOrInapplicableFlags() {
         for args in [["add", "--photo"], ["add", "--oops", "yes"], ["set"], ["remove", "one", "two"],
                      ["on", "--photo", "/tmp/a"], ["preview", "one", "--photo", "/tmp/a"], ["set", "one", "--name", "--room"],
-                     ["add", "--name", "one", "--name", "two"]] {
+                     ["add", "--name", "one", "--name", "two"], ["analyze"], ["analyze", "one", "two"],
+                     ["analyze", "cat.jpg", "--home", "h"], ["analyze", "--photo", "cat.jpg"]] {
             #expect(throws: (any Error).self) { try housePetArguments(args) }
         }
     }

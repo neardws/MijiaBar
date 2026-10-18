@@ -22,7 +22,9 @@ enum HousePetDemo {
 
     static func pose(world: HousePetWorld, rig: HousePetRig, module: String, action: String, facing: String = "SE", frame: Int = 0) -> HousePetPose? {
         let candidates = world.spots.filter { world.nodes[$0.node].module == module }
-        let spot = candidates.first { action == "sleep" ? $0.kind == "sleep" : action == "sit" ? $0.kind == "tv" : $0.kind == "sit" }
+        let preferred = module == "bedroom" && ["sleep", "groom"].contains(action) ? "bed" : module == "living" && action == "sit" ? "rug" : nil
+        let spot = preferred.flatMap { id in candidates.first { $0.id.hasSuffix("/" + id) } }
+            ?? candidates.first { action == "sleep" ? $0.kind == "sleep" : $0.kind == "sit" }
             ?? candidates.first
         guard let node = spot.map({ world.nodes[$0.node] }) ?? world.nodes.first(where: { $0.module == module }) else { return nil }
         var point = spot?.point ?? node.point
@@ -99,7 +101,7 @@ extension Snapshot {
             for phase in [HousePhase.day, .night] {
                 let (source, session) = try composed(style: style, phase: phase, cells: layout)
                 var poses: [String: HousePetPose] = [:]
-                poses[pets[0].id] = HousePetDemo.pose(world: session.world, rig: rig, module: "living", action: "sit", facing: "NE")
+                poses[pets[0].id] = HousePetDemo.pose(world: session.world, rig: rig, module: "living", action: "sit", facing: "SE")
                 poses[pets[1].id] = HousePetDemo.pose(world: session.world, rig: rig, module: "study", action: "walk", frame: 2)
                 poses[pets[2].id] = HousePetDemo.pose(world: session.world, rig: rig, module: "bedroom", action: phase == .night ? "sleep" : "groom")
                 for lights in [false, true] {
@@ -132,7 +134,7 @@ extension Snapshot {
         for (name, value) in [("light", NSAppearance.Name.aqua), ("dark", .darkAqua)] {
             appearance = NSAppearance(named: value)
             Snapshot.render(HousePilotHost(editing: true, editTab: .pets, decorDate: date).environmentObject(model),
-                            out.appendingPathComponent("pets-editor-\(name).png"), size: CGSize(width: 1041, height: 1020))
+                            out.appendingPathComponent("pets-editor-\(name).png"), size: CGSize(width: 1041, height: 1440))
         }
         appearance = NSAppearance(named: .aqua)
         for (name, hour) in [("day", 10), ("night", 22)] {
@@ -143,14 +145,20 @@ extension Snapshot {
         for (index, file) in photos.enumerated() {
             let draft = try HousePetPhotoDraft.load(URL(fileURLWithPath: file))
             let pet = HousePet(pattern: draft.result.pattern, palette: draft.result.palette)
-            let frameScale = 3, petWidth = rig.frameSize[0] * frameScale, petHeight = rig.frameSize[1] * frameScale
+            let frameScale = 9, petWidth = rig.frameSize[0] * frameScale, petHeight = rig.frameSize[1] * frameScale
             let photoWidth = Int((320 * Double(draft.image.width) / Double(draft.image.height)).rounded())
-            let height = max(360, petHeight + 70), width = photoWidth + 270 + petWidth * 3
+            let height = max(480, petHeight + 70), width = photoWidth + 270 + petWidth * 3
             let card = try canvas(width, height)
             card.setFillColor(NSColor.windowBackgroundColor.cgColor); card.fill(CGRect(x: 0, y: 0, width: width, height: height))
             HousePetPainter.drawImage(draft.image, in: card, rect: CGRect(x: 0, y: 20, width: photoWidth, height: 320))
             label("→", at: CGPoint(x: photoWidth + 12, y: 140), in: card)
-            label(HousePetPatterns.name(pet.pattern), at: CGPoint(x: photoWidth + 55, y: 45), in: card)
+            let names = ["solid": L("纯色 / Solid", "纯色 / Solid"), "tabby": L("虎斑 / Tabby", "虎斑 / Tabby"),
+                         "tabbyWhite": L("虎斑加白 / Tabby & white", "虎斑加白 / Tabby & white"), "bicolor": L("双色 / Bicolor", "双色 / Bicolor"),
+                         "calico": L("三花 / Calico", "三花 / Calico"), "colorpoint": L("重点色 / Colorpoint", "重点色 / Colorpoint")]
+            label(names[pet.pattern] ?? pet.pattern, at: CGPoint(x: photoWidth + 35, y: 45), in: card)
+            let maskPixels = draft.mask.flatMap { [$0, $0, $0, UInt8(255)] }
+            let maskImage = try HousePetRecolor.image(width: draft.image.width, height: draft.image.height, rgba: maskPixels)
+            HousePetPainter.drawImage(maskImage, in: card, rect: CGRect(x: 12, y: 352, width: photoWidth / 3, height: 106))
             for (offset, hex) in [pet.palette.base, pet.palette.second, pet.palette.white, pet.palette.eye].enumerated() {
                 card.setFillColor(NSColor(HousePetAppearanceFields.color(hex)).cgColor)
                 card.fill(CGRect(x: photoWidth + 55 + offset * 42, y: 85, width: 32, height: 32))

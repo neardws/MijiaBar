@@ -102,8 +102,24 @@ final class HousePetPainter {
         for (pet, pose) in ordered where pose.visible {
             guard let module = scene.modules[byRoom ? pose.room : pose.module],
                   let image = frame(pet: pet, pose: pose, night: state.night, lit: state.lights[pose.room] == true, unlitImage: unlit, litImage: lit) else { continue }
+            if let silhouette = Self.silhouette(image, base: pet.palette.base) {
+                context.saveGState(); context.concatenate(Self.transform(rig: rig, pose: pose))
+                Self.drawImage(silhouette, in: context, rect: CGRect(x: 0, y: 0, width: rig.frameSize[0], height: rig.frameSize[1]))
+                context.restoreGState()
+            }
             Self.drawFrame(image, in: context, rig: rig, pose: pose, polygons: module.visible ?? [module.region])
         }
+    }
+
+    static func silhouette(_ image: CGImage, base: String) -> CGImage? {
+        guard var bytes = pixels(image), let value = UInt32(base.dropFirst(), radix: 16) else { return nil }
+        let colour = [Int((value >> 16) & 255), Int((value >> 8) & 255), Int(value & 255)].map { UInt8((Double($0) * 0.65).rounded()) }
+        for offset in stride(from: 0, to: bytes.count, by: 4) {
+            let alpha: UInt8 = bytes[offset + 3] == 255 ? 77 : 0
+            for channel in 0..<3 { bytes[offset + channel] = alpha == 0 ? 0 : colour[channel] }
+            bytes[offset + 3] = alpha
+        }
+        return try? HousePetRecolor.image(width: image.width, height: image.height, rgba: bytes)
     }
 
     static func drawFrame(_ image: CGImage, in context: CGContext, rig: HousePetRig, pose: HousePetPose, polygons: [[[Double]]]) {

@@ -60,22 +60,41 @@ entries and a lock. Reuse a cache instance; call `clear()` on resource reload.
 
 ## Photo palette and privacy
 
-`HousePetPhoto.analyze(rgba:width:height:mask:eye:species:)` is deterministic pure
+`HousePetPhoto.analyze(rgba:width:height:mask:eye:species:eyeSamples:extremities:)` is deterministic pure
 Swift: at most about 16k samples, sRGB→CIELab, farthest-point seeding, k=5,
-16 Lloyd iterations. Cluster areas and Lab hue/lightness pick the coat colors.
-Dark same-hue patches above 8% imply tabby; white above 12% adds white;
-orange + dark + white implies calico; cream with spatially dark extremities
-implies colorpoint. Other two-color white coats are bicolor; otherwise solid.
-Small saturation/brightness lifts avoid muddy photo colors. Orange/brown coats
-default to green eyes, neutral coats amber, colorpoints blue; an eye override wins.
+16 Lloyd iterations. Before clustering, the brightest low-chroma foreground
+pixels (up to 6% of the mask, at least 3%) estimate white balance toward
+(0.95, 0.93, 0.90), with gains clamped to 0.75…1.6. Lab fractions classify white
+(L>70, chroma<16), dark (L<30), warm (chroma>20, hue 35°…85°, 35<L<85),
+and neutral grey (chroma<12, L=30…70). Classification, in order:
+white≥12% + warm≥7% + dark≥5% → calico; cream≥45% with dark extremities →
+colorpoint; white≥15% → tabby & white or bicolor; otherwise tabby or solid.
+A darker same-hue cluster covering ≥10% of non-white coat, or high local
+luminance variance, indicates stripes. Colorpoint extremities use pose joints
+when available, otherwise an edge heuristic relative to the foreground bounds.
+Channel medians select dominant non-white base, stripes/calico dark secondary,
+and white (lifted to L≥88); warm bases gain 15% saturation and stay at least
+0.45 lightness. This preserves orange coats and near-black tuxedo bases.
+Animal eye joints with confidence >0.3 provide discs of radius 0.16× inter-eye
+distance (minimum 2px). Iris sampling rejects saturation≤0.18 and value outside
+0.22…0.97, uses channel medians, then boosts saturation 15% and value to ≥0.55.
+Without usable eyes, orange/brown coats default to green, neutral coats amber,
+colorpoints blue; an explicit eye override wins.
 Confidence is a heuristic cluster-quality score, not a species-model probability.
 
 `HousePetPhoto.load(from:eye:recognizeSpecies:)` reads a local file through
-ImageIO, applies EXIF orientation, downsizes to at most 512px, and optionally runs
-Vision animal recognition (cat/dog/unknown). `HousePetForeground.mask(image:)`
-uses macOS 14 foreground instance segmentation where it succeeds, otherwise
-a center-weighted ellipse. The reusable mask is one byte per pixel, >127 selects
-foreground. Pure analysis without a mask uses all nontransparent pixels.
+ImageIO, applies EXIF orientation, downsizes to at most 512px, and runs local
+Vision animal recognition (cat/dog/unknown), instance segmentation and animal
+body pose. `recognizeSpecies:false` suppresses the species label, not foreground
+localization. Masks support OneComponent8, OneComponent32Float (0…1), and
+OneComponent16Half, honoring row stride. The instance with greatest overlap
+(intersection-over-union) with the recognized animal box wins, otherwise the
+largest instance. Erosion removes about 2.5% of the short side at edges. Coverage
+outside 3%…92% (or too little remaining after erosion) falls back to an ellipse
+inside the animal box, or a centered ellipse without a box. The reusable mask
+is one byte per pixel, >127 selects foreground. Pure analysis without a mask
+uses all nontransparent pixels. `loadAnalysis` also returns the exact image/mask
+in memory for review thumbnails, avoiding a second Vision run.
 Only cats are currently instantiated, even when the photo reports dog/unknown.
 
 **Photos are never stored, copied to disk, cached, or uploaded.** All analysis and
@@ -115,7 +134,9 @@ TV room keys, night state and `changedAt`/`changedRoom`. Keep the same timestamp
 until the next context change. Reactions begin from the baseline plan at that
 timestamp: dark night seeks sleep; TV seeks its TV spot; a light change produces
 2s lookup then a light-pool sit. `homeRoom` confines routes and rest locations.
-Sorted pet IDs partition separated rest spots; pass the **same roster** to every
+Sorted pet IDs partition rest spots at least three cells apart. TV/light/sleep
+reaction destinations use the same spacing, falling back to two, then one cell
+only if there are too few spots for the roster. Pass the **same roster** to every
 pet. `restOnly=true` chooses the current/next rest spot and restricts actions to
 idle/sit/sleep, without changing the underlying full-scene day plan. `visible`
 also reflects pet/global enablement and missing-room safety.
@@ -124,6 +145,7 @@ also reflects pet/global enablement and missing-room safety.
 
 ```
 mijiabar house pets list --json
+mijiabar house pets analyze /local/cat.jpg --json
 mijiabar house pets add --name Mochi --photo /local/cat.jpg
 mijiabar house pets add --pattern tabby --palette 'base=#E8973F,eye=#9CC43E'
 mijiabar house pets set p_a1b2 --room ROOM_KEY --enabled true
@@ -139,6 +161,14 @@ or an unambiguous name. `set` accepts all appearance flags, including a new loca
 photo. `preview` writes a nearest-neighbor recolored PNG contact sheet, not a GUI.
 Palette flags may specify a subset of the four colors. `--room auto` clears the
 room restriction. Lists and all mutations return JSON.
+
+`analyze <photo> [--json]` is read-only and returns pattern, palette, species,
+confidence, `usedVisionMask` and `usedEyePose`. Without `--json` it prints named
+fields; JSON wraps these fields in `analysis` alongside `ok:true`.
+`usedVisionMask` means the selected, eroded Vision mask actually reached the
+color analyzer; `usedEyePose` means pose iris samples supplied the eye color.
+It requires only agent read access, never resolves a home or reads/writes
+`house.json`, and rejects `--home` and appearance mutation flags.
 
 MCP `get_house_pets` returns pets, preferences, patterns/actions and `limit:3`.
 `set_house_pets` accepts `op:add|update|remove|enable|disable`, `pet` (ID/name for
@@ -180,6 +210,11 @@ No photo path, thumbnail or Vision mask is persisted or uploaded.
 
 The shared `HousePetPainter` draws anchor-relative, mirrored, nearest-neighbor
 frames sorted by foot y, clipped to each composed module's `visible` polygons.
+Before that clipped pass, the shared window/menu painter draws an unclipped
+x-ray silhouette at 30% opacity in the pet's base color darkened to 65%.
+Only opaque sprite pixels enter this alpha mask: ground shadows are excluded.
+The normal opaque sprite covers the silhouette where visible; hidden parts
+remain faintly readable through the low cut-away walls and foreground modules.
 Day-lit cats use `dayLit`. Night-unlit cats use `night`; night-lit cats multiply
 the day color by `night.mul` and a per-channel lit/unlit ratio (9×5 foot patch,
 clamped to 1…2.6), falling back to `nightLit` if sampling is unavailable.
@@ -203,17 +238,20 @@ layout/default decorations, never the real house file or real devices. `--date`
 accepts an ISO date or timestamp (default 2026-07-01). It writes:
 
 - `pets-<style>-<day|night>-<unlit|lit>.png` and `-2x.png`, for cozy-wood,
-  japanese and modern, with 橘子 sitting toward the TV, 煤球 walking (frame 2),
-  and 花花 grooming by day/sleeping on a bedroom perch at night.
+  japanese and modern, with 橘子 sitting on the living-room rug facing SE toward
+  the camera, 煤球 walking (frame 2), and 花花 grooming by day/sleeping at night
+  on the same elevated bedroom bed sleep spot (including its z).
 - `pets-actions-<style>.png`: nine room panels covering idle, walk SE/NE, sit,
   groom, lookup, sleep, stretch and jump.
 - `pets-world-<style>.png`: walk cells (green), spots (orange), A* path (blue).
 - `pets-menubar-day.png`, `pets-menubar-night.png`: the real `HouseListEmbed`
   rendering path, with a fixed date and rest-only behavior.
 - `pets-editor-light.png`, `pets-editor-dark.png`: the Pets editor with all three
-  demo cards (taller review canvas).
-- `photo-<n>.png`: source photo at 320 px tall, arrow, detected palette/pattern,
-  and sit/walk/sleep cats enlarged with nearest-neighbor sampling, via the real
+  demo cards and the full local-analysis privacy footer (1440px review canvas).
+- `photo-<n>.png`: source photo at 320 px tall, exact foreground-mask thumbnail
+  underneath, arrow, detected palette and bilingual Chinese/English pattern,
+  and sit/walk/sleep cats enlarged to 9× cell size (3× the previous previews)
+  with nearest-neighbor sampling, via the real
   photo pipeline. Only this requested before/after PNG contains photo content;
   never commit it. No photo intermediates or sidecars are written.
 

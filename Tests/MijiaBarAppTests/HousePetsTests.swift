@@ -13,6 +13,49 @@ import MijiaCore
         return context
     }
 
+    @Test func silhouetteExcludesGroundShadowAndUsesSubtleBaseTint() throws {
+        let frame = try HousePetRecolor.image(width: 3, height: 1, rgba: [210, 140, 65, 255, 31, 20, 18, 90, 0, 0, 0, 0])
+        let silhouette = try #require(HousePetPainter.silhouette(frame, base: "#D28C41"))
+        let data = try #require(silhouette.dataProvider?.data), bytes = try #require(CFDataGetBytePtr(data))
+        #expect(bytes[3] == 77 && bytes[7] == 0 && bytes[11] == 0)
+        #expect(bytes[0] == 137 && bytes[1] == 91 && bytes[2] == 42)
+    }
+
+    @Test func demoUsesRugAndElevatedBed() throws {
+        let model = AppModel(mock: true); model.addHouseFixtureDemo()
+        let layout = HousePetDemo.layout(model: model), rig = try rig()
+        for style in ["cozy-wood", "japanese", "modern"] {
+            let source = try #require(HouseModuleAssets.composedScene(layout: layout, phase: .day, style: style))
+            let session = try #require(HousePetSceneSession(source: source, layout: layout, style: style, config: HomeHouse(), rooms: model.houseRooms))
+            let living = try #require(HousePetDemo.pose(world: session.world, rig: rig, module: "living", action: "sit"))
+            let rug = try #require(session.world.spots.first { $0.id.hasSuffix("/rug") && session.world.nodes[$0.node].module == "living" })
+            #expect(living.point == rug.point && living.facing == "SE")
+            let grooming = try #require(HousePetDemo.pose(world: session.world, rig: rig, module: "bedroom", action: "groom"))
+            let sleeping = try #require(HousePetDemo.pose(world: session.world, rig: rig, module: "bedroom", action: "sleep"))
+            #expect(grooming.point == sleeping.point)
+            let bed = try #require(session.world.spots.first { $0.id.hasSuffix("/bed") && session.world.nodes[$0.node].module == "bedroom" })
+            #expect(grooming.point == bed.point)
+        }
+    }
+
+    @Test func sharedPainterShowsOnlyFaintSilhouetteBehindOccludingModule() throws {
+        let layout = [HouseLayoutCell(room: "room", module: "living", col: 0, row: 0, level: 0)]
+        let source = try #require(HouseModuleAssets.composedScene(layout: layout, phase: .day, style: "cozy-wood"))
+        let session = try #require(HousePetSceneSession(source: source, layout: layout, style: "cozy-wood", config: HomeHouse(), rooms: []))
+        let pet = HousePet(id: "p_1234"), rig = try rig()
+        let pose = try #require(HousePetDemo.pose(world: session.world, rig: rig, module: "living", action: "sit"))
+        var module = try #require(source.scene.modules[pose.room]); module.visible = []
+        for byRoom in [false, true] {
+            let scene = HouseCutawaySceneFile(size: source.scene.size, modules: [byRoom ? pose.room : pose.module: module])
+            let context = try bitmap(Int(source.artSize.width), Int(source.artSize.height))
+            HousePetPainter.shared.draw(in: context, pets: [pet], world: session.world, scene: scene, byRoom: byRoom,
+                                        context: HousePetContext(), date: .distantPast, unlit: nil, lit: nil, poses: [pet.id: pose])
+            let image = try #require(context.makeImage()), bytes = try #require(HousePetPainter.pixels(image))
+            let alphas = stride(from: 3, to: bytes.count, by: 4).map { bytes[$0] }.filter { $0 > 0 }
+            #expect(!alphas.isEmpty && alphas.allSatisfy { $0 == 77 })
+        }
+    }
+
     @Test func anchorMirrorAndJumpUseRigMetadata() throws {
         var rig = try rig(); rig.anchor = [1.25, 2.5]; rig.cellPx = 3
         for mirrored in [false, true] {
