@@ -161,7 +161,7 @@ import CoreGraphics
                             .init(room: "l", module: "living", col: 0, row: 1, level: 0)])
         #expect(up["a"]?["elevation"] as? Int == HouseGrid.levelStep)
         #expect(up["a"]?["level"] as? Int == 1 && up["l"]?["level"] as? Int == 0)
-        // 卧室相对客厅上移一级：墙顶、标签都高 16px；底边（加厚的地台）和客厅一样落到同一个地面
+        // 卧室相对客厅上移一级：墙顶、标签都高一级（levelStep）；底边（加厚的地台）和客厅一样落到同一个地面
         let dTop = (top(flat["a"]!) - top(flat["l"]!)) - (top(up["a"]!) - top(up["l"]!))
         #expect(abs(dTop - Double(HouseGrid.levelStep)) < 0.5)
         let dLab = (label(flat["a"]!)[1] - label(flat["l"]!)[1]) - (label(up["a"]!)[1] - label(up["l"]!)[1])
@@ -180,16 +180,65 @@ import CoreGraphics
         #expect(zip(fb, ub).allSatisfy { $0 <= $1 + 0.01 })
     }
 
+    /// 后格比前格高两级：前格切墙（40）挡不住高出来的那截地台——那里要画出石砌基座（不透明、偏灰），不能是透明或描边色
+    @Test func raisedRoomShowsStonePlinthAboveFrontCutWall() throws {
+        let (cat, images) = try Self.load("day")
+        func pixel(_ img: CGImage, _ x: Int, _ y: Int) -> (r: Int, g: Int, b: Int, a: Int) {
+            var px = [UInt8](repeating: 0, count: 4)
+            let ctx = CGContext(data: &px, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
+                                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+            ctx.draw(img, in: CGRect(x: -x, y: y - img.height + 1, width: img.width, height: img.height))
+            return (Int(px[0]), Int(px[1]), Int(px[2]), Int(px[3]))
+        }
+        let r = HouseComposer.compose(.init(layout: [.init(room: "a", module: "bedroom", col: 0, row: 0, level: 1),
+                                                     .init(room: "l", module: "living", col: 0, row: 1, level: -1)],
+                                            catalog: cat, images: images))
+        let img = try #require(r.unlit)
+        // 卧室前沿（v=1）u=0.5 处的地面点；卧室比客厅高 2·levelStep，客厅切墙顶在它下方 2·step − cutH
+        let tipX = -r.originX, tipY = -r.originY - HouseGrid.levelStep
+        let ex = tipX - HouseGrid.W / 4, ey = tipY + 3 * HouseGrid.floorH / 4
+        let gap = 2 * HouseGrid.levelStep - HouseGrid.cutH
+        #expect(gap > HouseGrid.slab + 8)
+        let p = pixel(img, ex, ey + HouseGrid.slab + (gap - HouseGrid.slab) / 2)
+        #expect(p.a == 255)
+        #expect(abs(p.r - p.b) < 50 && p.r > 30)   // 石头偏灰；木地台 / 墙纸都偏橙
+    }
+
+    /// 地面房间名标签不压徽章位；除了挤的阳台，也不压吸顶灯 / 被切灯具的 alt 位置框（含 App 里前右格放玄关的布局）
+    @Test func floorLabelsClearBadgesAndAltSpots() throws {
+        let (cat, images) = try Self.load("day")
+        var all = Self.layouts
+        all["six-entrance"] = Self.layouts["six"]!.map { var c = $0; if c.room == "d" { c.module = "generic" }; return c }
+        for (name, layout) in all {
+            let r = HouseComposer.compose(.init(layout: layout, catalog: cat, images: images))
+            let j = try #require(try JSONSerialization.jsonObject(with: r.sceneJSON) as? [String: Any])
+            let mods = try #require(j["modules"] as? [String: [String: Any]])
+            for (room, m) in mods {
+                let l = try #require(m["label"] as? [Double])
+                for b in (m["badges"] as? [[Double]]) ?? [] {
+                    #expect(!(abs(l[0] - b[0]) < 46 && l[1] > b[1] - 56 && l[1] < b[1] + 14), "\(name)/\(room) label on badge")
+                }
+                for L in (m["lights"] as? [[String: Any]]) ?? [] {
+                    // 阳台太挤（三徽章围着吸顶灯位），只保证不压徽章
+                    guard m["module"] as? String != "balcony",
+                          let a = L["alt"] as? [Double], (L["kind"] as? String) == "ceiling" || (L["hidden"] as? Bool) == true else { continue }
+                    #expect(!(abs(l[0] - a[0]) < 56 && l[1] > a[1] - 46 && l[1] < a[1] + 36), "\(name)/\(room) label \(l) on alt spot \(a); badges \((m["badges"] as? [[Double]]) ?? [])")
+                }
+            }
+        }
+    }
+
     @Test func levelPatternAndClamp() {
         #expect(HouseLevels.auto(col: 0, row: 0) == 1 && HouseLevels.auto(col: 2, row: 1) == -1 && HouseLevels.auto(col: 5, row: 5) == 0)
         #expect(HouseLevels.effective(.init(room: "x", module: "generic", col: 0, row: 0, level: 7)) == HouseGrid.levelRange.upperBound)
-        // 任意相邻两格（自动图案）最多差两级，且两级的高差小于切墙高度
+        // 任意相邻两格（自动图案）最多差两级；一级高过切墙（台阶侧面看得见），两级仍低于整面墙高
         for r in 0..<2 { for c in 0..<3 {
             for (dc, dr) in [(1, 0), (0, 1)] where c + dc < 3 && r + dr < 2 {
                 #expect(abs(HouseLevels.auto(col: c, row: r) - HouseLevels.auto(col: c + dc, row: r + dr)) <= 2)
             }
         } }
-        #expect((HouseGrid.levelRange.upperBound - HouseGrid.levelRange.lowerBound) * HouseGrid.levelStep < HouseGrid.cutH)
+        #expect(HouseGrid.levelStep > HouseGrid.cutH)
+        #expect((HouseGrid.levelRange.upperBound - HouseGrid.levelRange.lowerBound) * HouseGrid.levelStep < HouseGrid.wallH)
     }
 
     @Test func layoutCellLevelIsOptionalInJSON() throws {

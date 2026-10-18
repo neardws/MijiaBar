@@ -17,7 +17,7 @@ let houseUsage = """
   mijiabar house layout set <房间:模块:col:row[@层]> ... 设置布局，例如 客厅:living:0:1 卧室:bedroom:0:0@1（层 -1|0|1，省略 = 自动）
   mijiabar house layout auto [--home H]              按设备数自动填 3×2
   mijiabar house layout classic [--home H]           恢复经典四室几何（清掉 layout 覆盖，走整图）
-  mijiabar house layout level <房间> <-1|0|1|auto>    错层：这个房间的地面抬高 / 下沉一级（每级 16px），auto = 自动图案
+  mijiabar house layout level <房间> <-1|0|1|auto>    错层：这个房间的地面抬高 / 下沉一级（每级 48px），auto = 自动图案
   mijiabar house layout flat | stagger [--home H]    整屋平铺（全部 0）/ 回到自动错层（后排两角高、前排右格低）
   mijiabar house reset [<设备> | --room <房间> | --layout] [--home H]   恢复自动
   mijiabar house sync [icloud | local | <文件夹>]    查看 / 切换 house.json 的存放位置（默认 iCloud Drive，多台 Mac 同步）
@@ -313,7 +313,7 @@ nonisolated(unsafe) let houseSchema: [String: Any] = [
             "room": ["type": "string"], "module": ["type": "string", "enum": HouseModule.allCases.map(\.rawValue)],
             "col": ["type": "integer", "minimum": 0, "maximum": 2], "row": ["type": "integer", "minimum": 0, "maximum": 1],
             "level": ["type": "integer", "minimum": HouseGrid.levelRange.lowerBound, "maximum": HouseGrid.levelRange.upperBound,
-                      "description": "split level (each step raises the room's floor 16 px); omitted = automatic pattern"],
+                      "description": "split level (each step raises the room's floor 48 px); omitted = automatic pattern"],
         ]],
         "room": ["type": "object", "required": ["updatedAt"], "properties": [
             "module": ["type": ["string", "null"], "enum": HouseModule.allCases.map(\.rawValue) + ["none", NSNull()], "description": "null = automatic"],
@@ -401,7 +401,7 @@ nonisolated(unsafe) let houseMCPTools: [[String: Any]] = [
      "inputSchema": ["type": "object", "properties": ["room": ["type": "string"], "module": ["type": "string"], "home": ["type": "string"]], "required": ["room", "module"]]],
     ["name": "get_house_layout", "description": "当前小屋格子布局。classic=true 表示走 Phase 1 整图。",
      "inputSchema": ["type": "object", "properties": ["home": ["type": "string"]]]],
-    ["name": "set_house_layout", "description": "设置格子布局。cells 为 [{room,module,col,row,level?}]，level = -1|0|1（错层，每级 16px；省略 = 自动图案）；传 null 或 mode=classic 恢复经典四室；mode=auto 自动填 3×2；mode=flat 全部平铺；mode=stagger 回到自动错层。",
+    ["name": "set_house_layout", "description": "设置格子布局。cells 为 [{room,module,col,row,level?}]，level = -1|0|1（错层，每级 48px；省略 = 自动图案）；传 null 或 mode=classic 恢复经典四室；mode=auto 自动填 3×2；mode=flat 全部平铺；mode=stagger 回到自动错层。",
      "inputSchema": ["type": "object", "properties": ["home": ["type": "string"], "mode": ["type": "string", "enum": ["classic", "auto", "flat", "stagger"]], "cells": ["type": "array"]], "required": []]],
     ["name": "set_house_room_level", "description": "错层：把小屋布局里一个房间的地面抬高 / 下沉一级。level = -1 | 0 | 1 | \"auto\"（回到自动图案）。Set a room's floor level in the composed house.",
      "inputSchema": ["type": "object", "properties": ["room": ["type": "string"], "level": ["description": "-1 | 0 | 1 | \"auto\""], "home": ["type": "string"]], "required": ["room", "level"]]],

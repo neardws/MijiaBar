@@ -19,9 +19,9 @@ public enum HouseGrid {
     public static let slab = 14
     public static let px = 2
     /// 错层：每级把整格（地板、墙、家具）抬高 levelStep 像素，地台跟着加厚到最低一格的底面。
-    /// 级数限制在 levelRange，相邻两格最多差两级 = 32px < cutH：前 / 右格的切墙总能挡住后格地台的侧面，
-    /// 共享墙不需要额外的台阶面。
-    public static let levelStep = 16
+    /// r6：台阶要看得见（参照概念图）——一级 48px 已高过切墙（40），高的那格的地台侧面露在前面矮格的切墙上方；
+    /// 合成器把露出的地台画成石砌基座（HouseComposer.plinth），朝向不同明暗不同。
+    public static let levelStep = 48
     public static let levelRange = -1...1
     /// 墙顶厚度方向（朝墙后）：NW 墙往左上，NE 墙往右上
     public static let capNW = (x: -10, y: -4)
