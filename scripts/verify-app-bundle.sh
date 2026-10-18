@@ -12,9 +12,16 @@ fail() { echo "❌ App resource verification failed: $*" >&2; exit 1; }
   || fail "no House cutaway PNGs in $BUNDLE"
 [ -n "$(find "$BUNDLE" -type f -name 'module-*.png' -print -quit)" ] \
   || fail "no House module PNGs in $BUNDLE"
+[ -n "$(find "$BUNDLE" -type f -name 'decor-*.png' -print -quit)" ] \
+  || fail "no decor PNGs in $BUNDLE"
+[ -n "$(find "$BUNDLE" -type f -name 'decor-catalog.json' -print -quit)" ] \
+  || fail "no decor catalog in $BUNDLE"
 
 for style in japanese modern light-wood walnut; do
   PACK="$RESOURCES/House/styles/$style"
+  if [[ "$style" == japanese || "$style" == modern ]]; then
+    [ -f "$PACK/modules/catalog.json" ] || fail "missing $PACK/modules/catalog.json"
+  fi
   [ -d "$PACK/modules" ] || fail "missing $PACK/modules"
   [ -n "$(find "$PACK/modules" -type f -name '*.png' -print -quit)" ] \
     || fail "no style PNGs in $PACK/modules"

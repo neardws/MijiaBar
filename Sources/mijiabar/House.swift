@@ -22,6 +22,9 @@ let houseUsage = """
   mijiabar house reset [<设备> | --room <房间> | --layout] [--home H]   恢复自动
   mijiabar house sync [icloud | local | <文件夹>]    查看 / 切换 house.json 的存放位置（默认 iCloud Drive，多台 Mac 同步）
   mijiabar house style [list|set <id>|show] [--home H] [--json]
+  mijiabar house decor list [--room R] [--json]
+  mijiabar house decor set <room/slot> <item|none|auto> [--home H]
+  mijiabar house decor on|off | seasonal on|off | items | reset
   mijiabar house schema                             打印 house.json 的 JSON Schema
 设备 = did 或名称；房间 = 米家房间 id 或名称；--json 输出机器可读结果（修改类命令总是输出 JSON）。
 """
@@ -320,6 +323,8 @@ nonisolated(unsafe) let houseSchema: [String: Any] = [
             "devices": ["type": "object", "description": "device did → override", "additionalProperties": ["$ref": "#/$defs/device"]],
             "layout": ["type": ["array", "null"], "description": "Phase 2 grid layout (max 3×2); null = classic four", "items": ["$ref": "#/$defs/cell"]],
             "layoutUpdatedAt": ["type": "string", "format": "date-time"],
+            "decor": ["type": ["object", "null"], "additionalProperties": ["$ref": "#/$defs/decor"]],
+            "decorPrefs": ["type": ["object", "null"], "properties": ["enabled": ["type": "boolean", "default": true], "seasonal": ["type": "boolean", "default": true], "updatedAt": ["type": "string", "format": "date-time"]]],
         ]],
         "cell": ["type": "object", "required": ["room", "module", "col", "row"], "properties": [
             "room": ["type": "string"], "module": ["type": "string", "enum": HouseModule.allCases.map(\.rawValue)],
@@ -327,6 +332,7 @@ nonisolated(unsafe) let houseSchema: [String: Any] = [
             "level": ["type": "integer", "minimum": HouseGrid.levelRange.lowerBound, "maximum": HouseGrid.levelRange.upperBound,
                       "description": "split level (each step raises the room's floor 48 px); omitted = automatic pattern"],
         ]],
+        "decor": ["type": "object", "required": ["updatedAt"], "properties": ["item": ["type": ["string", "null"], "description": "null = automatic; none = empty"], "updatedAt": ["type": "string", "format": "date-time"]]],
         "room": ["type": "object", "required": ["updatedAt"], "properties": [
             "module": ["type": ["string", "null"], "enum": HouseModule.allCases.map(\.rawValue) + ["none", NSNull()], "description": "null = automatic"],
             "updatedAt": ["type": "string", "format": "date-time"],
@@ -398,6 +404,8 @@ nonisolated(unsafe) let houseSchema: [String: Any] = [
     case "schema": print(json(houseSchema))
     case "style":
         print(json(try await houseStyle(pos: pos, rest: rest, asJSON: asJSON)))
+    case "decor":
+        print(json(try await houseDecor(pos: pos, rest: rest)))
     default: print(houseUsage)
     }
 }
@@ -451,6 +459,10 @@ nonisolated(unsafe) let houseMCPTools: [[String: Any]] = [
      "inputSchema": ["type": "object", "properties": ["room": ["type": "string"], "level": ["description": "-1 | 0 | 1 | \"auto\""], "home": ["type": "string"]], "required": ["room", "level"]]],
     ["name": "get_house_styles", "description": "列出小屋风格（温馨木屋 / 浅木白墙 / 胡桃木 / 和风 / 现代）和当前选用。",
      "inputSchema": ["type": "object", "properties": ["home": ["type": "string"]]]],
+    ["name": "get_house_decor", "description": "Appearance only, never controls devices. List fixed decoration slots, current items, preferences and active seasons.",
+     "inputSchema": ["type": "object", "properties": ["home": ["type": "string"], "room": ["type": "string"]]]],
+    ["name": "set_house_decor", "description": "Appearance only, never controls devices. Set slot room/slot and item id|none|auto, or enabled, or seasonal. One operation per call.",
+     "inputSchema": ["type": "object", "properties": ["home": ["type": "string"], "slot": ["type": "string"], "item": ["type": "string"], "enabled": ["type": "boolean"], "seasonal": ["type": "boolean"]]]],
     ["name": "set_house_style", "description": "设置小屋风格：cozy-wood | light-wood | walnut | japanese | modern | auto。",
      "inputSchema": ["type": "object", "properties": ["style": ["type": "string"], "home": ["type": "string"]], "required": ["style"]]],
     ["name": "reset_house", "description": "把小屋恢复自动：整个家、一台设备或一个房间。",
@@ -496,6 +508,17 @@ nonisolated(unsafe) let houseMCPTools: [[String: Any]] = [
         return try await houseLayout(pos: ["level", anyString(a["room"]), lv], rest: rest3)
     case "get_house_styles":
         return try await houseStyle(pos: ["list"], rest: a["home"] as? String != nil ? ["--home", a["home"] as! String] : [], asJSON: true)
+    case "get_house_decor", "set_house_decor":
+        var rest: [String] = []
+        if let home = a["home"] as? String { rest += ["--home", home] }
+        if let room = a["room"] as? String { rest += ["--room", room] }
+        if name == "get_house_decor" { return try await houseDecor(pos: ["list"], rest: rest) }
+        let operations = [a["slot"] != nil || a["item"] != nil, a["enabled"] != nil, a["seasonal"] != nil].filter { $0 }.count
+        guard operations == 1 else { return ["ok": false, "error": L("每次只修改一项", "Specify exactly one operation")] }
+        if let enabled = a["enabled"] as? Bool { return try await houseDecor(pos: [enabled ? "on" : "off"], rest: rest) }
+        if let seasonal = a["seasonal"] as? Bool { return try await houseDecor(pos: ["seasonal", seasonal ? "on" : "off"], rest: rest) }
+        guard let slot = a["slot"] as? String, let item = a["item"] as? String else { return ["ok": false, "error": L("需要位置和装饰", "Expected slot and item")] }
+        return try await houseDecor(pos: ["set", slot, item], rest: rest)
     case "set_house_style":
         return try await houseStyle(pos: ["set", anyString(a["style"])], rest: a["home"] as? String != nil ? ["--home", a["home"] as! String] : [], asJSON: true)
     case "reset_house": return try await houseReset(device: a["device"] as? String, room: a["room"] as? String, home: a["home"] as? String)
