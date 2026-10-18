@@ -34,6 +34,8 @@ enum HouseFixtureNames {
         case "bedside": return L("床头灯位", "Bedside lamp")
         case "ac": return L("空调位", "Air conditioner")
         case "ceiling": return L("吸顶灯位", "Ceiling light")
+        case "pendant": return L("吊灯位", "Pendant light")
+        case "wall_lamp": return L("壁灯位", "Wall lamp")
         case "monitor": return L("显示器位", "Monitor")
         case "entry_light": return L("玄关灯位", "Entry light")
         default: return id
@@ -41,7 +43,7 @@ enum HouseFixtureNames {
     }
 
     /// 书房的显示器位和吸顶灯位挨得近，标签放到框上方，避免和徽章重叠
-    static let labelAbove: Set<String> = ["monitor", "ceiling"]
+    static let labelAbove: Set<String> = ["monitor", "ceiling", "pendant", "entry_light"]
 
     static func spot(_ s: HouseSpot?) -> String {
         switch s {
@@ -59,11 +61,18 @@ struct HouseEditSlots: View {
     let room: HouseRoom
     let artSize: CGSize
     let edit: HouseEditContext
+    /// 全场景统一排好的标签中心（labelPositions）；没有就按 labelAbove 放在框上 / 下
+    var labelAt: [HouseSelection: CGPoint] = [:]
+    /// 位置框和标签分两层画（场景里所有房间的框都在下，标签都在上），标签不会被隔壁房间的框压住
+    var labelsLayer = false
 
     /// 一个房间里所有可放置的位置（剖面原图坐标），点选和拖放命中测试共用
     static func targets(module: HouseCutawayModule, room: HouseRoom) -> [(sel: HouseSelection, rect: CGRect, round: Bool, labelAbove: Bool, fixture: String?)] {
         var out: [(HouseSelection, CGRect, Bool, Bool, String?)] = []
         for light in module.lights {
+            // 墙挂灯具随墙被切掉：位置不在了，空着就不给放（没法往看不见的壁灯上放灯）；
+            // 已经放了设备的，在 alt 地面点留一个位置框，方便拖走
+            if light.hidden == true, !room.devices.contains(where: { $0.spot == .fixture(light.id) }) { continue }
             if let r = rect(light) {
                 out.append((HouseSelection(roomKey: room.key, spot: .fixture(light.id)), r, true, HouseFixtureNames.labelAbove.contains(light.id), light.id))
             }
@@ -87,7 +96,51 @@ struct HouseEditSlots: View {
         .frame(width: artSize.width, height: artSize.height, alignment: .topLeading)
     }
 
+    /// 估算标签胶囊大小（14pt semibold + 左右 8 / 上下 3 内边距）
+    static func labelSize(_ text: String, fontSize: CGFloat = 14) -> CGSize {
+        let w = text.reduce(CGFloat(0)) { $0 + ($1.unicodeScalars.first!.value > 0x2E80 ? fontSize : fontSize * 0.56) }
+        return CGSize(width: w + 16, height: fontSize + 8)
+    }
+
+    /// 跨房间统一摆放灯具位标签：依次试 默认侧 / 另一侧 / 右 / 左，挑和已放标签、其他位置框、
+    /// 房间名牌重叠最少且不出画面的位置。房间之间的标签以前各排各的，会叠在一起（r4 审查：卧室空调 × 床头灯）。
+    static func labelPositions(_ items: [(sel: HouseSelection, rect: CGRect, labelAbove: Bool, text: String)],
+                               obstacles: [CGRect], fixedLabels: [CGRect] = [], bounds: CGSize) -> [HouseSelection: CGPoint] {
+        func area(_ a: CGRect, _ b: CGRect) -> CGFloat { let i = a.intersection(b); return i.isNull ? 0 : i.width * i.height }
+        var placed: [CGRect] = fixedLabels, out: [HouseSelection: CGPoint] = [:]
+        let slots = items.map(\.rect) + obstacles
+        // 先排上下文最挤的（周围位置框多的），它们选择少
+        let order = items.indices.sorted { i, j in
+            let ci = slots.filter { $0.insetBy(dx: -60, dy: -40).intersects(items[i].rect) }.count
+            let cj = slots.filter { $0.insetBy(dx: -60, dy: -40).intersects(items[j].rect) }.count
+            return ci != cj ? ci > cj : (items[i].rect.minY, items[i].rect.minX) < (items[j].rect.minY, items[j].rect.minX)
+        }
+        for i in order {
+            let it = items[i], r = it.rect, sz = labelSize(it.text)
+            let below = CGPoint(x: r.midX, y: r.maxY + 16), above = CGPoint(x: r.midX, y: r.minY - 14)
+            var cands = it.labelAbove ? [above, below] : [below, above]
+            cands += [CGPoint(x: r.maxX + sz.width / 2 + 4, y: r.midY), CGPoint(x: r.minX - sz.width / 2 - 4, y: r.midY)]
+            var best = cands[0], bestScore = CGFloat.infinity
+            for (k, c) in cands.enumerated() {
+                let lr = CGRect(x: c.x - sz.width / 2, y: c.y - sz.height / 2, width: sz.width, height: sz.height)
+                var score = CGFloat(k) * 40
+                score += placed.reduce(0) { $0 + area($1, lr) * 12 }
+                score += slots.reduce(0) { $0 + ($1 == r ? 0 : area($1, lr)) * 2 }
+                let inside = lr.intersection(CGRect(origin: .zero, size: bounds))
+                score += (lr.width * lr.height - (inside.isNull ? 0 : inside.width * inside.height)) * 20
+                if score < bestScore { bestScore = score; best = c }
+            }
+            placed.append(CGRect(x: best.x - sz.width / 2, y: best.y - sz.height / 2, width: sz.width, height: sz.height))
+            out[it.sel] = best
+        }
+        return out
+    }
+
     private static func rect(_ l: HouseLightSpec) -> CGRect? {
+        // 合成场景：墙挂灯具随墙被切掉 / 吸顶灯 → 用 alt 点（地面替代位 / 光斑上方），和徽章位同样大小
+        if let a = l.alt, a.count >= 2, l.hidden == true || l.corePolygon == nil {
+            return CGRect(x: a[0] - 26, y: a[1] - 44, width: 52, height: 52)
+        }
         if let poly = l.corePolygon, !poly.isEmpty {
             let xs = poly.map { $0[0] }, ys = poly.map { $0[1] }
             let r = CGRect(x: xs.min()!, y: ys.min()!, width: xs.max()! - xs.min()!, height: ys.max()! - ys.min()!)
@@ -125,52 +178,57 @@ struct HouseEditSlots: View {
         let solid: Bool = { switch lk { case .hoverOK, .hoverBad: return true; default: return selected } }()
         let isDragged = edit.drag.session?.did == device?.did && device != nil && edit.drag.session != nil
         let shape = RoundedRectangle(cornerRadius: round ? min(r.width, r.height) / 2 : 10, style: .continuous)
-        ZStack {
-            shape.fill(color.opacity(solid ? 0.28 : (lk.isCandidate ? 0.14 : 0.06)))
-            shape.strokeBorder(color.opacity(solid ? 1 : 0.9), style: StrokeStyle(lineWidth: solid ? 4 : (lk.isCandidate ? 2.5 : 2), dash: solid ? [] : [7, 5]))
-            if case .hoverBad = lk {
-                Image(systemName: "nosign").font(.system(size: 18, weight: .bold)).foregroundStyle(red).shadow(color: .black.opacity(0.6), radius: 2)
-            } else if case .hoverOK = lk {
-                Image(systemName: device == nil ? "arrow.down.circle.fill" : "arrow.left.arrow.right.circle.fill")
-                    .font(.system(size: 18, weight: .bold)).foregroundStyle(green).shadow(color: .black.opacity(0.6), radius: 2)
-            } else if device == nil {
-                Image(systemName: "plus").font(.system(size: 16, weight: .bold)).foregroundStyle(color.opacity(0.9))
-                    .shadow(color: .black.opacity(0.6), radius: 2)
-            }
-        }
-        .frame(width: r.width, height: r.height)
-        .scaleEffect(lk.isHover ? 1.1 : 1)
-        .opacity(lk.isInvalid ? 0.3 : (isDragged ? 0.5 : 1))
-        .contentShape(shape)
-        .onTapGesture { edit.onSelect(sel) }
-        .modifier(HouseSlotDrag(enabled: device != nil) { edit.beginDrag(device?.did ?? "", sel) })
-        .position(x: r.midX, y: r.midY)
-        if case .hoverBad(let why) = lk {
-            hoverTag(why, color: red, at: CGPoint(x: r.midX, y: r.maxY + 18))
-        } else if case .hoverOK = lk, let s = edit.drag.session {
-            hoverTag(device == nil || device?.did == s.did ? L("放到这里", "Drop here") : L("和 ", "Swap with ") + (device?.name ?? "") + L(" 交换", ""),
-                     color: green, at: CGPoint(x: r.midX, y: r.maxY + 18))
-        } else if let label, !lk.isInvalid {
-            Text(label)
-                .font(.system(size: 14, weight: .semibold)).lineLimit(1)
-                .foregroundStyle(device != nil ? Color.white : Color.black.opacity(0.8))
-                .padding(.horizontal, 8).padding(.vertical, 3)
-                .background(Capsule().fill(device != nil ? Color.black.opacity(0.72) : Color.white.opacity(0.85)))
-                .overlay(Capsule().stroke(selected ? Color.accentColor : .clear, lineWidth: 2))
-                .fixedSize()
-                .position(x: r.midX, y: labelAbove ? r.minY - 14 : r.maxY + 16)
-                .allowsHitTesting(false)
-        }
-        if lk.isHover, edit.drag.showPreview, let s = edit.drag.session {
-            // 截图模式：系统拖动图像不会进 cacheDisplay，这里画一个同样的拖动标签 + 指针
-            HouseDragChip(name: s.name, category: s.category)
-                .overlay(alignment: .topLeading) {
-                    Image(systemName: "cursorarrow").font(.system(size: 22)).foregroundStyle(.white)
-                        .shadow(color: .black, radius: 1).offset(x: -10, y: -14)
+        let fallback = CGPoint(x: r.midX, y: labelAbove ? r.minY - 14 : r.maxY + 16)
+        let labelPoint: CGPoint = labelAt[sel] ?? fallback
+        if !labelsLayer {
+            ZStack {
+                shape.fill(color.opacity(solid ? 0.28 : (lk.isCandidate ? 0.14 : 0.06)))
+                shape.strokeBorder(color.opacity(solid ? 1 : 0.9), style: StrokeStyle(lineWidth: solid ? 4 : (lk.isCandidate ? 2.5 : 2), dash: solid ? [] : [7, 5]))
+                if case .hoverBad = lk {
+                    Image(systemName: "nosign").font(.system(size: 18, weight: .bold)).foregroundStyle(red).shadow(color: .black.opacity(0.6), radius: 2)
+                } else if case .hoverOK = lk {
+                    Image(systemName: device == nil ? "arrow.down.circle.fill" : "arrow.left.arrow.right.circle.fill")
+                        .font(.system(size: 18, weight: .bold)).foregroundStyle(green).shadow(color: .black.opacity(0.6), radius: 2)
+                } else if device == nil {
+                    Image(systemName: "plus").font(.system(size: 16, weight: .bold)).foregroundStyle(color.opacity(0.9))
+                        .shadow(color: .black.opacity(0.6), radius: 2)
                 }
-                .fixedSize()
-                .position(x: r.midX + 70, y: r.midY + 6)
-                .allowsHitTesting(false)
+            }
+            .frame(width: r.width, height: r.height)
+            .scaleEffect(lk.isHover ? 1.1 : 1)
+            .opacity(lk.isInvalid ? 0.3 : (isDragged ? 0.5 : 1))
+            .contentShape(shape)
+            .onTapGesture { edit.onSelect(sel) }
+            .modifier(HouseSlotDrag(enabled: device != nil) { edit.beginDrag(device?.did ?? "", sel) })
+            .position(x: r.midX, y: r.midY)
+        } else {
+            if case .hoverBad(let why) = lk {
+                hoverTag(why, color: red, at: CGPoint(x: r.midX, y: r.maxY + 18))
+            } else if case .hoverOK = lk, let s = edit.drag.session {
+                hoverTag(device == nil || device?.did == s.did ? L("放到这里", "Drop here") : L("和 ", "Swap with ") + (device?.name ?? "") + L(" 交换", ""),
+                         color: green, at: CGPoint(x: r.midX, y: r.maxY + 18))
+            } else if let label, !lk.isInvalid {
+                Text(label)
+                    .font(.system(size: 14, weight: .semibold)).lineLimit(1)
+                    .foregroundStyle(device != nil ? Color.white : Color.black.opacity(0.8))
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(Capsule().fill(device != nil ? Color.black.opacity(0.72) : Color.white.opacity(0.85)))
+                    .overlay(Capsule().stroke(selected ? Color.accentColor : .clear, lineWidth: 2))
+                    .fixedSize()
+                    .position(labelPoint)
+                    .allowsHitTesting(false)
+            }
+            if lk.isHover, edit.drag.showPreview, let s = edit.drag.session {
+                // 截图模式：系统拖动图像不会进 cacheDisplay，这里画一个同样的拖动标签 + 指针
+                HouseDragChip(name: s.name, category: s.category)
+                    .overlay(alignment: .topLeading) {
+                        Image(systemName: "cursorarrow").font(.system(size: 22)).foregroundStyle(.white)
+                            .shadow(color: .black, radius: 1).offset(x: -10, y: -14)
+                    }
+                    .fixedSize()
+                    .position(x: r.midX + 70, y: r.midY + 6)
+                    .allowsHitTesting(false)
+            }
         }
     }
 
@@ -448,7 +506,9 @@ struct HouseEditPanel: View {
     private func roomMapping(_ resolved: ResolvedHouse) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(L("房间", "Rooms")).font(.system(size: 12, weight: .semibold))
-            Text(L("每个小屋房间放一个米家房间，最多 4 个（厨房、卫生间、阳台的素材之后加）。", "Each house room shows one Mijia room (kitchen, bathroom and balcony art come later)."))
+            Text(m.houseLayoutCells != nil
+                 ? L("用的是自定义布局：这里的菜单直接改布局（换模块、加进空位、移出）；位置在「房间布局」里拖。", "Using a custom layout: these menus edit it directly (change type, add to a free cell, take out). Move rooms around in Room layout.")
+                 : L("每个小屋房间放一个米家房间，最多 4 个；想要厨房、卫生间、阳台或别的摆法，用「房间布局」。", "Each house room shows one Mijia room, up to 4. For a kitchen, bathroom, balcony or another arrangement, use Room layout."))
                 .font(.system(size: 10)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             ForEach(resolved.rooms, id: \.key) { r in mappingRow(key: r.key, title: r.title, status: r.module.title, active: true) }
             ForEach(resolved.excluded) { e in mappingRow(key: e.key, title: e.title, status: reason(e), active: false) }
@@ -462,6 +522,7 @@ struct HouseEditPanel: View {
         case .spotTaken: return e.module.title + L(" · 已被占用", " · taken")
         case .excluded: return L("不放进小屋", "Not in house")
         case .unassigned: return L("未分配房间", "No room")
+        case .notInLayout: return L("不在布局里", "Not in layout")
         }
     }
 
@@ -471,6 +532,9 @@ struct HouseEditPanel: View {
             Circle().fill(active ? Color.green : Color.secondary.opacity(0.4)).frame(width: 6, height: 6)
             Text(title).font(.system(size: 12)).lineLimit(1)
             Spacer(minLength: 4)
+            if let layout = m.houseLayoutCells {
+                layoutMenu(layout: layout, key: key, title: title, status: status)
+            } else {
             Menu {
                 Button(L("自动", "Automatic")) { m.houseEdit(L("房间 ", "Room ") + title) { $0.setRoom(home: home, key: key, module: nil) } }
                 Divider()
@@ -487,9 +551,39 @@ struct HouseEditPanel: View {
             }
             .menuStyle(.borderlessButton).fixedSize().foregroundStyle(.secondary)
             .disabled(key.isEmpty)
+            }
         }
         .padding(.vertical, 3).padding(.horizontal, 6)
         .background(Theme.tile.opacity(0.6), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+    }
+
+    /// 自定义布局时的房间菜单：直接改布局里这个房间的模块（换模块 / 加进布局 / 移出），和「房间布局」标签同一份数据
+    private func layoutMenu(layout: [HouseLayoutCell], key: String, title: String, status: String) -> some View {
+        let cell = layout.first { $0.room == key }
+        func apply(_ module: String?) {
+            guard let next = HouseLayoutSolver.setModule(layout, room: key, module: module) else { return }
+            m.houseEdit(L("房间 ", "Room ") + title) { $0.setLayout(home: home, layout: next.isEmpty ? nil : next) }
+        }
+        let auto = HouseModule.isEntryFoyer(roomName: title) ? HouseModule.generic : HouseModule.from(roomName: title)
+        return Menu {
+            Button(L("自动（", "Automatic (") + auto.title + L("）", ")")) { apply(auto.rawValue) }
+                .disabled(HouseLayoutSolver.setModule(layout, room: key, module: auto.rawValue) == nil)
+            Divider()
+            ForEach(HouseModule.allCases, id: \.self) { mod in
+                Button {
+                    apply(mod.rawValue)
+                } label: {
+                    if cell?.module == mod.rawValue { Label(mod.title, systemImage: "checkmark") } else { Text(mod.title) }
+                }
+                .disabled(HouseLayoutSolver.setModule(layout, room: key, module: mod.rawValue) == nil)
+            }
+            Divider()
+            Button(L("不放进小屋", "Not in house")) { apply(nil) }.disabled(cell == nil)
+        } label: {
+            Text(cell.flatMap { HouseModule(rawValue: $0.module)?.title } ?? status).font(.system(size: 11))
+        }
+        .menuStyle(.borderlessButton).fixedSize().foregroundStyle(.secondary)
+        .disabled(key.isEmpty)
     }
 
     private var storageNote: String {
@@ -581,6 +675,38 @@ extension Snapshot {
         for (suffix, name) in [("light", NSAppearance.Name.aqua), ("dark", NSAppearance.Name.darkAqua)] {
             appearance = NSAppearance(named: name)
             render(HousePilotHost(editing: true).environmentObject(m), out.appendingPathComponent("house-edit-undo-\(suffix).png"), size: HouseWindow.editSize)
+        }
+        // 房间布局标签
+        // 用解析出来的真实房间 key（标题跟语言走），再加两间没有经典美术的房间（厨房 / 浴室）
+        let key = { (mod: HouseModule) in m.houseResolved.rooms.first { $0.module == mod }?.key ?? "name:" + mod.title }
+        let mix: [HouseLayoutCell] = [
+            .init(room: key(.bedroom), module: "bedroom", col: 0, row: 0),
+            .init(room: key(.study), module: "study", col: 1, row: 0),
+            .init(room: "name:" + L("卫生间", "Bathroom"), module: "bathroom", col: 2, row: 0),
+            .init(room: key(.living), module: "living", col: 0, row: 1),
+            .init(room: "name:" + L("厨房", "Kitchen"), module: "kitchen", col: 2, row: 1),
+        ]
+        m.houseEdit("layout") { $0.setLayout(home: home, layout: mix) }
+        for (suffix, name) in [("light", NSAppearance.Name.aqua), ("dark", NSAppearance.Name.darkAqua)] {
+            appearance = NSAppearance(named: name)
+            render(HousePilotHost(editing: true, editTab: .arrange).environmentObject(m), out.appendingPathComponent("house-arrange-\(suffix).png"), size: HouseWindow.editSize)
+        }
+        // 自定义布局后的小屋本身：模块合成图 + 灯光 / 徽章（查看 + 摆放）
+        for (suffix, name) in [("light", NSAppearance.Name.aqua), ("dark", NSAppearance.Name.darkAqua)] {
+            appearance = NSAppearance(named: name)
+            render(HousePilotHost().environmentObject(m), out.appendingPathComponent("house-composed-window-\(suffix).png"), size: HouseWindow.normalSize)
+            render(HousePilotHost(editing: true).environmentObject(m), out.appendingPathComponent("house-composed-edit-\(suffix).png"), size: HouseWindow.editSize)
+        }
+        // Devices 标签的房间菜单在自定义布局下直接改布局：厨房移出，门口（自动 = 门厅模块）加进空出来的格子
+        let entry = m.houseResolved.excluded.first { $0.reason == .notInLayout && HouseModule.isEntryFoyer(roomName: $0.title) }
+        if var lay = m.house.homes[home]?.layout {
+            lay = HouseLayoutSolver.setModule(lay, room: "name:" + L("厨房", "Kitchen"), module: nil) ?? lay
+            if let entry { lay = HouseLayoutSolver.setModule(lay, room: entry.key, module: "generic") ?? lay }
+            m.houseEdit("menu") { $0.setLayout(home: home, layout: lay) }
+        }
+        for (suffix, name) in [("light", NSAppearance.Name.aqua), ("dark", NSAppearance.Name.darkAqua)] {
+            appearance = NSAppearance(named: name)
+            render(HousePilotHost(editing: true).environmentObject(m), out.appendingPathComponent("house-composed-menu-\(suffix).png"), size: HouseWindow.editSize)
         }
         exit(0)
     }

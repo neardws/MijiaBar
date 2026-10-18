@@ -18,6 +18,11 @@ public enum HouseGrid {
     public static let cutH = 40
     public static let slab = 14
     public static let px = 2
+    /// 错层：每级把整格（地板、墙、家具）抬高 levelStep 像素，地台跟着加厚到最低一格的底面。
+    /// r6：台阶要看得见（参照概念图）——一级 48px 已高过切墙（40），高的那格的地台侧面露在前面矮格的切墙上方；
+    /// 合成器把露出的地台画成石砌基座（HouseComposer.plinth），朝向不同明暗不同。
+    public static let levelStep = 48
+    public static let levelRange = -1...1
     /// 墙顶厚度方向（朝墙后）：NW 墙往左上，NE 墙往右上
     public static let capNW = (x: -10, y: -4)
     public static let capNE = (x: 10, y: -4)
@@ -36,8 +41,38 @@ public struct HouseLayoutCell: Codable, Equatable, Sendable, Hashable {
     public var module: String
     public var col: Int
     public var row: Int
-    public init(room: String, module: String, col: Int, row: Int) {
-        self.room = room; self.module = module; self.col = col; self.row = row
+    /// 错层级数（-1…1）。nil = 自动（按格子位置取 `HouseLevels.pattern`）；不写进 JSON，老文件照常读。
+    public var level: Int? = nil
+    public init(room: String, module: String, col: Int, row: Int, level: Int? = nil) {
+        self.room = room; self.module = module; self.col = col; self.row = row; self.level = level
+    }
+}
+
+/// 自定义布局的错层（错落有致）：每格一个地面高度。
+public enum HouseLevels {
+    /// 自动图案（3×2，按格子位置）：后排左右两格抬高一级，前排右格下沉一级，其余平地——
+    /// 和概念图一样高低错落；任意相邻两格最多差两级。
+    public static let pattern: [[Int]] = [[1, 0, 1], [0, 0, -1]]
+
+    public static func auto(col: Int, row: Int) -> Int {
+        guard row >= 0, row < pattern.count, col >= 0, col < pattern[row].count else { return 0 }
+        return pattern[row][col]
+    }
+
+    /// 实际级数：用户设的（夹到 levelRange）或自动图案
+    public static func effective(_ c: HouseLayoutCell) -> Int {
+        let l = c.level ?? auto(col: c.col, row: c.row)
+        return min(max(l, HouseGrid.levelRange.lowerBound), HouseGrid.levelRange.upperBound)
+    }
+
+    /// 地面抬高的像素
+    public static func elevation(_ c: HouseLayoutCell) -> Int { effective(c) * HouseGrid.levelStep }
+
+    /// 每个被占格子 → 所在房间的地面高度（客厅两格同高）
+    public static func elevations(_ cells: [(HouseLayoutCell, Int)]) -> [[Int]: Int] {
+        var m: [[Int]: Int] = [:]
+        for (c, fw) in cells { for dc in 0..<fw { m[[c.col + dc, c.row]] = elevation(c) } }
+        return m
     }
 }
 
@@ -49,6 +84,8 @@ public struct HouseModuleArt: Codable, Equatable, Sendable {
     public var tip: [Int]
     public var region: [[Double]]
     public var label: [Double]
+    /// 两面后墙都被切时的标签位（地面空地，避开家具）；没有就放地板中间
+    public var floorLabel: [Double]? = nil
     public var badges: [[Double]]
     public var lights: [HouseModuleLight]
     /// "day-unlit" / "day-lit" / "night-unlit" / "night-lit"，以及切墙版 "…-cut"
@@ -117,6 +154,8 @@ public enum HouseWallPlanner {
         public var fw: Int
         public var tip: (x: Int, y: Int)
         public var segments: [HouseWallSegment]
+        /// 地面抬高（像素，HouseLevels.elevation）；墙段高度仍按本格地面算
+        public var elev: Int = 0
     }
 
     public static func occupancy(_ cells: [(HouseLayoutCell, Int)]) -> Set<[Int]> {
@@ -138,7 +177,7 @@ public enum HouseWallPlanner {
                 let b = (x: a.x + HouseGrid.W / 2, y: a.y + HouseGrid.floorH / 2)
                 segs.append(.init(side: .ne, a: a, b: b, height: occ.contains([c.col + i, c.row - 1]) ? HouseGrid.cutH : HouseGrid.wallH))
             }
-            return Placed(cell: c, fw: fw, tip: T, segments: segs)
+            return Placed(cell: c, fw: fw, tip: T, segments: segs, elev: HouseLevels.elevation(c))
         }
     }
 

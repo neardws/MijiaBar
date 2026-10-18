@@ -121,6 +121,7 @@ public struct HouseEdit: Equatable, Sendable {
     public let home: String
     public let devices: [String: Change<DeviceValue>]
     public let rooms: [String: Change<String?>]
+    public let layout: Change<[HouseLayoutCell]?>?
 
     public enum Side: Sendable { case before, after }
 
@@ -143,14 +144,22 @@ public struct HouseEdit: Equatable, Sendable {
             let x = module(before, home: home, room: k), y = module(after, home: home, room: k)
             if x != y { rs[k] = Change(before: x, after: y) }
         }
-        if ds.isEmpty && rs.isEmpty { return nil }
-        return HouseEdit(label: label, home: home, devices: ds, rooms: rs)
+        let lb = before.homes[home]?.layout, la = after.homes[home]?.layout
+        let layoutChange: Change<[HouseLayoutCell]?>? = (lb != la) ? Change(before: lb, after: la) : nil
+        if ds.isEmpty && rs.isEmpty && layoutChange == nil { return nil }
+        return HouseEdit(label: label, home: home, devices: ds, rooms: rs, layout: layoutChange)
     }
 
     /// 文件里这些条目现在是不是还等于 side 那一侧的值（不是的话说明被别处改过，撤销记录作废）
     public func matches(_ f: HouseFile, side: Side) -> Bool {
-        devices.allSatisfy { k, c in HouseEdit.value(f, home: home, did: k) == (side == .before ? c.before : c.after) }
-            && rooms.allSatisfy { k, c in HouseEdit.module(f, home: home, room: k) == (side == .before ? c.before : c.after) }
+        let devicesOK = devices.allSatisfy { k, c in HouseEdit.value(f, home: home, did: k) == (side == .before ? c.before : c.after) }
+        let roomsOK = rooms.allSatisfy { k, c in HouseEdit.module(f, home: home, room: k) == (side == .before ? c.before : c.after) }
+        let layoutOK: Bool = {
+            guard let layout else { return true }
+            let cur = f.homes[home]?.layout
+            return cur == (side == .before ? layout.before : layout.after)
+        }()
+        return devicesOK && roomsOK && layoutOK
     }
 
     public func apply(_ side: Side, to f: inout HouseFile, now: Date = Date()) {
@@ -160,6 +169,9 @@ public struct HouseEdit: Equatable, Sendable {
             else { f.setDevice(home: home, did: k, now: now) { $0.visible = v.visible; $0.place = v.place } }
         }
         for (k, c) in rooms { f.setRoom(home: home, key: k, module: side == .before ? c.before : c.after, now: now) }
+        if let layout {
+            f.setLayout(home: home, layout: side == .before ? layout.before : layout.after, now: now)
+        }
     }
 }
 

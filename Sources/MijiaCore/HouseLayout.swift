@@ -84,7 +84,16 @@ public enum HouseCatalog {
         case .generic: return [
             HouseFixture("entry_light", [.light]),
         ]
-        case .kitchen, .bathroom, .balcony: return []
+        // 下面三个只有 Phase 2 模块美术（自定义布局合成）；经典整图里没有，hasArt 仍为 false
+        case .kitchen: return [
+            HouseFixture("pendant", [.light], hints: ["吊灯", "吊燈", "餐", "pendant", "dining"]),
+        ]
+        case .bathroom: return [
+            HouseFixture("ceiling", [.light], hints: ["吸顶", "吸頂", "镜", "鏡", "ceiling", "mirror"]),
+        ]
+        case .balcony: return [
+            HouseFixture("wall_lamp", [.light], hints: ["壁灯", "壁燈", "wall"]),
+        ]
         }
     }
 
@@ -97,7 +106,7 @@ public enum HouseCatalog {
         case .bedroom: return 3
         case .study: return 3
         case .generic: return 3
-        case .kitchen, .bathroom, .balcony: return 0
+        case .kitchen, .bathroom, .balcony: return 3
         }
     }
     public static func badgeIds(_ m: HouseModule) -> [String] { (0..<badgeCount(m)).map { "b\($0 + 1)" } }
@@ -141,6 +150,7 @@ public struct ExcludedHouseRoom: Hashable, Sendable, Identifiable {
         case spotTaken      // 同类模块已经放了另一个房间
         case excluded       // 用户设成不放进小屋
         case unassigned     // 米家里没分配房间
+        case notInLayout    // 自定义布局里没放这个房间
     }
     public var id: String { key }
     public let key: String
@@ -167,7 +177,13 @@ public enum HouseResolver {
         return ""
     }
 
-    public static func resolve(devices: [Device], config: HomeHouse?, isHidden: (Device) -> Bool, name: (Device) -> String) -> ResolvedHouse {
+    /// `layout`：用户自定义布局（非经典四室）。给了就走模块合成：布局里的每个格子就是一个房间（模块按格子），
+    /// 7 种模块都有素材；不在布局里的房间记为 notInLayout。nil = 经典四室整图（每种模块一个位置）。
+    public static func resolve(devices: [Device], config: HomeHouse?, isHidden: (Device) -> Bool, name: (Device) -> String,
+                               layout: [HouseLayoutCell]? = nil) -> ResolvedHouse {
+        if let layout, !HouseLayoutSolver.isClassicGeometry(layout) {
+            return resolveComposed(devices: devices, config: config ?? HomeHouse(), layout: layout, isHidden: isHidden, name: name)
+        }
         let cfg = config ?? HomeHouse()
         let groups = Dictionary(grouping: devices, by: roomKey)
         var hidden: [String] = []
@@ -230,6 +246,39 @@ public enum HouseResolver {
         // 没进小屋的房间里，用户明确隐藏的设备也报告出来
         for e in excluded { for d in groups[e.key] ?? [] where !visible(d) { hidden.append(d.did) } }
 
+        excluded.sort { ($0.reason.rawValue, $0.title, $0.key) < ($1.reason.rawValue, $1.title, $1.key) }
+        return ResolvedHouse(rooms: rooms, excluded: excluded, hidden: hidden.sorted())
+    }
+
+    static func resolveComposed(devices: [Device], config cfg: HomeHouse, layout: [HouseLayoutCell],
+                                isHidden: (Device) -> Bool, name: (Device) -> String) -> ResolvedHouse {
+        let groups = Dictionary(grouping: devices, by: roomKey)
+        func visible(_ d: Device) -> Bool {
+            if let v = cfg.devices[d.did]?.visible { return v }
+            return !isHidden(d)
+        }
+        var hidden: [String] = []
+        var rooms: [ResolvedHouseRoom] = []
+        var seen: Set<String> = []
+        for cell in layout.sorted(by: { ($0.row, $0.col) < ($1.row, $1.col) }) {
+            guard !cell.room.isEmpty, !seen.contains(cell.room), cfg.rooms[cell.room]?.module != "none" else { continue }
+            seen.insert(cell.room)
+            let ds = groups[cell.room] ?? []
+            let mod = HouseModule(rawValue: cell.module) ?? .generic
+            let title = ds.first?.roomName.flatMap { $0.isEmpty ? nil : $0 }
+                ?? (cell.room.hasPrefix("name:") ? String(cell.room.dropFirst(5)) : mod.title)
+            for d in ds where !visible(d) { hidden.append(d.did) }
+            rooms.append(ResolvedHouseRoom(key: cell.room, title: title, module: mod,
+                                           devices: place(ds.filter { visible($0) && HouseCatalog.showable($0.category) }, in: mod, cfg: cfg, name: name)))
+        }
+        var excluded: [ExcludedHouseRoom] = []
+        for (key, ds) in groups where !seen.contains(key) {
+            let title = ds.first?.roomName.flatMap { $0.isEmpty ? nil : $0 } ?? L("未分配房间", "Unassigned")
+            let shown = ds.filter { visible($0) && HouseCatalog.showable($0.category) }
+            let reason: ExcludedHouseRoom.Reason = key.isEmpty ? .unassigned : cfg.rooms[key]?.module == "none" ? .excluded : .notInLayout
+            excluded.append(.init(key: key, title: title, module: HouseModule.from(roomName: ds.first?.roomName), reason: reason, deviceCount: shown.count))
+            for d in ds where !visible(d) { hidden.append(d.did) }
+        }
         excluded.sort { ($0.reason.rawValue, $0.title, $0.key) < ($1.reason.rawValue, $1.title, $1.key) }
         return ResolvedHouse(rooms: rooms, excluded: excluded, hidden: hidden.sorted())
     }

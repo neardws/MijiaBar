@@ -26,11 +26,16 @@ public struct HouseDeviceOverride: Codable, Equatable, Sendable {
 public struct HomeHouse: Codable, Equatable, Sendable {
     public var rooms: [String: HouseRoomOverride] = [:]
     public var devices: [String: HouseDeviceOverride] = [:]
+    /// nil = 经典四室 / 自动；非空 = 用户的格子布局（最多 3×2）
+    public var layout: [HouseLayoutCell]? = nil
+    public var layoutUpdatedAt: Date? = nil
     public init() {}
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         rooms = try c.decodeIfPresent([String: HouseRoomOverride].self, forKey: .rooms) ?? [:]
         devices = try c.decodeIfPresent([String: HouseDeviceOverride].self, forKey: .devices) ?? [:]
+        layout = try c.decodeIfPresent([HouseLayoutCell].self, forKey: .layout)
+        layoutUpdatedAt = try c.decodeIfPresent(Date.self, forKey: .layoutUpdatedAt)
     }
 }
 
@@ -53,6 +58,8 @@ public struct HouseFile: Codable, Equatable, Sendable {
             var h = out.homes[hid] ?? HomeHouse()
             for (k, v) in hb.rooms where (h.rooms[k]?.updatedAt ?? .distantPast) < v.updatedAt { h.rooms[k] = v }
             for (k, v) in hb.devices where (h.devices[k]?.updatedAt ?? .distantPast) < v.updatedAt { h.devices[k] = v }
+            let ta = h.layoutUpdatedAt ?? .distantPast, tb = hb.layoutUpdatedAt ?? .distantPast
+            if tb > ta { h.layout = hb.layout; h.layoutUpdatedAt = hb.layoutUpdatedAt }
             out.homes[hid] = h
         }
         return out
@@ -80,13 +87,21 @@ public struct HouseFile: Codable, Equatable, Sendable {
         h.rooms[key] = HouseRoomOverride(module: module, updatedAt: now); homes[home] = h
     }
     /// 恢复自动：整个家，或只一台设备 / 一个房间
-    public mutating func reset(home: String, did: String? = nil, room: String? = nil, now: Date = Date()) {
+    public mutating func setLayout(home: String, layout: [HouseLayoutCell]?, now: Date = Date()) {
+        var h = homes[home] ?? HomeHouse()
+        h.layout = layout
+        h.layoutUpdatedAt = now
+        homes[home] = h
+    }
+    public mutating func reset(home: String, did: String? = nil, room: String? = nil, layout: Bool = false, now: Date = Date()) {
         var h = homes[home] ?? HomeHouse()
         if let did { h.devices[did] = HouseDeviceOverride(updatedAt: now) }
         if let room { h.rooms[room] = HouseRoomOverride(module: nil, updatedAt: now) }
-        if did == nil && room == nil {
+        if layout { h.layout = nil; h.layoutUpdatedAt = now }
+        if did == nil && room == nil && !layout {
             for k in h.devices.keys { h.devices[k] = HouseDeviceOverride(updatedAt: now) }
             for k in h.rooms.keys { h.rooms[k] = HouseRoomOverride(module: nil, updatedAt: now) }
+            h.layout = nil; h.layoutUpdatedAt = now
         }
         homes[home] = h
     }

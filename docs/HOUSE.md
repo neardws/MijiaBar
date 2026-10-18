@@ -122,3 +122,34 @@ Open the house window (**Enlarge**) and click **Edit**. The window widens:
 Edits are written to `house.json` right away. Undo writes the previous values back with a fresh `updatedAt`, so it wins the merge on other Macs like any other edit. If the CLI, an agent or another Mac changes an entry that is in the undo history, the history is cleared with a notice, so undo never reverts someone else's change. External edits to other entries keep the history.
 
 Screenshots with demo data: `MijiaBar --house-window-snapshot <dir>` (set `MIJIABAR_LANG=en|zh-Hans` and `MIJIABAR_HOUSE_PHASE=day|night`). It renders the window, edit mode, two mid-drag states (`house-drag-valid`, `house-drag-invalid`, with the drag image drawn by the app because the system drag image can't be captured) and `house-edit-undo`.
+
+## Layout (Phase 2)
+
+`homes.<id>.layout` is an optional array of `{room, module, col, row, level?}`. Max grid 3×2; living footprint is 2×1.
+
+- `null` / absent → classic four-room cutaway (Phase 1 single PNGs).
+- Non-classic geometry → modules are stitched by `HouseComposer` (see `docs/HOUSE_MODULES.md`).
+
+```
+mijiabar house layout [--json]
+mijiabar house layout set <room:module:col:row[@level]> ...
+mijiabar house layout level <room> <-1|0|1|auto>
+mijiabar house layout flat | stagger [--home H]
+mijiabar house layout auto [--home H]
+mijiabar house layout classic [--home H]
+mijiabar house reset --layout
+```
+
+MCP: `get_house_layout`, `set_house_layout` (`mode`: classic / auto / flat / stagger, cells may carry `level`), `set_house_room_level` (`room`, `level`). Undo covers layout changes (same `updatedAt` merge via `layoutUpdatedAt`).
+
+### Split levels (staggered heights)
+
+Composed layouts are drawn with rooms at clearly different floor heights, like the original concept art. Each cell has an optional `level` of -1, 0 or +1. Each step moves the room's floor, walls and furniture up by `HouseGrid.levelStep` (48 px at 1×).
+
+- `level` absent → automatic pattern: back row `+1 0 +1`, front row `0 0 -1` (so the back corners are high and the front-right cell is low). `house layout stagger` clears all explicit levels back to this.
+- `house layout flat` sets every cell to 0. The House window → Room layout has a "Split levels" checkbox and ▼/▲ on each card. A "·" after the number means the level is automatic.
+- Classic four (layout `null`, or classic geometry with no explicit non-zero level) stays the single hand-drawn cutaway. An explicit non-zero level on classic geometry switches it to the composed renderer.
+- **Step faces:** one step (48 px) is taller than a cut wall (40 px), so a raised room's base shows above the cut wall of the lower room in front of it. The composer extends every room's base down to the lowest floor in the house and draws it as a stone plinth (`HouseComposer.plinth`). The plinth has 10 px courses of staggered 26 px blocks with a jittered tone per block, 1 px mortar, a shadow under the wooden slab and a ground line. The left-front (SW) face is lighter than the right-front (SE) face, and the night palette darkens it like the walls. Both lit and unlit renders draw the plinth identically, so light masks never reveal light on step faces. Two steps (96 px) stay below a full wall (104 px).
+- Shared and cut walls, end faces, the outline and the silhouette are computed from absolute heights. At the back corner the silhouette follows each wall's own height, so no outline-coloured triangle shows above a lower neighbour.
+- **Badges and floor spots:** a badge, floor `alt` spot or floor room label that would sit behind a front neighbour's cut wall (taller when that room is higher) moves along the floor into the room until it clears the wall top. Badges in a room are then kept ≥ 54 px apart. Ceiling and hidden-fixture spots move up to clear the badges, and a floor room label moves sideways (or above the badges) so it covers neither a badge nor a ceiling spot.
+- `house layout --json` reports `level` (or `"auto"`), `effective_level` and `level_step_px`. Out-of-range levels are rejected by validation (`levelOutOfRange`).
