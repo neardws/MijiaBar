@@ -31,8 +31,9 @@ def lamp(g, id, u, v, z, slot=0, wall=None, kind='lamp'):
     return d
 
 def ceiling(g, id, u, v, slot=0):
+    # alt = 编辑模式里灯具位的落点：光斑中心往上一点（“天花板上”），不和地板中部的徽章位叠在一起
     return {"id": id, "kind": "ceiling", "role": "light", "slot": slot,
-            "pool": ell(g, u, v, 120, 48), "reveal": ell(g, u, v, 160, 80)}
+            "pool": ell(g, u, v, 120, 48), "reveal": ell(g, u, v, 160, 80), "alt": P(g, u, v, 16)}
 
 # 1x1 模块的徽章位：地板中心周围三点（左、右、前），彼此 ≥ 60px，离相邻房间的徽章位也够远
 SPREAD = [(0.28, 0.66), (0.66, 0.28), (0.74, 0.74)]
@@ -46,7 +47,7 @@ def spec(module):
     if module == 'living':
         lights = [dict(lamp(g, 'floor_lamp', 0.07, 0.09, 63), pool=ell(g, 0.3, 0.3, 110, 44)),
                   dict(lamp(g, 'sconce', 0.81, 0.02, 71, slot=1, wall='ne', kind='sconce'), radius=75, strength=0.85, pool=ell(g, 0.85, 0.25, 90, 36),
-                       alt=P(g, 0.82, 0.32)),
+                       alt=P(g, 0.7, 0.22)),
                   {"id": "tv", "kind": "screen", "role": "tv", "slot": 0, "style": "tv",
                    # 电视柜离墙摆在右格中间（约 u=1.55, v=0.25）；屏幕平行于 NE 墙，按规范图实测的平行四边形
                    "screen": [[372, 153], [419, 173], [419, 209], [372, 190]], "throw": [-40, 40], "radius": 85,
