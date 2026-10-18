@@ -78,6 +78,40 @@ import Testing
         let result = try photo { col, row in row * 80 + col < 640 ? [245, 240, 232] : [25, 24, 27] }
         #expect(result.pattern == "bicolor")
     }
+    @Test func shadowedTuxedoThresholds() throws {
+        for (whiteCount, darkCount, pattern) in [(320, 6080, "bicolor"), (320, 1920, "bicolor"), (319, 1920, "solid"), (320, 1919, "solid")] {
+            let result = try photo { col, row in
+                let index = row * 80 + col
+                return index < whiteCount ? [245, 240, 232] : index < whiteCount + darkCount ? [70, 70, 70] : [85, 85, 85]
+            }
+            #expect(result.pattern == pattern)
+            #expect(result.diagnostics.white == Double(whiteCount) / 6400)
+            #expect(result.diagnostics.neutralDark == Double(darkCount) / 6400)
+            #expect(!result.diagnostics.striped)
+        }
+    }
+    @Test func warmCoatWhiteThreshold() throws {
+        for (whiteCount, pattern) in [(191, "tabby"), (192, "tabbyWhite"), (256, "tabbyWhite")] {
+            let result = try photo { col, row in row * 80 + col < whiteCount ? [245, 240, 232] : [225, 145, 55] }
+            #expect(result.pattern == pattern)
+            #expect(result.diagnostics.white == Double(whiteCount) / 6400)
+            #expect(result.diagnostics.warm == Double(6400 - whiteCount) / 6400)
+        }
+    }
+    @Test func diagnosticsMeasureCorrectedSelectedSamples() throws {
+        let grey = try photo { _, _ in [128, 128, 128] }
+        #expect(grey.diagnostics.grey == 1 && grey.diagnostics.cream == 0)
+        #expect(grey.diagnostics.maskCoverage == 1 && !grey.diagnostics.whiteBalanceApplied)
+        let mask: [UInt8] = [255, 128, 127, 0]
+        let result = try HousePetPhoto.analyze(rgba: [245, 240, 232, 255, 25, 24, 27, 255, 225, 145, 55, 255, 128, 128, 128, 255],
+                                             width: 4, height: 1, mask: mask)
+        #expect(result.diagnostics.white == 0.5 && result.diagnostics.neutralDark == 0.5)
+        #expect(result.diagnostics.warm == 0 && result.diagnostics.grey == 0 && result.diagnostics.cream == 0.5)
+        #expect(result.diagnostics.maskCoverage == 0.5 && result.diagnostics.whiteBalanceApplied)
+        let corrected = try photo { col, _ in col < 20 ? [200, 215, 235] : [185, 130, 70] }
+        #expect(corrected.diagnostics.whiteBalanceApplied && corrected.diagnostics.white == 0.25)
+        #expect(corrected.diagnostics.warm == 0.75)
+    }
     @Test func mostlyOrangeWithBlackAndWhiteIsNotCalico() throws {
         let result = try photo { col, row in
             let index = row * 80 + col

@@ -5,11 +5,22 @@ import Vision
 import CoreVideo
 
 public enum HousePetPhoto {
+    public struct Diagnostics: Codable, Equatable, Sendable {
+        public var white: Double
+        public var neutralDark: Double
+        public var warm: Double
+        public var grey: Double
+        public var cream: Double
+        public var striped: Bool
+        public var maskCoverage: Double
+        public var whiteBalanceApplied: Bool
+    }
     public struct Result: Codable, Equatable, Sendable {
         public var palette: HousePetPalette
         public var pattern: String
         public var species: String
         public var confidence: Double
+        public var diagnostics: Diagnostics
         public var usedVisionMask: Bool = false
         public var usedEyePose: Bool = false
     }
@@ -76,8 +87,10 @@ public enum HousePetPhoto {
         guard !samples.isEmpty else { throw HousePetError.invalid }
         let bright = samples.filter { $0.lab[0] > 66 }.sorted { $0.lab[0] > $1.lab[0] }
         let highlights = Array(bright.prefix(max(1, Int(ceil(Double(samples.count) * 0.06)))))
+        var whiteBalanceApplied = false
         if Double(highlights.count) / Double(samples.count) >= 0.03,
            hypot(lab(medianRGB(highlights))[1], lab(medianRGB(highlights))[2]) <= 22 {
+            whiteBalanceApplied = true
             let cast = medianRGB(highlights), target = [0.95, 0.93, 0.90]
             let gains = (0..<3).map { min(1.30, max(0.85, target[$0] / max(0.01, cast[$0]))) }
             for index in samples.indices {
@@ -136,6 +149,11 @@ public enum HousePetPhoto {
         let striped = !darker.isEmpty || (pairs > 0 && Double(rough) / Double(pairs) > 0.18)
         func fraction(_ filtered: [Sample]) -> Double { Double(filtered.count) / Double(samples.count) }
         let cream = samples.filter { $0.lab[0] > 62 && $0.chroma < 28 }
+        let grey = samples.filter { !$0.white && !$0.neutralDark && $0.chroma < 15 }
+        let diagnostics = Diagnostics(white: fraction(whites), neutralDark: fraction(neutralDark), warm: fraction(warm),
+                                      grey: fraction(grey), cream: fraction(cream), striped: striped,
+                                      maskCoverage: mask.map { Double($0.filter { $0 > 127 }.count) / Double(width * height) } ?? 1,
+                                      whiteBalanceApplied: whiteBalanceApplied)
         let minX = samples.map(\.x).min()!, maxX = samples.map(\.x).max()!, minY = samples.map(\.y).min()!, maxY = samples.map(\.y).max()!
         let points = samples.filter { $0.lab[0] < 45 }
         func peripheral(_ sample: Sample) -> Bool {
@@ -146,13 +164,13 @@ public enum HousePetPhoto {
         let peripheralCount = samples.filter(peripheral).count, peripheralDark = points.filter(peripheral).count
         let concentrated = Double(peripheralDark) / Double(max(1, peripheralCount)) > Double(points.count - peripheralDark) / Double(max(1, samples.count - peripheralCount)) + 0.12
         let pattern: String
-        if fraction(whites) >= 0.10 && fraction(warm) >= 0.012 && fraction(neutralDark) >= 0.04 && fraction(warm) < 0.5 { pattern = "calico" }
-        else if fraction(cream) >= 0.45 && fraction(points) >= 0.05 && concentrated { pattern = "colorpoint" }
-        else if fraction(warm) >= 0.35 { pattern = fraction(whites) >= 0.05 ? "tabbyWhite" : "tabby" }
-        else if !striped && ((fraction(whites) >= 0.10 && fraction(neutralDark) >= 0.20) || fraction(whites) >= 0.15) { pattern = "bicolor" }
-        else if fraction(whites) >= 0.15 && striped { pattern = "tabbyWhite" }
+        if diagnostics.white >= 0.10 && diagnostics.warm >= 0.012 && diagnostics.neutralDark >= 0.04 && diagnostics.warm < 0.5 { pattern = "calico" }
+        else if diagnostics.cream >= 0.45 && fraction(points) >= 0.05 && concentrated { pattern = "colorpoint" }
+        else if diagnostics.warm >= 0.35 { pattern = diagnostics.white >= 0.03 ? "tabbyWhite" : "tabby" }
+        else if !striped && ((diagnostics.white >= 0.10 && diagnostics.neutralDark >= 0.20) || (diagnostics.white >= 0.05 && diagnostics.neutralDark >= 0.30) || diagnostics.white >= 0.15) { pattern = "bicolor" }
+        else if diagnostics.white >= 0.15 && striped { pattern = "tabbyWhite" }
         else { pattern = striped ? "tabby" : "solid" }
-        let warmCoat = fraction(warm) >= 0.35 && pattern != "colorpoint"
+        let warmCoat = diagnostics.warm >= 0.35 && pattern != "colorpoint"
         let primary = pattern == "colorpoint" ? cream : pattern == "calico" || warmCoat ? warm : pattern == "bicolor" ? coat : dominant
         var base = medianRGB(primary.isEmpty ? dominant : primary)
         if pattern == "calico" { base = boost(base, saturation: 1.35, minimum: 0.62) }
@@ -166,7 +184,7 @@ public enum HousePetPhoto {
         let detectedEye = eyeColour(eyeSamples)
         return .init(palette: .init(base: hex(base), second: hex(second), white: hex(white),
                                    eye: eye ?? detectedEye ?? (pattern == "colorpoint" ? "#4E8FE0" : (!warm.isEmpty ? "#9CC43E" : "#E9C24A"))),
-                     pattern: pattern, species: species, confidence: min(0.95, 0.55 + fraction(dominant) * 0.4))
+                     pattern: pattern, species: species, confidence: min(0.95, 0.55 + fraction(dominant) * 0.4), diagnostics: diagnostics)
     }
 
     public static func load(from url: URL, eye: String? = nil, recognizeSpecies: Bool = true) throws -> Result {

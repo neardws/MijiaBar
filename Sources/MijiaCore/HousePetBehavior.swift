@@ -170,7 +170,7 @@ public final class HousePetBehavior: @unchecked Sendable {
 
     static func separatedSpots(_ candidates: [HousePetWorld.Spot], count: Int, cellSize: Double) -> [HousePetWorld.Spot] {
         var selected: [HousePetWorld.Spot] = []
-        for cells in [3.0, 2.0, 1.0] {
+        for cells in [5.0, 3.0, 2.0, 1.0] {
             selected = []
             for candidate in candidates where selected.allSatisfy({ $0.point.distance(to: candidate.point) >= cellSize * cells - 0.001 }) {
                 selected.append(candidate)

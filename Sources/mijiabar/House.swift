@@ -419,6 +419,7 @@ nonisolated(unsafe) let houseSchema: [String: Any] = [
             for field in ["pattern", "palette", "species", "confidence", "usedVisionMask", "usedEyePose"] {
                 if let value = analysis[field] { print("\(field): \(value is [String: Any] ? json(value) : String(describing: value))") }
             }
+            if let diagnostics = analysis["diagnostics"] as? [String: Any] { print(housePetDiagnosticsText(diagnostics)) }
         } else { print(json(result)) }
     case "style":
         print(json(try await houseStyle(pos: pos, rest: rest, asJSON: asJSON)))

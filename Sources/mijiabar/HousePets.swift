@@ -50,6 +50,11 @@ func housePetJSON<T: Encodable>(_ value: T) throws -> Any {
     return try JSONSerialization.jsonObject(with: encoder.encode(value))
 }
 
+func housePetDiagnosticsText(_ diagnostics: [String: Any]) -> String {
+    let data = try? JSONSerialization.data(withJSONObject: diagnostics, options: [.sortedKeys])
+    return "diagnostics: " + (data.flatMap { String(data: $0, encoding: .utf8) } ?? "{}")
+}
+
 func housePetPreview(pet: HousePet, rig: HousePetRig, directory: URL, output: URL, action: String? = nil, phase: String = "day") throws -> Int {
     guard action == nil || rig.actions[action!] != nil else { throw HousePetError.invalid }
     let frames = try HousePetFrameCache().frames(pet: pet, rig: rig, directory: directory, phase: phase)

@@ -220,10 +220,13 @@ import Testing
     }
 
     @Test func spacingFallsBackOnlyForSmallRooms() {
-        for (extent, spacing) in [(6, 3), (4, 2), (2, 1)] {
+        for (extent, spacing) in [(12, 5), (10, 5), (9, 3), (6, 3), (5, 2), (4, 2), (3, 1), (2, 1)] {
             let spots = (0...extent).map { HousePetWorld.Spot(id: "\($0)", kind: "sit", node: $0, point: .init(x: Double($0) * 10, y: 0), facing: "SE", priority: 1) }
             let selected = HousePetBehavior.separatedSpots(spots, count: 3, cellSize: 10)
-            #expect(selected.count == 3)
+            #expect(selected.count >= 3)
+            for left in selected.indices { for right in selected.indices where right > left {
+                #expect(selected[left].point.distance(to: selected[right].point) >= Double(spacing * 10))
+            } }
             #expect(selected[0].point.distance(to: selected[1].point) == Double(spacing * 10))
         }
     }

@@ -31,6 +31,21 @@ import MijiaCore
         #expect(definitions["pet"] != nil && definitions["petPalette"] != nil)
     }
 
+    @Test func analysisDiagnosticsSerializeAndPrintOnOneLine() throws {
+        let result = try HousePetPhoto.analyze(rgba: [128, 128, 128, 255], width: 1, height: 1)
+        let analysis = try #require(housePetJSON(result) as? [String: Any])
+        let diagnostics = try #require(analysis["diagnostics"] as? [String: Any])
+        #expect(Set(diagnostics.keys) == Set(["white", "neutralDark", "warm", "grey", "cream", "striped", "maskCoverage", "whiteBalanceApplied"]))
+        #expect(diagnostics["grey"] as? Double == 1)
+        #expect(diagnostics["striped"] as? Bool == false)
+        #expect(diagnostics["whiteBalanceApplied"] as? Bool == false)
+        let text = housePetDiagnosticsText(diagnostics)
+        #expect(text.hasPrefix("diagnostics: ") && !text.contains("\n"))
+        #expect(text.contains("\"whiteBalanceApplied\":false"))
+        let decoded = try JSONDecoder().decode(HousePetPhoto.Diagnostics.self, from: Data(text.dropFirst("diagnostics: ".count).utf8))
+        #expect(decoded == result.diagnostics)
+    }
+
     @Test func previewWritesScaledContactSheetWithoutLaunchingAnApp() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let directory = root.appendingPathComponent("Sources/MijiaBarApp/Resources/House/pets")
