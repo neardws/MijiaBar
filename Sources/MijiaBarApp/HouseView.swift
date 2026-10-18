@@ -88,20 +88,20 @@ struct HouseSceneSource {
     var artSize: CGSize { scene.artSize }
     func module(for room: HouseRoom) -> HouseCutawayModule? { scene.modules[byRoom ? room.key : room.module.rawValue] }
 
-    @MainActor static func make(layout: [HouseLayoutCell]?, phase: HousePhase, style: String? = nil) -> HouseSceneSource? {
+    @MainActor static func make(layout: [HouseLayoutCell]?, phase: HousePhase, style: String? = nil, config: HomeHouse = HomeHouse(), roomKeys: [String: String] = [:]) -> HouseSceneSource? {
         if !HouseStyles.info(style).hasClassicArt {
             let classic = HouseLayoutSolver.isClassicGeometry(layout)
-            let fallback = HouseLayoutSolver.classicFour.map { HouseLayoutCell(room: $0.module, module: $0.module, col: $0.col, row: $0.row) }
+            let fallback = HouseLayoutSolver.classicFour.map { HouseLayoutCell(room: roomKeys[$0.module] ?? $0.module, module: $0.module, col: $0.col, row: $0.row) }
             let cells = classic ? HouseLayoutSolver.setAllLevels(layout ?? fallback, flat: true) : (layout ?? fallback)
-            guard let source = HouseModuleAssets.composedScene(layout: cells, phase: phase, style: style) else { return nil }
+            guard let source = HouseModuleAssets.composedScene(layout: cells, phase: phase, style: style, config: config) else { return nil }
             if layout != nil { return source }
             var modules: [String: HouseCutawayModule] = [:]
             for cell in cells { modules[cell.module] = source.scene.modules[cell.room] }
             return HouseSceneSource(unlit: source.unlit, lit: source.lit,
-                                    scene: HouseCutawaySceneFile(size: source.scene.size, modules: modules), byRoom: false)
+                                    scene: HouseCutawaySceneFile(size: source.scene.size, modules: modules, decorSlots: source.scene.decorSlots), byRoom: false)
         }
         if let layout, !HouseLayoutSolver.isClassicGeometry(layout),
-           let c = HouseModuleAssets.composedScene(layout: layout, phase: phase, style: style) { return c }
+           let c = HouseModuleAssets.composedScene(layout: layout, phase: phase, style: style, config: config) { return c }
         guard let u = HouseAssets.cutawayImage(phase: phase, lit: false, style: style),
               let l = HouseAssets.cutawayImage(phase: phase, lit: true, style: style),
               let sc = HouseAssets.cutawayScene() else { return nil }
@@ -112,7 +112,21 @@ struct HouseSceneSource {
 struct HouseCutawaySceneFile: Decodable {
     let size: [Double]
     let modules: [String: HouseCutawayModule]
+    var decorSlots: [HouseDecorSceneSlot]? = nil
     var artSize: CGSize { CGSize(width: size[0], height: size[1]) }
+}
+
+struct HouseDecorSceneSlot: Decodable {
+    let room: String
+    let slot: String
+    let surface: String
+    let wall: String?
+    let sizes: [String]
+    let x: Double
+    let y: Double
+    let item: String?
+    let hidden: String?
+    let rect: [Double]
 }
 
 /// 剖面底图时段：本地 6:00–18:00 为白天，其余为夜间（与系统时区一致）。
@@ -324,8 +338,12 @@ struct HouseCutawaySceneView: View {
     /// 自定义布局（非经典四室）→ 用模块合成图；nil / 经典几何 → 手绘整图
     var layout: [HouseLayoutCell]? = nil
     var style: String? = nil
+    var decorConfig: HomeHouse = HomeHouse()
 
-    private var source: HouseSceneSource? { HouseSceneSource.make(layout: layout, phase: phase, style: style) }
+    private var source: HouseSceneSource? {
+        let keys = rooms.reduce(into: [String: String]()) { if $0[$1.module.rawValue] == nil { $0[$1.module.rawValue] = $1.key } }
+        return HouseSceneSource.make(layout: layout, phase: phase, style: style, config: decorConfig, roomKeys: keys)
+    }
     private var artSize: CGSize { source?.artSize ?? CGSize(width: 960, height: 540) }
     private var displayScale: CGFloat {
         guard let fitWidth else { return 1 }
@@ -748,7 +766,7 @@ struct HouseFullView: View {
                     .font(.system(size: 12)).foregroundStyle(.secondary).frame(width: sceneWidth, height: 200)
             } else {
                 HouseCutawaySceneView(rooms: rooms, phase: phase, showLabels: true, fitWidth: showChrome ? sceneWidth : nil,
-                                      onToggle: onToggle, edit: edit, layout: layout, style: m.houseStyle)
+                                      onToggle: onToggle, edit: edit, layout: layout, style: m.houseStyle, decorConfig: m.house.homes[m.houseHomeKey] ?? HomeHouse())
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Theme.stroke))
             }
@@ -883,7 +901,7 @@ struct HouseListEmbed: View {
         HouseCutawaySceneView(rooms: rooms, phase: phase, showLabels: false, fitWidth: width, onToggle: { did in
             guard let d = m.device(did) else { return }
             withoutAnimation { m.toggle(d) }
-        }, layout: m.houseLayoutCells)
+        }, layout: m.houseLayoutCells, style: m.houseStyle, decorConfig: m.house.homes[m.houseHomeKey] ?? HomeHouse())
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.stroke))
         .overlay(alignment: .topTrailing) {

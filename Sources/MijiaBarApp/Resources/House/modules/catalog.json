@@ -316,6 +316,90 @@
    "floorLabel": [
     194,
     167
+   ],
+   "decor": [
+    {
+     "id": "rug",
+     "surface": "rug",
+     "sizes": [
+      "L"
+     ],
+     "at": [
+      362,
+      272
+     ],
+     "default": null
+    },
+    {
+     "id": "corner",
+     "surface": "floor",
+     "sizes": [
+      "S",
+      "M",
+      "L"
+     ],
+     "at": [
+      412,
+      226
+     ],
+     "default": "monstera",
+     "holiday": true
+    },
+    {
+     "id": "window",
+     "surface": "floor",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      240,
+      162
+     ],
+     "default": null,
+     "holiday": true
+    },
+    {
+     "id": "sofa_side",
+     "surface": "floor",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      90,
+      205
+     ],
+     "default": null
+    },
+    {
+     "id": "wall_nw",
+     "surface": "wall",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      148,
+      94
+     ],
+     "wall": "nw",
+     "default": null,
+     "holiday": true
+    },
+    {
+     "id": "wall_ne",
+     "surface": "wall",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      446,
+      172
+     ],
+     "wall": "ne",
+     "default": "painting_landscape",
+     "holiday": true
+    }
    ]
   },
   "bedroom": {
@@ -537,6 +621,61 @@
    "floorLabel": [
     138,
     230
+   ],
+   "decor": [
+    {
+     "id": "foot",
+     "surface": "floor",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      240,
+      236
+     ],
+     "default": null
+    },
+    {
+     "id": "dresser",
+     "surface": "floor",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      118,
+      180
+     ],
+     "default": "spider_plant"
+    },
+    {
+     "id": "wall_nw",
+     "surface": "wall",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      56,
+      112
+     ],
+     "wall": "nw",
+     "default": "painting_cat"
+    },
+    {
+     "id": "wall_ne",
+     "surface": "wall",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      222,
+      82
+     ],
+     "wall": "ne",
+     "default": null
+    }
    ]
   },
   "study": {
@@ -775,6 +914,60 @@
    "floorLabel": [
     114,
     213
+   ],
+   "decor": [
+    {
+     "id": "shelf",
+     "surface": "floor",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      82,
+      206
+     ],
+     "default": "book_stack"
+    },
+    {
+     "id": "desk",
+     "surface": "floor",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      306,
+      204
+     ],
+     "default": null
+    },
+    {
+     "id": "wall_nw",
+     "surface": "wall",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      58,
+      108
+     ],
+     "wall": "nw",
+     "default": "wall_clock"
+    },
+    {
+     "id": "wall_ne",
+     "surface": "wall",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      202,
+      84
+     ],
+     "wall": "ne",
+     "default": null
+    }
    ]
   },
   "generic": {
@@ -879,6 +1072,76 @@
    "floorLabel": [
     178,
     193
+   ],
+   "decor": [
+    {
+     "id": "rug",
+     "surface": "rug",
+     "sizes": [
+      "L"
+     ],
+     "at": [
+      200,
+      222
+     ],
+     "default": null
+    },
+    {
+     "id": "corner",
+     "surface": "floor",
+     "sizes": [
+      "S",
+      "M",
+      "L"
+     ],
+     "at": [
+      300,
+      196
+     ],
+     "default": null,
+     "holiday": true
+    },
+    {
+     "id": "door",
+     "surface": "floor",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      70,
+      196
+     ],
+     "default": "spider_plant"
+    },
+    {
+     "id": "wall_nw",
+     "surface": "wall",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      132,
+      96
+     ],
+     "wall": "nw",
+     "default": "wall_clock",
+     "holiday": true
+    },
+    {
+     "id": "wall_ne",
+     "surface": "wall",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      220,
+      90
+     ],
+     "wall": "ne",
+     "default": null,
+     "holiday": true
+    }
    ]
   },
   "kitchen": {
@@ -1066,6 +1329,61 @@
    "floorLabel": [
     240,
     212
+   ],
+   "decor": [
+    {
+     "id": "corner",
+     "surface": "floor",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      80,
+      210
+     ],
+     "default": null
+    },
+    {
+     "id": "counter",
+     "surface": "floor",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      300,
+      212
+     ],
+     "default": null
+    },
+    {
+     "id": "wall_nw",
+     "surface": "wall",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      130,
+      96
+     ],
+     "wall": "nw",
+     "default": "wall_clock",
+     "holiday": true
+    },
+    {
+     "id": "wall_ne",
+     "surface": "wall",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      200,
+      92
+     ],
+     "wall": "ne",
+     "default": null,
+     "holiday": true
+    }
    ]
   },
   "bathroom": {
@@ -1241,6 +1559,59 @@
    "floorLabel": [
     130,
     220
+   ],
+   "decor": [
+    {
+     "id": "corner",
+     "surface": "floor",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      300,
+      206
+     ],
+     "default": null
+    },
+    {
+     "id": "tub",
+     "surface": "floor",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      80,
+      206
+     ],
+     "default": "succulent"
+    },
+    {
+     "id": "wall_nw",
+     "surface": "wall",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      54,
+      98
+     ],
+     "wall": "nw",
+     "default": null
+    },
+    {
+     "id": "wall_ne",
+     "surface": "wall",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      300,
+      108
+     ],
+     "wall": "ne",
+     "default": null
+    }
    ]
   },
   "balcony": {
@@ -1435,6 +1806,61 @@
    "floorLabel": [
     186,
     197
+   ],
+   "decor": [
+    {
+     "id": "corner",
+     "surface": "floor",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      250,
+      230
+     ],
+     "default": null,
+     "holiday": true
+    },
+    {
+     "id": "chair",
+     "surface": "floor",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      150,
+      236
+     ],
+     "default": "cat_bed"
+    },
+    {
+     "id": "washer",
+     "surface": "floor",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      112,
+      210
+     ],
+     "default": null
+    },
+    {
+     "id": "wall_nw",
+     "surface": "wall",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      140,
+      92
+     ],
+     "wall": "nw",
+     "default": null,
+     "holiday": true
+    }
    ]
   }
  }

@@ -30,10 +30,12 @@ public enum HouseComposer {
         /// 夜景：墙顶 / 端面 / 壁柱用压暗的木色（和模块夜景调色一致）
         public var night: Bool
         public var wallCaps: HouseWallCapColors?
+        public var decor: [HouseDecorImage]
         public init(layout: [HouseLayoutCell], catalog: HouseModuleCatalog, images: [String: HouseModuleImages], pad: Int = 24, night: Bool = false,
-                    wallCaps: HouseWallCapColors? = nil) {
+                    wallCaps: HouseWallCapColors? = nil, decor: [HouseDecorImage] = []) {
             self.layout = layout; self.catalog = catalog; self.images = images; self.pad = pad; self.night = night
             self.wallCaps = wallCaps
+            self.decor = decor
         }
     }
 
@@ -94,11 +96,12 @@ public enum HouseComposer {
         width += width % 2; height += height % 2
 
         let pal = Palette(night: input.night, wallCaps: input.wallCaps)
-        let unlit = render(items, occ: occ, elev: elev, images: input.images, lit: false, pal: pal, originX: originX, originY: originY, width: width, height: height)
-        let lit = render(items, occ: occ, elev: elev, images: input.images, lit: true, pal: pal, originX: originX, originY: originY, width: width, height: height)
+        let unlit = render(items, occ: occ, elev: elev, images: input.images, decor: input.decor, lit: false, pal: pal, originX: originX, originY: originY, width: width, height: height)
+        let lit = render(items, occ: occ, elev: elev, images: input.images, decor: input.decor, lit: true, pal: pal, originX: originX, originY: originY, width: width, height: height)
 
         // 场景：锚点转画布坐标；visible = 本模块剪影减去后画模块的剪影（灯光蒙版用，避免透过前屋墙体）
         var sceneMods: [String: Any] = [:]
+        var decorSlots: [[String: Any]] = []
         for (i, it) in items.enumerated() {
             let dx = Double(it.ox - originX), dy = Double(it.oy - originY)
             func tx(_ p: [Double]) -> [Double] { [p[0] + dx, p[1] + dy] }
@@ -162,6 +165,20 @@ public enum HouseComposer {
                 visible = visible.subtracting(path(silhouette(later.placed, ext: later.ext), dx: later.ox - originX, dy: later.oy - originY))
             }
             let key = it.placed.cell.room.isEmpty ? it.placed.cell.module : it.placed.cell.room
+            for slot in it.art.decor ?? [] where slot.at.count == 2 {
+                let placed = input.decor.first { $0.placement.room == key && $0.placement.slot == slot.id }
+                var record: [String: Any] = ["room": key, "slot": slot.id, "surface": slot.surface, "sizes": slot.sizes,
+                                             "x": slot.at[0] + dx, "y": slot.at[1] + dy]
+                if let wall = slot.wall {
+                    record["wall"] = wall
+                    if wallIsHidden(wall: wall, anchor: slot.at, segments: it.placed.segments) { record["hidden"] = "wall cut" }
+                }
+                if let placed {
+                    record["item"] = placed.placement.item
+                    record["rect"] = [Double(placed.x) + dx, Double(placed.y) + dy, Double(placed.image.width), Double(placed.image.height)]
+                } else { record["rect"] = [slot.at[0] + dx - 12, slot.at[1] + dy - 12, 24, 24] }
+                decorSlots.append(record)
+            }
             sceneMods[key] = [
                 "module": it.placed.cell.module,
                 "label": tx(clearLabel(floorPointLift(labelPoint(it.art, segments: it.placed.segments), placed: it.placed, elev: elev), badgePts, alts: altPts)),
@@ -174,7 +191,7 @@ public enum HouseComposer {
                 "walls": it.placed.segments.map { ["side": $0.side.rawValue, "height": $0.height] },
             ]
         }
-        let scene: [String: Any] = ["size": [width, height], "origin": [originX, originY], "modules": sceneMods]
+        let scene: [String: Any] = ["size": [width, height], "origin": [originX, originY], "modules": sceneMods, "decorSlots": decorSlots]
         let data = (try? JSONSerialization.data(withJSONObject: scene, options: [.sortedKeys])) ?? Data()
         let ms = (CFAbsoluteTimeGetCurrent() - t0) * 1000
         return HouseComposeResult(width: width, height: height, originX: originX, originY: originY, milliseconds: ms,
@@ -409,9 +426,13 @@ public enum HouseComposer {
     }
 
     static func isHidden(_ L: HouseModuleLight, wall: String, segments: [HouseWallSegment]) -> Bool {
+        wallIsHidden(wall: wall, anchor: L.anchor, segments: segments)
+    }
+
+    public static func wallIsHidden(wall: String, anchor: [Double]?, segments: [HouseWallSegment]) -> Bool {
         let side: HouseWallSegment.Side = wall == "nw" ? .nw : .ne
         let segs = segments.filter { $0.side == side }
-        if let a = L.anchor, a.count >= 2,
+        if let a = anchor, a.count >= 2,
            let s = segs.first(where: { Double(min($0.a.x, $0.b.x)) <= a[0] && a[0] <= Double(max($0.a.x, $0.b.x)) }) {
             return s.height < HouseGrid.wallH
         }
@@ -524,7 +545,7 @@ public enum HouseComposer {
         band(x0, x1, y1 - 2, y1, pal.ground)           // 地线
     }
 
-    static func render(_ items: [Item], occ: Set<[Int]>, elev: [[Int]: Int] = [:], images: [String: HouseModuleImages], lit: Bool, pal: Palette,
+    static func render(_ items: [Item], occ: Set<[Int]>, elev: [[Int]: Int] = [:], images: [String: HouseModuleImages], decor: [HouseDecorImage] = [], lit: Bool, pal: Palette,
                        originX: Int, originY: Int, width: Int, height: Int) -> CGImage? {
         guard let c = Canvas(width: width, height: height) else { return nil }
         func add(_ p: (x: Int, y: Int), _ q: (x: Int, y: Int)) -> (x: Int, y: Int) { (p.x + q.x, p.y + q.y) }
@@ -596,6 +617,19 @@ public enum HouseComposer {
             }
             if let imgs = images[it.placed.cell.module] {
                 c.image(moduleImage(it, imgs, lit: lit), x: ox, y: oy)
+                let room = HouseDecor.roomKey(it.placed.cell)
+                func rank(_ surface: String) -> Int { surface == "rug" ? 0 : surface == "wall" ? 1 : 2 }
+                let decorations = decor.filter { $0.placement.room == room && $0.placement.module == it.placed.cell.module }.sorted {
+                    let left = rank($0.placement.surface), right = rank($1.placement.surface)
+                    if left != right { return left < right }
+                    if $0.placement.at[1] != $1.placement.at[1] { return $0.placement.at[1] < $1.placement.at[1] }
+                    return $0.placement.slot < $1.placement.slot
+                }
+                for decoration in decorations {
+                    if let wall = decoration.placement.wall, wallIsHidden(wall: wall, anchor: decoration.placement.at, segments: it.placed.segments) { continue }
+                    let image = lit ? HouseDecorPixels.brightened(decoration, module: imgs) : decoration.image
+                    c.image(image, x: ox + decoration.x, y: oy + decoration.y)
+                }
             }
         }
         return c.ctx.makeImage()

@@ -57,6 +57,50 @@ pruned after 30 days. The app watches the folder and refreshes the house within 
 
 Unknown fields are ignored, so newer versions can add fields without breaking older ones. `mijiabar house schema` prints the JSON Schema.
 
+## Fixed decorations (Phase 3b, milestone 1)
+
+Decorations are appearance-only sprites in fixed module slots, never device commands or freely placed objects.
+Module catalogs optionally provide `decor` slots (`id`, `surface`, `sizes`, `at`, optional `wall`, `default`, `holiday`).
+Older catalogs without slots render unchanged. Composed houses use the same decorated images in the window and menu bar;
+the legacy hand-drawn classic scene does not have module decor slots. Palette styles share cozy-wood's slots.
+
+Optional home fields keep **schema 1** compatible:
+
+- `decorPrefs: {enabled: true, seasonal: true, updatedAt: "…"}`; defaults apply when absent.
+- `decor: {"<room key>/<slot id>": {item: "monstera", updatedAt: "…"}}`.
+  `item: "none"` keeps a slot empty; `item: null` (or omitted) is a tombstone restoring automatic placement.
+- Overrides merge independently by `updatedAt`, including tombstones. Preferences merge as one timestamped entry.
+  `decor reset` tombstones every decor override without changing preferences. A full `house reset` also resets preferences.
+
+```sh
+mijiabar house decor list --json
+mijiabar house decor list --room '<room key>'
+mijiabar house decor items --json
+mijiabar house decor set '<room key>/<slot id>' monstera
+mijiabar house decor set '<room key>/<slot id>' none
+mijiabar house decor set '<room key>/<slot id>' auto
+mijiabar house decor on
+mijiabar house decor seasonal off
+mijiabar house decor reset
+```
+
+Listing reports preferences, active seasons, overrides, and each module slot's item/source and `hidden: "wall cut"`
+when the composer's wall-light rule hides that wall. If module catalogs are unavailable, overrides are still listed;
+setting an unknown slot or incompatible item returns error JSON rather than guessing. All mutations return JSON.
+The MCP tools `get_house_decor` and `set_house_decor` use the same resolver and validation. No decor editor UI is included yet.
+
+Automatic holiday items replace defaults only in compatible `holiday` slots with no live override. An invalid live override
+falls back to its default but still blocks holiday substitution. Dates use local calendar days (including both window endpoints);
+Chinese-calendar holidays ignore leap months and handle lunar-year boundaries. Disabled seasonal placement does not block
+explicit user holiday items. Missing PNGs are skipped, with a single stderr diagnostic per filename.
+
+For asset review, run `MijiaBarApp --house-decor-snapshot /tmp/house-decor --date 2026-10-18`.
+It uses only demo rooms/in-memory overrides, never the real home or `house.json`. Outputs include decor/no-decor day/night
+pairs for three styles, fixed-date holiday scenes, labelled slot overlays with scene JSON, and a 3× nearest-neighbour catalog sheet.
+The optional date controls regular demos; holiday examples always use their documented 2026/2027 dates.
+Regular demo overrides cycle between the day and night examples so items sharing a scarce rug or large-floor slot
+all appear across the pair; every slot receives a compatible item. Slot overlays describe the day example.
+
 ## Automatic layout
 
 1. **Room → module** by name (Simplified/Traditional Chinese and English): 客厅/living → `living`; 卧/儿童房/客房/bedroom → `bedroom`;

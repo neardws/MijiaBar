@@ -88,6 +88,7 @@ public struct HouseModuleArt: Codable, Equatable, Sendable {
     public var floorLabel: [Double]? = nil
     public var badges: [[Double]]
     public var lights: [HouseModuleLight]
+    public var decor: [HouseDecorSlot]? = nil
     /// "day-unlit" / "day-lit" / "night-unlit" / "night-lit"，以及切墙版 "…-cut"
     public var variants: [String: String]?
     public var fw: Int { footprint.first ?? 1 }

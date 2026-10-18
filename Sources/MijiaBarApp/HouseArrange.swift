@@ -254,12 +254,12 @@ struct HouseArrangeView: View {
         let shown = HouseLayoutSolver.isClassicGeometry(m.house.homes[home]?.layout) ? HouseLayoutSolver.setAllLevels(layout, flat: true) : layout
         if !HouseStyles.info(m.houseStyle).hasClassicArt {
             let start = CFAbsoluteTimeGetCurrent()
-            let source = HouseSceneSource.make(layout: shown, phase: phase, style: m.houseStyle)
+            let source = HouseSceneSource.make(layout: shown, phase: phase, style: m.houseStyle, config: m.house.homes[home] ?? HomeHouse())
             preview = phase == .day ? source?.unlit : source?.lit
             previewMs = (CFAbsoluteTimeGetCurrent() - start) * 1000
             return
         }
-        if let result = HouseModuleAssets.compose(layout: shown, phase: phase, style: m.houseStyle) {
+        if let result = HouseModuleAssets.compose(layout: shown, phase: phase, style: m.houseStyle, config: m.house.homes[home] ?? HomeHouse()) {
             previewMs = result.ms
             preview = result.image
         } else {
@@ -313,7 +313,7 @@ enum HouseModuleAssets {
 
     @MainActor static func clearCache() { inputs.removeAll(); scenes.removeAll() }
 
-    private static func wallCaps(style: String?) -> HouseWallCapColors? {
+    static func wallCaps(style: String?) -> HouseWallCapColors? {
         let styleId = HouseStyles.resolve(style)
         guard HouseStyles.info(styleId).hasOwnCatalog,
               let catalog = resourceURL("catalog", "json", style: styleId, fallbackToDefault: false),
@@ -355,12 +355,13 @@ enum HouseModuleAssets {
         return (cat, images)
     }
 
-    @MainActor static func composedScene(layout: [HouseLayoutCell], phase: HousePhase, style: String? = nil) -> HouseSceneSource? {
+    @MainActor static func composedScene(layout: [HouseLayoutCell], phase: HousePhase, style: String? = nil, config: HomeHouse = HomeHouse(), date: Date = Date()) -> HouseSceneSource? {
         let styleId = HouseStyles.resolve(style)
-        let key = "\(styleId)|\(phase.assetName)|" + layout.map { "\($0.room)=\($0.module)@\($0.col),\($0.row)^\(HouseLevels.effective($0))" }.joined(separator: ";")
+        let key = "\(styleId)|\(phase.assetName)|\(decorFingerprint(config, date: date))|" + layout.map { "\($0.room)=\($0.module)@\($0.col),\($0.row)^\(HouseLevels.effective($0))" }.joined(separator: ";")
         if let s = scenes[key] { return s }
         guard let (cat, images) = load(phase: phase, style: styleId) else { return nil }
-        let r = HouseComposer.compose(.init(layout: layout, catalog: cat, images: images, night: phase == .night, wallCaps: wallCaps(style: styleId)))
+        let decor = decorations(layout: layout, catalog: cat, phase: phase, config: config, date: date)
+        let r = HouseComposer.compose(.init(layout: layout, catalog: cat, images: images, night: phase == .night, wallCaps: wallCaps(style: styleId), decor: decor))
         guard let u = r.unlit, let l = r.lit else { return nil }
         let scene: HouseCutawaySceneFile
         do { scene = try JSONDecoder().decode(HouseCutawaySceneFile.self, from: r.sceneJSON) }
@@ -373,9 +374,10 @@ enum HouseModuleAssets {
         return src
     }
 
-    @MainActor static func compose(layout: [HouseLayoutCell], phase: HousePhase, style: String? = nil) -> (image: NSImage, ms: Double)? {
+    @MainActor static func compose(layout: [HouseLayoutCell], phase: HousePhase, style: String? = nil, config: HomeHouse = HomeHouse()) -> (image: NSImage, ms: Double)? {
         guard let (cat, images) = load(phase: phase, style: style) else { return nil }
-        let r = HouseComposer.compose(.init(layout: layout, catalog: cat, images: images, night: phase == .night, wallCaps: wallCaps(style: style)))
+        let decor = decorations(layout: layout, catalog: cat, phase: phase, config: config)
+        let r = HouseComposer.compose(.init(layout: layout, catalog: cat, images: images, night: phase == .night, wallCaps: wallCaps(style: style), decor: decor))
         // 预览：白天看关灯底图，夜间看开灯（暖光）版
         guard let img = phase == .day ? r.unlit : r.lit else { fputs("HouseModuleAssets: compose produced nil\n", stderr); return nil }
         let ns = NSImage(cgImage: img, size: NSSize(width: img.width, height: img.height))
