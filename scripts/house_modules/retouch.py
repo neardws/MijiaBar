@@ -73,10 +73,10 @@ def object_mask(orig, bg, region, thr=34):
         m &= ~edge
     return m
 
-def hole_alpha(alpha, hole, g, rgb=None, depth=10):
+def hole_alpha(alpha, hole, g, rgb=None, depth=10, interp=False):
     """剖面版里搬走家具后的 alpha：洞里按旁边切墙的实际墙顶高度补墙，墙顶以上透明。
     直接用规范剪影（正好 CUT_H）会和生成图实际画的墙顶差几个像素，出台阶。
-    墙顶高度取洞左右各 40 列的中位数里较低的那个（靠墙角的列会混进另一面墙）。
+    墙顶高度取洞左右各 40 列的中位数里较低的那个（靠墙角的列会混进另一面墙）；interp=True 时从左到右线性过渡。
     给了 rgb 时，顺便用旁边墙顶下 depth 像素的“离墙顶距离 → 颜色”剖面重画洞里的墙顶压条。"""
     _, z = col_z(g, alpha.shape)
     masks = pl.region_masks(g, 2)
@@ -95,16 +95,21 @@ def hole_alpha(alpha, hole, g, rgb=None, depth=10):
     t = min([np.median(v) for v in (L, R) if v] or [CUT_H * 2])
     sil = pl.silhouette_mask(g, 2, cut=True)
     out = alpha.copy()
-    out[hole] = (sil & ((z <= t) | ~wall))[hole]
+    tcol = np.full(w, t, np.float64)
+    if interp and L and R:
+        # 两侧墙顶不一样高（生成图里常差几个像素）：洞里从左侧墙顶线性过渡到右侧，接口处不出台阶
+        tl, tr = np.median(L[-8:]), np.median(R[:8])
+        tcol = tl + (tr - tl) * np.clip((np.arange(w) - x0) / max(1, x1 - x0), 0, 1)
+    out[hole] = (sil & ((z <= tcol[None, :]) | ~wall))[hole]
     if rgb is not None:
         ref = [x for x in range(x0 - 40, x0) if 0 <= x < w] or [x for x in range(x1 + 1, x1 + 41) if x < w]
         prof = {}
         for d in range(depth):
-            px = [rgb[int(np.argmin(np.abs(z[:, x] - (t - d)) + 1e6 * ~wall[:, x])), x] for x in ref]
+            px = [rgb[int(np.argmin(np.abs(z[:, x] - (tcol[x] - d)) + 1e6 * ~wall[:, x])), x] for x in ref]
             prof[d] = np.median(np.array(px), 0)
         for x in cols:
             for d in range(depth):
-                ys = np.nonzero(hole[:, x] & wall[:, x] & (np.abs(z[:, x] - (t - d)) < 0.5))[0]
+                ys = np.nonzero(hole[:, x] & wall[:, x] & (np.abs(z[:, x] - (tcol[x] - d)) < 0.5))[0]
                 rgb[ys, x] = prof[d]
     return out
 
@@ -186,49 +191,70 @@ def warped(mid, g):
         out.append(np.asarray(w2.convert('RGBA')))
     return out
 
-def study():
+def shorten(mid, poly, base, zband, shadow=None, dark_only=True, thr=34, interp=False):
+    """把靠在（常被切矮的）后墙上的高家具改矮：去掉 z 段 zband，上段整体下移，原位置 LaMa 补墙。
+    base = 家具前下角（地面）；前后两个侧面沿墙方向，底边斜率都是 ±FH/W。dark_only：只搬深色像素（木家具，
+    亮的是漏进来的墙纸）；白色家具（冰箱）用 False。"""
     g = module_geom(1)
-    F, C = warped('study', g)
-    shelf = poly_mask(F.shape, SHELF, grow=5)
+    F, C = warped(mid, g)
+    shelf = poly_mask(F.shape, poly, grow=5)
     _, z = col_z(g, F.shape[:2])
     res = {}
     for v, A in (('full', F), ('cut', C)):
         rgb = A[..., :3].copy(); alpha = A[..., 3] > 0
         hole = shelf & ((z < CUT_H * 2 + 6) | (v == 'full'))
-        if v == 'full':
-            hole = hole | (poly_mask(F.shape, SHELF_SHADOW) & (z > 0))
+        if v == 'full' and shadow:
+            hole = hole | (poly_mask(F.shape, shadow) & (z > 0))
         bg = inpaint(rgb, hole)
         if v == 'full':
-            obj = object_mask(F, bg, poly_mask(F.shape, SHELF, grow=1))
+            if dark_only:
+                obj = object_mask(F, bg, poly_mask(F.shape, poly, grow=1))
+            else:
+                obj = poly_mask(F.shape, poly) & (np.abs(F[..., :3].astype(np.int32) - bg.astype(np.int32)).sum(-1) > thr)
+                obj = cv2.morphologyEx(obj.astype(np.uint8), cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8)) > 0
+                ff = obj.astype(np.uint8).copy(); hh, ww = ff.shape
+                cv2.floodFill(ff, np.zeros((hh + 2, ww + 2), np.uint8), (0, 0), 2)
+                obj = obj | (ff == 0)
         res[v] = (bg, alpha)
     h, w = obj.shape
     k = FH / W
-    z0, z1 = SHELF_Z; dz = z1 - z0
-    bx, by = SHELF_BASE
+    z0, z1 = zband; dz = z1 - z0
+    bx, by = base
     new = np.zeros_like(obj); px = np.zeros_like(F[..., :3])
     for x in range(w):
         if not obj[:, x].any(): continue
-        yb = by - abs(x - bx) * k                    # 这一列书架底边
+        yb = by - abs(x - bx) * k                    # 这一列家具底边
         ya, yc = int(round(yb - z1)), int(round(yb - z0))
         col = obj[:, x]
-        # 下段原样
-        lo = col.copy(); lo[:yc] = False
+        lo = col.copy(); lo[:yc] = False             # 下段原样
         new[lo, x] = True; px[lo, x] = F[lo, x, :3]
-        # 上段（ya 以上）整体下移 dz
         lumc = F[:, x, :3].astype(np.float32).mean(-1)
-        for y in np.nonzero(col[:ya])[0]:
-            if y + dz < h and lumc[y] < 95:     # 顶板是深木色；亮的是顶板后沿漏进来的墙纸
+        for y in np.nonzero(col[:ya])[0]:            # 上段（ya 以上）整体下移 dz
+            if y + dz < h and (not dark_only or lumc[y] < 95):
                 new[y + dz, x] = True; px[y + dz, x] = F[y, x, :3]
     for v in ('full', 'cut'):
         bg, alpha = res[v]
         o = bg.copy()
         a = alpha
         if v == 'cut':
-            a = hole_alpha(alpha, shelf, g, o)
+            a = hole_alpha(alpha, shelf, g, o, interp=interp)
         o[new] = px[new]
         if v == 'cut':
             a = a | new
-        save(o, a, f'study-day-{v}-canon.png')
+        save(o, a, f'{mid}-day-{v}-canon.png')
+
+def study():
+    shorten('study', SHELF, SHELF_BASE, SHELF_Z, shadow=SHELF_SHADOW)
+
+# ---------------- kitchen ----------------
+# 冰箱靠 NW 墙（composed 布局里常是和客厅 / 书房共享的切墙）：原高 ≈ 58px（s=1），错层后前面的切墙 + 地台挡不住，
+# 像插进后面的房间。改成矮冰箱：去掉下门中段，上门（冷冻室）落下来 → 顶 ≈ 34px（s=1），低于切墙 40
+FRIDGE = [(227, 188), (282, 170), (324, 178), (324, 298), (265, 325), (227, 309)]
+FRIDGE_BASE = (265, 322)
+FRIDGE_Z = (4, 52)
+
+def kitchen():
+    shorten('kitchen', FRIDGE, FRIDGE_BASE, FRIDGE_Z, dark_only=False, interp=True)
 
 if __name__ == '__main__':
-    {'living': living, 'study': study}[sys.argv[1]]()
+    {'living': living, 'study': study, 'kitchen': kitchen}[sys.argv[1]]()
