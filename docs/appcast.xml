@@ -3,20 +3,19 @@
     <channel>
         <title>MijiaBar</title>
         <item>
-            <title>0.1.12</title>
-            <pubDate>Sat, 17 Oct 2026 16:53:11 +0800</pubDate>
+            <title>0.1.13</title>
+            <pubDate>Sun, 18 Oct 2026 18:45:49 +0800</pubDate>
             <link>https://www.neardws.com/MijiaBar/</link>
-            <sparkle:version>0.1.12</sparkle:version>
-            <sparkle:shortVersionString>0.1.12</sparkle:shortVersionString>
+            <sparkle:version>0.1.13</sparkle:version>
+            <sparkle:shortVersionString>0.1.13</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description sparkle:format="markdown"><![CDATA[## 0.1.12
+            <description sparkle:format="markdown"><![CDATA[## 0.1.13
 
-- 设备列表顶部嵌入像素风等距小屋剖面图；点 **放大 / Enlarge** 打开独立小屋窗口 / Pixel-art isometric house cutaway at the top of the device list; **Enlarge** opens a dedicated House window
-- 按本地时间切换白天与夜晚烘焙底图（约 6:00–17:59）/ Separate day and night baked art from local time (~6:00–17:59)
-- 点场景里的灯具、电视/显示器、空调、玄关灯等开关对应设备 / Tap fixtures on the art to toggle matched devices (lights, TV/monitor, AC, entry light)
-- 每个点位单独亮灯（烘焙底图 + 椭圆揭示），不再叠发光 PNG / Per-fixture local glow (baked bases + ellipse reveals); glow PNG overlays removed
+- 修复：从 0.1.12 更新后点击菜单栏图标立即闪退（发布包漏了小屋图片资源包；找不到资源时也不再崩溃）/ Fix: crash when clicking the menu-bar icon after updating to 0.1.12 (the app bundle was missing the house art resource bundle; missing resources no longer crash)
+- 新增：和风、现代两套小屋风格（完整重绘）/ New: Japanese and modern house styles (full redraws)
+- 浅木、胡桃木配色变体现在随 App 一起打包 / Light-wood and walnut variants now ship inside the app
 ]]></description>
-            <enclosure url="https://github.com/neardws/MijiaBar/releases/download/v0.1.12/MijiaBar-0.1.12.dmg" length="24299167" type="application/octet-stream" sparkle:edSignature="r9scRKMu/aOVv826yp6mBfa+XsBXeS3AUOI8GoLDSTY1PsxkS4D/EBbrMikB0DTjVzxogaFJiyxIT3ydLTv3Cg=="/>
+            <enclosure url="https://github.com/neardws/MijiaBar/releases/download/v0.1.13/MijiaBar-0.1.13.dmg" length="66877496" type="application/octet-stream" sparkle:edSignature="lGuCtyeXbEHSwjWfEuJOuH+p1iNNTYiyNH71vpJXdTWHIZ8ojJMU4xjsklTGAd8w1nWOQm2yskNMvrpz/aAJCw=="/>
         </item>
     </channel>
 </rss>
