@@ -49,6 +49,8 @@ public struct HouseModuleArt: Codable, Equatable, Sendable {
     public var tip: [Int]
     public var region: [[Double]]
     public var label: [Double]
+    /// 两面后墙都被切时的标签位（地面空地，避开家具）；没有就放地板中间
+    public var floorLabel: [Double]? = nil
     public var badges: [[Double]]
     public var lights: [HouseModuleLight]
     /// "day-unlit" / "day-lit" / "night-unlit" / "night-lit"，以及切墙版 "…-cut"

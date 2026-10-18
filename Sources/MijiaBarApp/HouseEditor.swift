@@ -43,7 +43,7 @@ enum HouseFixtureNames {
     }
 
     /// 书房的显示器位和吸顶灯位挨得近，标签放到框上方，避免和徽章重叠
-    static let labelAbove: Set<String> = ["monitor", "ceiling"]
+    static let labelAbove: Set<String> = ["monitor", "ceiling", "pendant", "entry_light"]
 
     static func spot(_ s: HouseSpot?) -> String {
         switch s {
@@ -66,6 +66,9 @@ struct HouseEditSlots: View {
     static func targets(module: HouseCutawayModule, room: HouseRoom) -> [(sel: HouseSelection, rect: CGRect, round: Bool, labelAbove: Bool, fixture: String?)] {
         var out: [(HouseSelection, CGRect, Bool, Bool, String?)] = []
         for light in module.lights {
+            // 墙挂灯具随墙被切掉：位置不在了，空着就不给放（没法往看不见的壁灯上放灯）；
+            // 已经放了设备的，在 alt 地面点留一个位置框，方便拖走
+            if light.hidden == true, !room.devices.contains(where: { $0.spot == .fixture(light.id) }) { continue }
             if let r = rect(light) {
                 out.append((HouseSelection(roomKey: room.key, spot: .fixture(light.id)), r, true, HouseFixtureNames.labelAbove.contains(light.id), light.id))
             }
@@ -90,6 +93,10 @@ struct HouseEditSlots: View {
     }
 
     private static func rect(_ l: HouseLightSpec) -> CGRect? {
+        // 合成场景：墙挂灯具随墙被切掉 / 吸顶灯 → 用 alt 点（地面替代位 / 光斑上方），和徽章位同样大小
+        if let a = l.alt, a.count >= 2, l.hidden == true || l.corePolygon == nil {
+            return CGRect(x: a[0] - 26, y: a[1] - 44, width: 52, height: 52)
+        }
         if let poly = l.corePolygon, !poly.isEmpty {
             let xs = poly.map { $0[0] }, ys = poly.map { $0[1] }
             let r = CGRect(x: xs.min()!, y: ys.min()!, width: xs.max()! - xs.min()!, height: ys.max()! - ys.min()!)
@@ -451,7 +458,7 @@ struct HouseEditPanel: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(L("房间", "Rooms")).font(.system(size: 12, weight: .semibold))
             Text(m.houseLayoutCells != nil
-                 ? L("用的是自定义布局：在「房间布局」里加减房间、换模块；不在布局里的米家房间不显示。", "Using a custom layout: add, remove or re-type rooms in Room layout. Mijia rooms not in the layout aren't shown.")
+                 ? L("用的是自定义布局：这里的菜单直接改布局（换模块、加进空位、移出）；位置在「房间布局」里拖。", "Using a custom layout: these menus edit it directly (change type, add to a free cell, take out). Move rooms around in Room layout.")
                  : L("每个小屋房间放一个米家房间，最多 4 个；想要厨房、卫生间、阳台或别的摆法，用「房间布局」。", "Each house room shows one Mijia room, up to 4. For a kitchen, bathroom, balcony or another arrangement, use Room layout."))
                 .font(.system(size: 10)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             ForEach(resolved.rooms, id: \.key) { r in mappingRow(key: r.key, title: r.title, status: r.module.title, active: true) }
@@ -476,6 +483,9 @@ struct HouseEditPanel: View {
             Circle().fill(active ? Color.green : Color.secondary.opacity(0.4)).frame(width: 6, height: 6)
             Text(title).font(.system(size: 12)).lineLimit(1)
             Spacer(minLength: 4)
+            if let layout = m.houseLayoutCells {
+                layoutMenu(layout: layout, key: key, title: title, status: status)
+            } else {
             Menu {
                 Button(L("自动", "Automatic")) { m.houseEdit(L("房间 ", "Room ") + title) { $0.setRoom(home: home, key: key, module: nil) } }
                 Divider()
@@ -492,9 +502,39 @@ struct HouseEditPanel: View {
             }
             .menuStyle(.borderlessButton).fixedSize().foregroundStyle(.secondary)
             .disabled(key.isEmpty)
+            }
         }
         .padding(.vertical, 3).padding(.horizontal, 6)
         .background(Theme.tile.opacity(0.6), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+    }
+
+    /// 自定义布局时的房间菜单：直接改布局里这个房间的模块（换模块 / 加进布局 / 移出），和「房间布局」标签同一份数据
+    private func layoutMenu(layout: [HouseLayoutCell], key: String, title: String, status: String) -> some View {
+        let cell = layout.first { $0.room == key }
+        func apply(_ module: String?) {
+            guard let next = HouseLayoutSolver.setModule(layout, room: key, module: module) else { return }
+            m.houseEdit(L("房间 ", "Room ") + title) { $0.setLayout(home: home, layout: next.isEmpty ? nil : next) }
+        }
+        let auto = HouseModule.isEntryFoyer(roomName: title) ? HouseModule.generic : HouseModule.from(roomName: title)
+        return Menu {
+            Button(L("自动（", "Automatic (") + auto.title + L("）", ")")) { apply(auto.rawValue) }
+                .disabled(HouseLayoutSolver.setModule(layout, room: key, module: auto.rawValue) == nil)
+            Divider()
+            ForEach(HouseModule.allCases, id: \.self) { mod in
+                Button {
+                    apply(mod.rawValue)
+                } label: {
+                    if cell?.module == mod.rawValue { Label(mod.title, systemImage: "checkmark") } else { Text(mod.title) }
+                }
+                .disabled(HouseLayoutSolver.setModule(layout, room: key, module: mod.rawValue) == nil)
+            }
+            Divider()
+            Button(L("不放进小屋", "Not in house")) { apply(nil) }.disabled(cell == nil)
+        } label: {
+            Text(cell.flatMap { HouseModule(rawValue: $0.module)?.title } ?? status).font(.system(size: 11))
+        }
+        .menuStyle(.borderlessButton).fixedSize().foregroundStyle(.secondary)
+        .disabled(key.isEmpty)
     }
 
     private var storageNote: String {
@@ -607,6 +647,17 @@ extension Snapshot {
             appearance = NSAppearance(named: name)
             render(HousePilotHost().environmentObject(m), out.appendingPathComponent("house-composed-window-\(suffix).png"), size: HouseWindow.normalSize)
             render(HousePilotHost(editing: true).environmentObject(m), out.appendingPathComponent("house-composed-edit-\(suffix).png"), size: HouseWindow.editSize)
+        }
+        // Devices 标签的房间菜单在自定义布局下直接改布局：厨房移出，门口（自动 = 门厅模块）加进空出来的格子
+        let entry = m.houseResolved.excluded.first { $0.reason == .notInLayout && HouseModule.isEntryFoyer(roomName: $0.title) }
+        if var lay = m.house.homes[home]?.layout {
+            lay = HouseLayoutSolver.setModule(lay, room: "name:" + L("厨房", "Kitchen"), module: nil) ?? lay
+            if let entry { lay = HouseLayoutSolver.setModule(lay, room: entry.key, module: "generic") ?? lay }
+            m.houseEdit("menu") { $0.setLayout(home: home, layout: lay) }
+        }
+        for (suffix, name) in [("light", NSAppearance.Name.aqua), ("dark", NSAppearance.Name.darkAqua)] {
+            appearance = NSAppearance(named: name)
+            render(HousePilotHost(editing: true).environmentObject(m), out.appendingPathComponent("house-composed-menu-\(suffix).png"), size: HouseWindow.editSize)
         }
         exit(0)
     }

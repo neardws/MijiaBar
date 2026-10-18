@@ -51,6 +51,34 @@ public enum HouseLayoutSolver {
         return Array(Set(problems.map(\.rawValue))).compactMap(Problem.init(rawValue:))
     }
 
+    /// 自定义布局里给一个房间换模块 / 加进来 / 移出（Devices 标签的房间菜单用）。
+    /// module == nil → 移出布局；房间已在布局里 → 原地换模块，放不下（例如换成占两格的客厅）就挪到第一个空位；
+    /// 不在布局里 → 放到第一个空位（按行、列顺序）。没有空位返回 nil。
+    public static func setModule(_ layout: [HouseLayoutCell], room: String, module: String?) -> [HouseLayoutCell]? {
+        var rest = layout.filter { $0.room != room }
+        guard let module else { return rest }
+        if let cur = layout.first(where: { $0.room == room }) {
+            var cell = cur; cell.module = module
+            if validate(rest + [cell]).isEmpty {
+                return layout.map { $0.room == room ? cell : $0 }
+            }
+        }
+        guard let spot = firstFree(rest, module: module, room: room) else { return nil }
+        rest.append(spot)
+        return rest
+    }
+
+    /// 第一个能放下这个模块的空位（行优先）
+    public static func firstFree(_ layout: [HouseLayoutCell], module: String, room: String) -> HouseLayoutCell? {
+        for row in 0..<maxRows {
+            for col in 0..<maxCols {
+                let c = HouseLayoutCell(room: room, module: module, col: col, row: row)
+                if validate(layout + [c]).isEmpty { return c }
+            }
+        }
+        return nil
+    }
+
     /// 经典四室预设（和 Phase 1 整图房间位对应）：后排卧室+书房，前排客厅(2)+玄关
     public static let classicFour: [HouseLayoutCell] = [
         .init(room: "", module: "bedroom", col: 0, row: 0),

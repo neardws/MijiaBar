@@ -30,4 +30,31 @@ import Testing
         #expect(living?.col == 0)
         #expect(layout.count <= 6)
     }
+
+    @Test func setModuleChangesAddsAndRemoves() {
+        let base: [HouseLayoutCell] = [
+            .init(room: "a", module: "bedroom", col: 0, row: 0),
+            .init(room: "b", module: "study", col: 1, row: 0),
+            .init(room: "k", module: "kitchen", col: 0, row: 1),
+        ]
+        // 原地换模块
+        let s1 = HouseLayoutSolver.setModule(base, room: "b", module: "bathroom")!
+        #expect(s1.first { $0.room == "b" } == .init(room: "b", module: "bathroom", col: 1, row: 0))
+        // 换成客厅（占两格）：原地放不下 (1,0)+(2,0) 其实能放 → 原地
+        let s2 = HouseLayoutSolver.setModule(base, room: "b", module: "living")!
+        #expect(s2.first { $0.room == "b" } == .init(room: "b", module: "living", col: 1, row: 0))
+        // 厨房换客厅：(0,1)+(1,1) 空 → 原地
+        let s3 = HouseLayoutSolver.setModule(s2, room: "k", module: "living")!
+        #expect(HouseLayoutSolver.validate(s3).isEmpty)
+        // 新房间加进第一个空位
+        let s4 = HouseLayoutSolver.setModule(base, room: "n", module: "balcony")!
+        #expect(s4.first { $0.room == "n" } == .init(room: "n", module: "balcony", col: 2, row: 0))
+        // 移出
+        #expect(HouseLayoutSolver.setModule(base, room: "a", module: nil)!.map(\.room) == ["b", "k"])
+        // 满了放不下
+        let full = (0..<6).map { HouseLayoutCell(room: "r\($0)", module: "generic", col: $0 % 3, row: $0 / 3) }
+        #expect(HouseLayoutSolver.setModule(full, room: "x", module: "bedroom") == nil)
+        // 满格时把一间 1x1 换成客厅：原地放不下也没有空位 → nil
+        #expect(HouseLayoutSolver.setModule(full, room: "r2", module: "living") == nil)
+    }
 }
