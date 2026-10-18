@@ -128,7 +128,7 @@ public enum HouseComposer {
                 case .room: d["reveal"] = "room"
                 case nil: break
                 }
-                for (k, poly) in [("shade", L.shade), ("screen", L.screen), ("core", L.core)] where !hidden {
+                for (k, poly) in [("shade", L.shade), ("screen", L.screen), ("core", L.core), ("vent", L.vent)] where !hidden {
                     if let poly { d[k] = poly.map(tx) }
                 }
                 lights.append(d)

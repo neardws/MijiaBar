@@ -35,9 +35,17 @@ def pixelize_rgba(im: Image.Image, brightness=0.96, contrast=1.05) -> Image.Imag
 
 # ---------- night LUT（经典整图 day-base → night-base） ----------
 _LUT = None
+NIGHT_LUT = Path(__file__).resolve().parents[2] / 'assets/house/modules/night-lut.npz'
+
 def night_lut(day_base: Path, night_base: Path, bins=24):
+    """昼→夜颜色映射。固化在 assets/house/modules/night-lut.npz：经典整图底图之后加了灯具（空调等），
+    重新统计会让所有模块的夜景差几个色阶；删掉这个文件才会从底图重新统计。"""
     global _LUT
     if _LUT is not None: return _LUT
+    if NIGHT_LUT.exists():
+        z = np.load(NIGHT_LUT)
+        _LUT = (z['lut'].astype(np.float32), int(z['bins']))
+        return _LUT
     d = np.asarray(Image.open(day_base).convert('RGB'), dtype=np.float32) / 255
     n = np.asarray(Image.open(night_base).convert('RGB'), dtype=np.float32) / 255
     # 只取房间内的像素（排除黑底），排除窗户天空（蓝）
@@ -60,6 +68,7 @@ def night_lut(day_base: Path, night_base: Path, bins=24):
     from scipy.ndimage import uniform_filter
     for c in range(3): lut[..., c] = uniform_filter(lut[..., c], size=3, mode='nearest')
     _LUT = (lut, bins)
+    np.savez_compressed(NIGHT_LUT, lut=lut, bins=bins)
     return _LUT
 
 def apply_night(rgb: np.ndarray, lut_bins, night_sky: np.ndarray | None = None) -> np.ndarray:
@@ -320,23 +329,10 @@ def bake_module(base_rgb: np.ndarray, phase: str, mod: dict, cut: bool, bodies: 
     return unlit, lit
 
 def paint_ac(img: np.ndarray, light: dict, phase: str):
-    """空调送风点：和经典版 bakelib.paint_ac 一样的点阵，但按空调所在的墙决定往哪边飘——
-    NE 墙（面朝左前）往左下，NW 墙（面朝右前）往右下。"""
-    (x0, y0), (x1, y1) = light["vent"]
-    sx = 1.2 if light.get("wall") == "nw" else -1.2
-    rng = np.random.default_rng(7)
-    PX_ = bakelib.PX
-    for i in range(18):
-        t = (i + 0.5) / 18
-        bx, by = x0 + (x1 - x0) * t, y0 + (y1 - y0) * t
-        for k in range(1, 6):
-            if rng.random() < 0.55:
-                x = int(bx + k * sx * 2.0 + rng.integers(-1, 2)) // PX_ * PX_
-                y = int(by + k * 5 + rng.integers(-1, 2)) // PX_ * PX_
-                a = 0.75 - k * 0.11
-                img[y:y + PX_, x:x + PX_] = img[y:y + PX_, x:x + PX_] * (1 - a) + np.array([0.62, 0.86, 1.0]) * a
-    lx, ly = light["led"]
-    img[ly:ly + PX_, lx:lx + PX_] = [0.45, 1.0, 0.75]
+    """空调开机：lit 里只烘焙绿色指示灯（在 core 里）。送风由 App 动态画（HouseAirflow，按 vent + 墙朝向）：
+    烘焙进 lit 的送风会被同屋其他灯的 reveal 蒙版一起露出来，空调关着也看得到。"""
+    from acsprite import paint_led
+    paint_led(img, light["led"])
 
 def measure_low_wall(cut_img: np.ndarray, cc: dict, g) -> float:
     """剖面版的矮墙在规范图里有多高（中位数；家具冒出来的列会被中位数压掉）。"""

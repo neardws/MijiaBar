@@ -73,10 +73,28 @@ Fixture slots (`mijiabar house slots --json`):
 
 | Module | Fixtures (accepts) | Badges |
 |---|---|---|
-| `living` | `floor_lamp` (light), `sconce` (light), `tv` (tv) | 4 |
+| `living` | `floor_lamp` (light), `sconce` (light), `tv` (tv), `ac` (ac, wall unit above the sofa) | 4 |
 | `bedroom` | `bedside` (light), `ac` (ac) | 3 |
-| `study` | `ceiling` (light), `monitor` (light/tv/other, name must mention 显示器/monitor/screen…) | 3 |
+| `study` | `ceiling` (light), `monitor` (light/tv/other, name must mention 显示器/monitor/screen…), `ac` (ac, wall unit beside the window) | 3 |
 | `generic` | `entry_light` (light) | 3 |
+| `kitchen` / `bathroom` / `balcony` (composed layouts) | `pendant` / `ceiling` / `wall_lamp` (light) | 3 |
+
+### Device classes (fixture vs badge)
+
+Devices are either **(A) fixtures** drawn into the room art with an on/off state, or **(B) badges** (pixel icon on the floor).
+`HouseCatalog.deviceClass(category:model:)` decides; `mijiabar house --json` reports it per device as `class`
+(`fixture:<kind>`, `fixture:<kind>(badge)` = type A without art yet, or `badge`), and `house slots --json` lists every fixture's `kind`.
+
+| Class | Kinds | Shown as |
+|---|---|---|
+| A, has art | `light`, `screen` (TV / monitor), `ac` (wall unit) | Baked into the module art: lit layer fades in when the device is on (lamp glow, screen picture, AC airflow + green LED) |
+| A, art planned | `curtain`, `fridge`, `water-heater`, `washer` (baked fixtures); `fan`, `air-purifier`, `humidifier`, `dehumidifier`, `heater`, `vacuum` (floor sprites with on/off frames, Phase 3b/3c) | Badge until the art lands |
+| B | plugs, switches, sensors, gateways, remotes, locks, cameras, speakers, printers, water purifiers, kitchen appliances | Badge |
+
+A type-A device falls back to a badge when its room module has no free slot of that kind (no such slot, already taken, or the wall it
+hangs on is cut away in a composed layout — then the badge sits on the slot's floor `alt` point). Every art set — the classic cutaway
+(`house-cutaway.json`), the module catalog and every style pack — must define exactly the fixture set of `HouseCatalog.fixtures`
+(`HouseCatalog.fixtureSetProblems`, checked by unit tests).
 
 ## CLI
 

@@ -63,13 +63,56 @@ private func resolve(_ ds: [Device], _ cfg: HomeHouse? = nil, hidden: Set<String
         let living = h.rooms[0]
         #expect(living.device(at: .fixture("floor_lamp"))?.did == "d3")
         #expect(living.device(at: .fixture("tv"))?.did == "d14")
-        // 客厅画里没有空调：空调进徽章，不会占一个看不见的位置
-        #expect(living.devices.first { $0.did == "d1" }?.spot == .badge("b1"))
+        // 客厅美术里画了壁挂空调（Phase 3a）：空调进 ac 灯具位，不再是茶几上的徽章
+        #expect(living.device(at: .fixture("ac"))?.did == "d1")
         let bed = h.rooms[1]
         #expect(bed.device(at: .fixture("ac"))?.did == "d2")
         #expect(bed.devices.first { $0.did == "d4" }?.spot == .badge("b1"))
         #expect(h.rooms[2].placed.count == 2)   // 插座、温湿度计都是徽章
         #expect(h.rooms[3].devices.first?.spot == .badge("b1"))
+    }
+
+    @Test func acLandsOnWallUnitInEveryRoomThatHasOne() {
+        let ds = [dev("a1", "客厅空调", "xiaomi.aircondition.mt0", room: "客厅"), dev("a2", "卧室空调", "lumi.acpartner.mcn02", room: "主卧"),
+                  dev("a3", "书房空调", "lumi.acpartner.v3", room: "书房"), dev("a4", "门口空调", "lumi.acpartner.v3", room: "门口")]
+        let h = resolve(ds)
+        for (i, m) in [HouseModule.living, .bedroom, .study].enumerated() {
+            #expect(h.rooms.first { $0.module == m }?.device(at: .fixture("ac"))?.did == "a\(i + 1)", "\(m)")
+        }
+        // 玄关没有空调位：退回徽章
+        #expect(h.rooms.first { $0.module == .generic }?.devices.first?.spot == .badge("b1"))
+        // 第二台空调：灯具位已占，退回徽章
+        let two = resolve([dev("x", "空调1", "lumi.acpartner.v3", room: "客厅"), dev("y", "空调2", "lumi.acpartner.v3", room: "客厅")])
+        #expect(two.rooms[0].devices.map(\.spot) == [.fixture("ac"), .badge("b1")])
+    }
+
+    @Test func deviceClasses() {
+        func k(_ model: String) -> HouseDeviceClass { HouseCatalog.deviceClass(category: DeviceCategory.guess(model), model: model) }
+        #expect(k("lumi.acpartner.mcn02") == .fixture(.ac))
+        #expect(k("yeelink.light.ceiling22") == .fixture(.light))
+        #expect(k("xiaomi.tv.eanfv1") == .fixture(.screen))
+        #expect(k("zhimi.fan.za5") == .fixture(.fan))
+        #expect(k("zhimi.airpurifier.mb4") == .fixture(.airPurifier))
+        #expect(k("nwt.derh.wdh318efw1") == .fixture(.dehumidifier))
+        #expect(k("deerma.humidifier.jsq5") == .fixture(.humidifier))
+        #expect(k("roborock.vacuum.a15") == .fixture(.vacuum))
+        #expect(k("lumi.curtain.hagl05") == .fixture(.curtain))
+        #expect(k("viomi.fridge.x3") == .fixture(.fridge))
+        #expect(k("cuco.plug.v3") == .badge)
+        #expect(k("miaomiaoce.sensor_ht.t2") == .badge)
+        #expect(k("lumi.gateway.mgl03") == .badge)
+        #expect(k("isa.camera.hlc7") == .badge)
+        // 已有灯具位美术的只有灯 / 屏幕 / 空调；其余 A 类先显示徽章
+        #expect(k("lumi.acpartner.mcn02").hasFixtureArt && !k("zhimi.fan.za5").hasFixtureArt && !k("cuco.plug.v3").hasFixtureArt)
+        // 每个灯具位都有 kind，而且是已实现的
+        for m in HouseModule.allCases { for f in HouseCatalog.fixtures(m) { #expect(HouseCatalog.fixtureKind(m, f.id)?.implemented == true) } }
+        #expect(HouseCatalog.fixtureKind(.living, "ac") == .ac && HouseCatalog.fixtureKind(.study, "monitor") == .screen)
+    }
+
+    @Test func fixtureSetValidation() {
+        #expect(HouseCatalog.fixtureSetProblems(.study, lightIds: ["ceiling", "monitor", "ac"]).isEmpty)
+        #expect(HouseCatalog.fixtureSetProblems(.study, lightIds: ["ceiling", "monitor"]) == ["study: missing fixture ac"])
+        #expect(HouseCatalog.fixtureSetProblems(.study, lightIds: ["ceiling", "monitor", "ac", "fan"]) == ["study: unknown fixture fan"])
     }
 
     @Test func tvNeverLandsOnStudyMonitor() {
@@ -190,6 +233,22 @@ private func resolve(_ ds: [Device], _ cfg: HomeHouse? = nil, hidden: Set<String
         try? FileManager.default.removeItem(at: dir)
     }
 
+    /// 每套素材（模块 catalog.json；以后每个风格包）都必须提供同一套灯具位
+    @Test func moduleCatalogDefinesEveryFixture() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        for dir in ["assets/house/modules", "Sources/MijiaBarApp/Resources/House/modules"] {
+            let o = try JSONSerialization.jsonObject(with: Data(contentsOf: root.appendingPathComponent(dir + "/catalog.json"))) as! [String: Any]
+            let modules = o["modules"] as! [String: [String: Any]]
+            for m in HouseModule.allCases {
+                let lights = try #require(modules[m.rawValue]?["lights"] as? [[String: Any]], "\(dir) \(m)")
+                #expect(HouseCatalog.fixtureSetProblems(m, lightIds: lights.compactMap { $0["id"] as? String }).isEmpty, "\(dir) \(m)")
+                for L in lights where (L["role"] as? String) == "ac" {
+                    #expect(L["wall"] != nil && L["anchor"] != nil && L["alt"] != nil && L["vent"] != nil, "\(dir) \(m) ac")
+                }
+            }
+        }
+    }
+
     @Test func catalogMatchesCutawayJSON() throws {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("Sources/MijiaBarApp/Resources/House/house-cutaway.json")
@@ -197,7 +256,7 @@ private func resolve(_ ds: [Device], _ cfg: HomeHouse? = nil, hidden: Set<String
         let modules = o["modules"] as! [String: [String: Any]]
         for m in HouseCatalog.artModules {
             let lights = (modules[m.rawValue]?["lights"] as? [[String: Any]] ?? []).compactMap { $0["id"] as? String }
-            #expect(Set(lights) == Set(HouseCatalog.fixtures(m).map(\.id)), "\(m)")
+            #expect(HouseCatalog.fixtureSetProblems(m, lightIds: lights).isEmpty, "\(m)")
             #expect((modules[m.rawValue]?["badges"] as? [[Double]])?.count == HouseCatalog.badgeCount(m), "\(m) badges")
         }
     }

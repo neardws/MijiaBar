@@ -125,6 +125,21 @@ import CoreGraphics
         let ac2 = try lights([.init(room: "b", module: "bedroom", col: 0, row: 0)], "b").first { $0["id"] as? String == "ac" }!
         #expect(ac2["hidden"] == nil)
         #expect(ac2["core"] != nil)
+        #expect((ac2["vent"] as? [[Double]])?.count == 2)   // 送风由 App 按 vent 动态画；隐藏时没有 vent
+        #expect(ac["vent"] == nil)
+        // 客厅空调在 NW 外墙（沙发上方）：最左列可见；左边有房间时隐藏、给 alt
+        let lac = try lights([.init(room: "a", module: "bedroom", col: 0, row: 0), .init(room: "l", module: "living", col: 0, row: 1)], "l")
+            .first { $0["id"] as? String == "ac" }!
+        #expect(lac["hidden"] == nil && lac["vent"] != nil)
+        let lac2 = try lights([.init(room: "g", module: "generic", col: 0, row: 1), .init(room: "l", module: "living", col: 1, row: 1)], "l")
+            .first { $0["id"] as? String == "ac" }!
+        #expect(lac2["hidden"] as? Bool == true && (lac2["alt"] as? [Double])?.count == 2)
+        // 书房空调在 NE 外墙（窗右侧）：第一排可见；后面有房间时隐藏
+        let sac = try lights([.init(room: "s", module: "study", col: 0, row: 0)], "s").first { $0["id"] as? String == "ac" }!
+        #expect(sac["hidden"] == nil && sac["vent"] != nil)
+        let sac2 = try lights([.init(room: "b", module: "bedroom", col: 0, row: 0), .init(room: "s", module: "study", col: 0, row: 1)], "s")
+            .first { $0["id"] as? String == "ac" }!
+        #expect(sac2["hidden"] as? Bool == true)
         // 客厅壁灯在 NE 第 0 段；只有第 1 段后面有房间 → 壁灯不隐藏
         let sc = try lights([.init(room: "s", module: "study", col: 1, row: 0),
                              .init(room: "l", module: "living", col: 0, row: 1)], "l").first { $0["id"] as? String == "sconce" }!

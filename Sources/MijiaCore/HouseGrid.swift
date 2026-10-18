@@ -108,6 +108,8 @@ public struct HouseModuleLight: Codable, Equatable, Sendable {
     public var anchor: [Double]?
     /// 本体被切掉时的替代位置（地面点）：App 在这里画一个设备徽章（空调）
     public var alt: [Double]?
+    /// 空调出风口下沿（两点）：开机时 App 在这里画动态送风（不烘焙进 lit，免得同屋别的灯把它“露”出来）
+    public var vent: [[Double]]?
 }
 
 public enum HouseModuleReveal: Codable, Equatable, Sendable {

@@ -656,6 +656,13 @@ extension Snapshot {
             render(HousePilotHost().environmentObject(m), out.appendingPathComponent("house-window-\(suffix).png"), size: HouseWindow.normalSize)
             render(HousePilotHost(editing: true, selection: sel).environmentObject(m), out.appendingPathComponent("house-edit-\(suffix).png"), size: HouseWindow.editSize)
         }
+        // 客厅空调开 / 关（演示数据里开着）：墙上空调的送风 + 指示灯跟着开关
+        for (suffix, name) in [("light", NSAppearance.Name.aqua), ("dark", NSAppearance.Name.darkAqua)] {
+            appearance = NSAppearance(named: name)
+            m.states["d1"]?.values["power"] = .string("off")
+            render(HousePilotHost().environmentObject(m), out.appendingPathComponent("house-window-acoff-\(suffix).png"), size: HouseWindow.normalSize)
+            m.states["d1"]?.values["power"] = .string("on")
+        }
         // 拖动中（截图画不到系统拖动图像，用 showPreview 自己画）：落地灯拖到壁灯位 = 可以放；空调拖到落地灯位 = 拒绝
         let living = m.houseRooms.first { $0.module == .living }?.key ?? ""
         let valid = HouseDragState(session: HouseDragSession(did: "d3", name: m.device("d3").map(m.displayName) ?? "", category: .light,
@@ -696,6 +703,12 @@ extension Snapshot {
             appearance = NSAppearance(named: name)
             render(HousePilotHost().environmentObject(m), out.appendingPathComponent("house-composed-window-\(suffix).png"), size: HouseWindow.normalSize)
             render(HousePilotHost(editing: true).environmentObject(m), out.appendingPathComponent("house-composed-edit-\(suffix).png"), size: HouseWindow.editSize)
+        }
+        for (suffix, name) in [("light", NSAppearance.Name.aqua), ("dark", NSAppearance.Name.darkAqua)] {
+            appearance = NSAppearance(named: name)
+            m.states["d1"]?.values["power"] = .string("off")
+            render(HousePilotHost().environmentObject(m), out.appendingPathComponent("house-composed-window-acoff-\(suffix).png"), size: HouseWindow.normalSize)
+            m.states["d1"]?.values["power"] = .string("on")
         }
         // Devices 标签的房间菜单在自定义布局下直接改布局：厨房移出，门口（自动 = 门厅模块）加进空出来的格子
         let entry = m.houseResolved.excluded.first { $0.reason == .notInLayout && HouseModule.isEntryFoyer(roomName: $0.title) }

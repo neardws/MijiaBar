@@ -1,7 +1,7 @@
 """每个模块的灯具槽 / 徽章 / 标签（模块内 1x 坐标由地面参数换算）。
 
 位置用地面参数表示：u 沿 NE 墙（0..fw），v 沿 NW 墙（0..1），z = 离地高度（px）。
-灯具 id 沿用 Phase 1（living: floor_lamp/sconce/tv；bedroom: bedside/ac；study: ceiling/monitor；generic: entry_light），
+灯具 id 沿用 Phase 1（living: floor_lamp/sconce/tv/ac；bedroom: bedside/ac；study: ceiling/monitor/ac；generic: entry_light），
 新模块：kitchen: pendant；bathroom: ceiling；balcony: wall_lamp。
 """
 import sys; sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
@@ -35,6 +35,27 @@ def ceiling(g, id, u, v, slot=0):
     return {"id": id, "kind": "ceiling", "role": "light", "slot": slot,
             "pool": ell(g, u, v, 120, 48), "reveal": ell(g, u, v, 160, 80), "alt": P(g, u, v, 40)}
 
+def flow_reveal(g, u, v, sx):
+    """空调的 reveal：出风口正下方的送风区（送风粒子 + 冷光都在这），不是地板中间。"""
+    x, y = P(g, u, v, 72)
+    return [x + 10 * sx, y + 20, 44, 34]
+
+def ac_nw(g, alt=(0.28, 0.42)):
+    """NW 墙壁挂空调（卧室源图里画的那台；客厅用 module_ac 同位置贴了一台）。
+    所在墙被切掉时：空调本体不可见，App 在地上 alt 点显示一个空调徽章代替。"""
+    return {"id": "ac", "kind": "ac", "role": "ac", "slot": 0, "wall": "nw",
+            "vent": [P(g, 0.02, 0.6, 72), P(g, 0.02, 0.38, 72)], "led": P(g, 0.02, 0.34, 84),
+            "core": quad(g, 0.02, 0.46, 81, 50, 22), "reveal": flow_reveal(g, 0.02, 0.49, 1),
+            "anchor": P(g, 0.02, 0.46, 81), "alt": P(g, *alt)}
+
+def ac_ne(g, u0, u1, alt):
+    """NE 墙壁挂空调（卧室那台镜像过来、缩短，见 scripts/house_modules/add_ac.py）：u0..u1 = 出风口沿墙的范围。"""
+    um = (u0 + u1) / 2
+    return {"id": "ac", "kind": "ac", "role": "ac", "slot": 0, "wall": "ne",
+            "vent": [P(g, u0, 0.02, 72), P(g, u1, 0.02, 72)], "led": P(g, u0 + 0.05, 0.02, 85),
+            "core": quad(g, um + 0.03, 0.02, 81, 40, 22), "reveal": flow_reveal(g, um, 0.02, -1),
+            "anchor": P(g, um, 0.02, 80), "alt": P(g, *alt)}
+
 # 1x1 模块的徽章位：地板中心周围三点（左、右、前），彼此 ≥ 60px，离相邻房间的徽章位也够远
 SPREAD = [(0.28, 0.66), (0.66, 0.28), (0.74, 0.74)]
 
@@ -42,7 +63,8 @@ def spec(module):
     fw = 2 if module == 'living' else 1
     g = module_geom(fw)
     b = lambda pts: [P(g, u, v) for u, v in pts]
-    lab = P(g, 0.08, 0.62, 98)
+    # 房间名标签：NW 墙上沿。客厅 / 卧室的 NW 墙中段挂着空调，标签挪到空调左边（靠墙的外端）
+    lab = P(g, 0.08, 0.9 if module in ('living', 'bedroom') else 0.62, 98)
     floor_label = None
     if module == 'living':
         lights = [dict(lamp(g, 'floor_lamp', 0.07, 0.09, 63), pool=ell(g, 0.3, 0.3, 110, 44)),
@@ -52,22 +74,19 @@ def spec(module):
                    # 电视柜在右格正中（约 u=1.45, v=0.5，retouch.py 从 NE 墙根往前搬了 0.35 格）；
                    # 屏幕平行于 NE 墙，按规范图实测的平行四边形
                    "screen": [[316, 176], [363, 196], [363, 232], [316, 213]], "throw": [-40, 40], "radius": 85,
-                   "reveal": ell(g, 1.35, 0.9, 120, 75)}]
+                   "reveal": ell(g, 1.35, 0.9, 120, 75)},
+                  ac_nw(g)]   # 沙发上方的 NW 外墙（composed 布局里客厅在最左列时这面墙完整）
         badges = b([(0.5, 0.75), (0.95, 0.62), (1.4, 0.9), (1.8, 0.75)])   # 电视柜挪到右格中间后重新排开
         floor_label = P(g, 0.35, 0.3, 0)   # 两面后墙都被切时：沙发前的空地（避开徽章位）
     elif module == 'bedroom':
-        lights = [dict(lamp(g, 'bedside', 0.07, 0.09, 44), pool=ell(g, 0.2, 0.3, 100, 40)),
-                  {"id": "ac", "kind": "ac", "role": "ac", "slot": 0, "wall": "nw",
-                   "vent": [P(g, 0.02, 0.6, 72), P(g, 0.02, 0.38, 72)], "led": P(g, 0.02, 0.34, 84),
-                   "core": quad(g, 0.02, 0.46, 81, 50, 22), "reveal": ell(g, 0.2, 0.46, 70, 50),
-                   # 所在墙被切掉时：空调本体不可见，App 在地上 alt 点显示一个空调徽章代替
-                   "anchor": P(g, 0.02, 0.46, 81), "alt": P(g, 0.28, 0.42)}]
+        lights = [dict(lamp(g, 'bedside', 0.07, 0.09, 44), pool=ell(g, 0.2, 0.3, 100, 40)), ac_nw(g)]
         badges = b([(0.55, 0.8), (0.8, 0.55), (0.35, 0.65)])
     elif module == 'study':
         lights = [ceiling(g, 'ceiling', 0.55, 0.55),
                   {"id": "monitor", "kind": "screen", "role": "tv", "slot": 0, "style": "monitor",
                    "screen": quad(g, 0.48, 0.12, 46, 24, 20), "throw": [-8, 35], "radius": 60,
-                   "reveal": ell(g, 0.5, 0.35, 85, 65)}]
+                   "reveal": ell(g, 0.5, 0.35, 85, 65)},
+                  ac_ne(g, 0.71, 0.93, alt=(0.82, 0.27))]   # 窗右侧的 NE 外墙（书房在第一排时这面墙完整）
         badges = b([(0.55, 0.85), (0.85, 0.6), (0.3, 0.7)])
     elif module == 'generic':
         lights = [ceiling(g, 'entry_light', 0.5, 0.55)]

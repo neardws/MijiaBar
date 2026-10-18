@@ -65,7 +65,8 @@ func spotString(_ s: HouseSpot?) -> Any {
         "rooms": r.rooms.map { room -> [String: Any] in
             ["key": room.key, "title": room.title, "module": room.module.rawValue,
              "devices": room.devices.map { d -> [String: Any] in
-                 ["did": d.did, "name": d.name, "category": d.category.rawValue, "online": d.online, "spot": spotString(d.spot), "pinned": d.pinned] }]
+                 ["did": d.did, "name": d.name, "category": d.category.rawValue, "online": d.online, "spot": spotString(d.spot), "pinned": d.pinned,
+                  "class": houseClassString(HouseCatalog.deviceClass(category: d.category, model: all.first { $0.did == d.did }?.model ?? ""))] }]
         },
         "excluded": r.excluded.map { ["key": $0.key, "title": $0.title, "module": $0.module.rawValue, "reason": $0.reason.rawValue, "devices": $0.deviceCount] },
         "hidden": r.hidden.map { did in ["did": did, "name": all.first { $0.did == did }.map(prefs.name) ?? did] },
@@ -77,11 +78,21 @@ func houseSlots() -> [String: Any] {
     for m in HouseModule.allCases {
         mods[m.rawValue] = [
             "has_art": m.hasArt, "title": m.title,
-            "fixtures": HouseCatalog.fixtures(m).map { ["id": $0.id, "accepts": $0.accepts.map(\.rawValue).sorted(), "hints": $0.hints, "hint_required": $0.hintRequired] },
+            "fixtures": HouseCatalog.fixtures(m).map { ["id": $0.id, "kind": HouseCatalog.fixtureKind(m, $0.id)?.rawValue ?? "", "accepts": $0.accepts.map(\.rawValue).sorted(), "hints": $0.hints, "hint_required": $0.hintRequired] },
             "badges": HouseCatalog.badgeIds(m),
         ]
     }
-    return ["schema": HouseFile.currentSchema, "modules": mods]
+    // 设备分类：A 类 kind（implemented = 已有灯具位美术，否则先显示徽章）；其余类型是 B 类，只用徽章
+    let kinds = HouseFixtureKind.allCases.map { ["kind": $0.rawValue, "implemented": $0.implemented] as [String: Any] }
+    return ["schema": HouseFile.currentSchema, "modules": mods, "fixture_kinds": kinds]
+}
+
+/// "fixture:ac" / "fixture:fan(badge)"（A 类但还没有灯具位美术）/ "badge"
+func houseClassString(_ c: HouseDeviceClass) -> String {
+    switch c {
+    case .fixture(let k): return "fixture:" + k.rawValue + (k.implemented ? "" : "(badge)")
+    case .badge: return "badge"
+    }
 }
 
 @MainActor func houseResolveRoom(_ q: String, home: String) async throws -> (key: String, title: String) {

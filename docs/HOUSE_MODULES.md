@@ -67,6 +67,12 @@ Pipeline (`scripts/house_modules/build.py`), same treatment as `gen-house-cutawa
      top inside a retouched hole follows the generator's actual wall top next to it; for the kitchen it blends
      linearly from the left to the right side. Output: `src/{living,study,kitchen}-day-{full,cut}-canon.png`, used
      by `build.py` directly.
+   * **Wall AC** (`add_ac.py modules`, after `retouch.py`): the bedroom's wall unit (warped to the 2x canonical frame
+     the same way `build.py` does) is pasted onto living's NW wall above the sofa (same spot — all modules share the
+     tip) and, mirrored about the tip column (`P(0,v,z) ↔ P(u=v,0,z)`) and shortened, onto study's NE wall right of
+     the window; tone matched to the target wallpaper. Slots: `ac_nw` / `ac_ne` in `fixtures.py`.
+     `add_ac.py classic` did the same for the classic cutaway (living: replaces the large painting, LaMa fills the
+     rest; study: NE wall left of the window) and patched its unlit/lit incrementally.
    * The kitchen pendant was edited out of the source: a pendant hanging in mid-air would be sliced in half by a
      cut-wall strip, so the kitchen light is an invisible ceiling light with its pool on the table.
 2. **Fit**: auto-detect the room silhouette (outer edges, wall-top lines fitted by least squares so hanging items
@@ -81,26 +87,28 @@ Pipeline (`scripts/house_modules/build.py`), same treatment as `gen-house-cutawa
    dark furniture sides survive; near-black 1–3 px fringes left by the generator along the cut edge are peeled off.
 3. **Pixelize**: half-resolution LANCZOS + brightness/contrast + NEAREST ×2 + sharpen (classic parameters).
 4. **Night**: 3D LUT learned from the aligned classic `day-base → night-base` pair (pixel-aligned by construction),
-   window glass replaced with night sky.
-5. **Bake**: the classic light functions (`light_field`, `band`, `paint_shade`, `paint_screen`); AC airflow drifts
-   away from the wall the unit hangs on (`paint_ac` in `pipeline.py`).
+   window glass replaced with night sky. The LUT is frozen in `assets/house/modules/night-lut.npz` (learned before the
+   classic bases got the AC units); delete it to re-learn.
+5. **Bake**: the classic light functions (`light_field`, `band`, `paint_shade`, `paint_screen`); AC airflow (dashed
+   pixel streams + particles + green LED, `acsprite.paint_airflow`) drifts away from the wall the unit hangs on. An AC's
+   `reveal` is the airflow area right under the vent, so the lit airflow actually shows when the AC is on.
    Wall-mounted lights (`"wall": "nw"|"ne"`, with an `anchor` point) are skipped in the `-cut` bake.
 
 **Hidden wall fixtures.** The composer finds the wall segment under a fixture's `anchor`; if that segment is cut,
 the fixture's body went with the wall: the scene marks it `"hidden": true` and drops its `shade`/`screen`/`core`
 polygons (nothing paints a body that isn't there; the tap target falls back to the reveal ellipse). Lamps keep
-their light — the floor pool comes from the full-wall lit image, which is what's under the strip. The bedroom AC
-has no pool, so it carries an `alt` floor point where the app shows an AC badge instead. Only the segment that
+their light — the floor pool comes from the full-wall lit image, which is what's under the strip. ACs have no
+pool, so they carry an `alt` floor point where the app shows an AC badge instead. Only the segment that
 actually holds the fixture matters (living's sconce is on NE segment 0; a room behind segment 1 doesn't hide it).
 
-Fixture ids: living `floor_lamp`/`sconce`/`tv`, bedroom `bedside`/`ac`, study `ceiling`/`monitor`,
+Fixture ids: living `floor_lamp`/`sconce`/`tv`/`ac`, bedroom `bedside`/`ac`, study `ceiling`/`monitor`/`ac`,
 generic `entry_light` (Phase 1 ids), kitchen `pendant`, bathroom `ceiling`, balcony `wall_lamp`.
 
 All seven modules now have generated art (`catalog.style = "generated"`). Without sources, `build.py` falls
 back to **geometry shells** (empty rooms) marked `shell-standin` — geometry review only, not final art.
 
 Regenerate: `python3 scripts/house_modules/extend.py pair living livingR && LAMA=big-lama.pt python3
-scripts/house_modules/retouch.py living && … retouch.py study && … retouch.py kitchen && python3 scripts/house_modules/build.py
+scripts/house_modules/retouch.py living && … retouch.py study && … retouch.py kitchen && python3 scripts/house_modules/add_ac.py modules && python3 scripts/house_modules/build.py
 assets/house/modules --raw assets/house/modules/src --classic <dir with house-cutaway-{day,night}-base.png> &&
 scripts/sync-house-modules.sh`. `fitcheck.py <id> <fw>` writes a corner overlay + full/cut fit preview to /tmp.
 

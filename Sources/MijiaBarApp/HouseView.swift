@@ -33,6 +33,11 @@ struct HouseLightSpec: Decodable, Identifiable {
     let shade: [[Double]]?    // 灯罩多边形
     let screen: [[Double]]?   // 屏幕四边形
     let core: [[Double]]?     // 灯具本体（关灯时用 unlit 盖回去）
+    /// 空调出风口下沿（两点）+ 送风方向：开机时画动态送风（HouseAirflow）
+    var vent: [[Double]]? = nil
+    var wall: String? = nil
+    var flow: Double? = nil
+    var flowDirection: Double { flow ?? (wall == "ne" ? -1 : 1) }
 
     /// 合成场景：墙挂灯具所在那段墙被切掉了（本体不可见，没有 shade/screen/core）
     var hidden: Bool? = nil
@@ -341,6 +346,48 @@ struct HouseCutawaySceneView: View {
     }
 }
 
+/// 空调送风：出风口下沿往前下方飘的几股像素点（2 px 格，和底图像素对齐），8 fps；坐标 = 底图像素。
+/// 菜单栏面板 / 窗口关掉时视图不在层级里，TimelineView 自然停。
+struct HouseAirflow: View {
+    let a: CGPoint, b: CGPoint
+    let dir: Double
+    static let streams = 5, perStream = 6
+
+    var body: some View {
+        TimelineView(.periodic(from: .init(timeIntervalSinceReferenceDate: 0), by: 1.0 / 8)) { ctx in
+            Canvas { g, _ in Self.draw(g, a: a, b: b, dir: dir, t: ctx.date.timeIntervalSinceReferenceDate) }
+        }
+    }
+
+    /// 纯函数（同一时刻画出来一样），截图和测试都能复现
+    static func particles(a: CGPoint, b: CGPoint, dir: Double, t: Double) -> [(CGPoint, Double)] {
+        var out: [(CGPoint, Double)] = []
+        for i in 0..<streams {
+            let s = (Double(i) + 0.5) / Double(streams)
+            let base = CGPoint(x: a.x + (b.x - a.x) * s, y: a.y + (b.y - a.y) * s)
+            let seed = Double(i) * 0.37
+            for j in 0..<perStream {
+                // 0 → 1：从出风口飘出去、变淡
+                var p = (t * 0.45 + Double(j) / Double(perStream) + seed).truncatingRemainder(dividingBy: 1)
+                if p < 0 { p += 1 }
+                let d = 4 + p * 26
+                let wob = sin(t * 2.1 + Double(i) * 1.7 + p * 6) * 1.6
+                let x = base.x + dir * d * 0.85 + wob
+                let y = base.y + 2 + d * 0.9
+                out.append((CGPoint(x: (x / 2).rounded(.down) * 2, y: (y / 2).rounded(.down) * 2), 0.3 + (1 - p) * 0.65))
+            }
+        }
+        return out
+    }
+
+    static func draw(_ g: GraphicsContext, a: CGPoint, b: CGPoint, dir: Double, t: Double) {
+        let col = Color(red: 0.70, green: 0.92, blue: 1.0)
+        for (p, alpha) in particles(a: a, b: b, dir: dir, t: t) {
+            g.fill(Path(CGRect(x: p.x, y: p.y, width: 2, height: 2)), with: .color(col.opacity(alpha)))
+        }
+    }
+}
+
 /// 单个房间：每盏开着的灯按「房间多边形 ∩ 灯具蒙版」露出 lit 底图；关着的灯具本体用 unlit 盖回去。
 private struct HouseRoomLightLayer: View {
     let module: HouseCutawayModule
@@ -376,6 +423,18 @@ private struct HouseRoomLightLayer: View {
                         .mask(HousePolygon(points: core).fill(Color.white))
                         .opacity(1 - k)
                         .animation(.easeInOut(duration: 0.35), value: k)
+                }
+            }
+            // 空调送风：动态像素粒子（不烘焙进 lit——同屋的灯开着时 lit 会把烘焙的送风也露出来）
+            ForEach(module.lights) { light in
+                if light.kind == "ac", light.hidden != true, let v = light.vent, v.count == 2 {
+                    let k = light.strength(lighting)
+                    if k > 0 {
+                        HouseAirflow(a: CGPoint(x: v[0][0], y: v[0][1]), b: CGPoint(x: v[1][0], y: v[1][1]), dir: light.flowDirection)
+                            .frame(width: artSize.width, height: artSize.height)
+                            .opacity(k)
+                            .allowsHitTesting(false)
+                    }
                 }
             }
             if onToggle != nil {
@@ -924,6 +983,16 @@ struct HousePilotHost: View {
 // MARK: - CLI
 
 extension Snapshot {
+    /// 客厅空调开 / 关（其余照演示状态）
+    static func acPair(_ rooms: [HouseRoom]) -> [(String, HousePhase, [HouseRoom])] {
+        func onIds(_ r: HouseRoom) -> Set<String> {
+            Set(r.devices.compactMap { d -> String? in if case .fixture(let id)? = d.spot, d.on { return id }; return nil })
+        }
+        let on = rooms.map { $0.module == .living ? $0.lit(onIds($0).union(["ac"]), badgesOn: false) : $0 }
+        let off = rooms.map { $0.module == .living ? $0.lit(onIds($0).subtracting(["ac"]), badgesOn: false) : $0 }
+        return [("house-day-ac-on", .day, on), ("house-day-ac-off", .day, off), ("house-night-ac-on", .night, on), ("house-night-ac-off", .night, off)]
+    }
+
     static func house(dir: String) {
         NSApplication.shared.setActivationPolicy(.accessory)
         let out = URL(fileURLWithPath: dir)
@@ -946,11 +1015,11 @@ extension Snapshot {
         let oneLamp = rooms.map { $0.lit($0.module == .living ? ["floor_lamp"] : [], badgesOn: false) }
         let twoLamps = rooms.map { $0.lit($0.module == .living ? ["floor_lamp"] : $0.module == .bedroom ? ["bedside"] : [], badgesOn: false) }
         let partial: [(String, HousePhase, [HouseRoom])] = [
-            ("house-night-partial", .night, rooms),   // 演示数据的真实状态：客厅落地灯 + 电视，客厅空调徽章
+            ("house-night-partial", .night, rooms),   // 演示数据的真实状态：客厅落地灯 + 电视 + 墙上空调
             ("house-day-partial", .day, rooms),
             ("house-night-onelamp", .night, oneLamp),
             ("house-night-twolamps", .night, twoLamps),
-        ]
+        ] + acPair(rooms)
         for (name, phase, rs) in exports + partial {
             render(HouseCutawaySceneView(rooms: rs, phase: phase, showLabels: false), out.appendingPathComponent("\(name).png"),
                    size: CGSize(width: 960, height: 540))
