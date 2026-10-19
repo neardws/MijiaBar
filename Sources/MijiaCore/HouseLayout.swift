@@ -47,7 +47,8 @@ public enum HouseModule: String, CaseIterable, Codable, Sendable {
     }
 }
 
-/// 灯具位：素材里画好、烘焙了局部光的灯 / 屏幕 / 空调。id 稳定（house.json 和 house-cutaway.json 都用它）。
+/// 灯具位：素材里画好的灯 / 屏幕 / 空调（烘焙局部光）和窗帘 / 冰箱 / 热水器 / 洗衣机（状态由 App 动态画）。
+/// id 稳定（house.json、house-cutaway.json、模块 catalog.json 都用它）。
 public struct HouseFixture: Hashable, Sendable {
     public let id: String
     public let accepts: Set<DeviceCategory>
@@ -72,14 +73,19 @@ public enum HouseCatalog {
             HouseFixture("floor_lamp", [.light], hints: ["落地", "floor", "台灯", "檯燈", "lamp"]),
             HouseFixture("sconce", [.light], hints: ["壁灯", "壁燈", "wall", "sconce"]),
             HouseFixture("tv", [.tv], hints: ["电视", "電視", "tv", "投影", "projector"]),
+            HouseFixture("ac", [.ac]),
+            HouseFixture("curtain", [.curtain]),
         ]
         case .bedroom: return [
             HouseFixture("bedside", [.light], hints: ["床头", "床頭", "台灯", "檯燈", "bedside", "nightstand", "lamp"]),
             HouseFixture("ac", [.ac]),
+            HouseFixture("curtain", [.curtain]),
         ]
         case .study: return [
             HouseFixture("ceiling", [.light], hints: ["吸顶", "吸頂", "主灯", "主燈", "顶灯", "頂燈", "ceiling"]),
             HouseFixture("monitor", [.light, .tv, .other], hints: ["显示器", "顯示器", "屏幕", "螢幕", "挂灯", "掛燈", "monitor", "display", "screen"], hintRequired: true),
+            HouseFixture("ac", [.ac]),
+            HouseFixture("curtain", [.curtain]),
         ]
         case .generic: return [
             HouseFixture("entry_light", [.light]),
@@ -87,12 +93,16 @@ public enum HouseCatalog {
         // 下面三个只有 Phase 2 模块美术（自定义布局合成）；经典整图里没有，hasArt 仍为 false
         case .kitchen: return [
             HouseFixture("pendant", [.light], hints: ["吊灯", "吊燈", "餐", "pendant", "dining"]),
+            HouseFixture("fridge", [.fridge]),
+            HouseFixture("curtain", [.curtain]),
         ]
         case .bathroom: return [
             HouseFixture("ceiling", [.light], hints: ["吸顶", "吸頂", "镜", "鏡", "ceiling", "mirror"]),
+            HouseFixture("water_heater", [.waterHeater]),
         ]
         case .balcony: return [
             HouseFixture("wall_lamp", [.light], hints: ["壁灯", "壁燈", "wall"]),
+            HouseFixture("washer", [.washer]),
         ]
         }
     }
@@ -113,6 +123,73 @@ public enum HouseCatalog {
 
     /// 能进小屋的设备类型（other 认不出是什么，不画）
     public static func showable(_ c: DeviceCategory) -> Bool { c != .other }
+
+    /// 设备分类（docs/HOUSE.md「设备分类」）：A = 画进房间美术、有开关状态的灯具；B = 只用地上的像素徽章。
+    /// A 类在所在模块没有空位（没有这种灯具位 / 已被占 / 所在墙被切掉）时退回徽章。
+    public static func deviceClass(category: DeviceCategory, model: String = "") -> HouseDeviceClass {
+        let m = model.lowercased()
+        func has(_ s: String...) -> Bool { s.contains { m.contains($0) } }
+        // DeviceCategory 还没细分的类型先按 model 关键词认（它们现在归 other / plug，不进小屋或显示徽章）
+        if has("vacuum", "roborock", "sweeper", ".robot.") { return .fixture(.vacuum) }
+        if has("humidifier") && !has("dehumid") { return .fixture(.humidifier) }
+        switch category {
+        case .ac: return .fixture(.ac)
+        case .light: return .fixture(.light)
+        case .tv: return .fixture(.screen)
+        case .fan: return .fixture(.fan)
+        case .airPurifier: return .fixture(.airPurifier)
+        case .dehumidifier: return .fixture(.dehumidifier)
+        case .heater: return .fixture(.heater)
+        case .curtain: return .fixture(.curtain)
+        case .fridge: return .fixture(.fridge)
+        case .washer: return .fixture(.washer)
+        case .waterHeater: return .fixture(.waterHeater)
+        case .plug, .sensor, .camera, .speaker, .kitchen, .printer, .purifier, .other: return .badge
+        }
+    }
+
+    /// 灯具位的 kind（同一 id 在每个风格包里 kind 都一样）
+    public static func fixtureKind(_ m: HouseModule, _ id: String) -> HouseFixtureKind? {
+        guard let f = fixture(m, id) else { return nil }
+        if f.accepts(.ac) { return .ac }
+        if f.accepts(.tv) { return .screen }
+        if f.accepts(.curtain) { return .curtain }
+        if f.accepts(.fridge) { return .fridge }
+        if f.accepts(.washer) { return .washer }
+        if f.accepts(.waterHeater) { return .waterHeater }
+        return .light
+    }
+
+    /// 风格包 / 素材目录的灯具位校验：每个模块必须正好提供 `fixtures(m)` 这一套 id（坐标各自标注）。
+    /// 返回问题列表（空 = 通过）。经典整图、模块 catalog.json、以后每个风格包都用它（单元测试 + 加载时）。
+    public static func fixtureSetProblems(_ m: HouseModule, lightIds: [String]) -> [String] {
+        let want = Set(fixtures(m).map(\.id)), have = Set(lightIds)
+        var out: [String] = []
+        for id in want.subtracting(have).sorted() { out.append("\(m.rawValue): missing fixture \(id)") }
+        for id in have.subtracting(want).sorted() { out.append("\(m.rawValue): unknown fixture \(id)") }
+        if have.count != lightIds.count { out.append("\(m.rawValue): duplicate fixture id") }
+        return out
+    }
+}
+
+/// 设备在小屋里怎么画：A 类（灯具，画进美术）/ B 类（徽章）
+public enum HouseDeviceClass: Hashable, Sendable {
+    case fixture(HouseFixtureKind)
+    case badge
+    /// 现在就有灯具位美术的 A 类；其余 A 类（风扇、净化器……）先按徽章显示，见 docs/HOUSE.md
+    public var hasFixtureArt: Bool {
+        if case .fixture(let k) = self { return k.implemented }
+        return false
+    }
+}
+
+public enum HouseFixtureKind: String, CaseIterable, Sendable {
+    // A1：画进模块美术（灯 / 屏幕 / 空调烘焙光；窗帘贴片、家电指示灯 / 动画运行时画）
+    case light, screen, ac, curtain, fridge, waterHeater = "water-heater", washer
+    // A2：落地电器小精灵（与 3b 装饰共用图层），扫地机与 3c 宠物共用寻路
+    case fan, airPurifier = "air-purifier", humidifier, dehumidifier, heater, vacuum
+    /// 已有灯具位美术
+    public var implemented: Bool { [.light, .screen, .ac, .curtain, .fridge, .waterHeater, .washer].contains(self) }
 }
 
 /// 设备在小屋里的位置

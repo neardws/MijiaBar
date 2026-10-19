@@ -29,8 +29,13 @@ public enum HouseComposer {
         public var pad: Int
         /// 夜景：墙顶 / 端面 / 壁柱用压暗的木色（和模块夜景调色一致）
         public var night: Bool
-        public init(layout: [HouseLayoutCell], catalog: HouseModuleCatalog, images: [String: HouseModuleImages], pad: Int = 24, night: Bool = false) {
+        public var wallCaps: HouseWallCapColors?
+        public var decor: [HouseDecorImage]
+        public init(layout: [HouseLayoutCell], catalog: HouseModuleCatalog, images: [String: HouseModuleImages], pad: Int = 24, night: Bool = false,
+                    wallCaps: HouseWallCapColors? = nil, decor: [HouseDecorImage] = []) {
             self.layout = layout; self.catalog = catalog; self.images = images; self.pad = pad; self.night = night
+            self.wallCaps = wallCaps
+            self.decor = decor
         }
     }
 
@@ -90,12 +95,13 @@ public enum HouseComposer {
         var width = maxX + pad - originX, height = maxY + pad - originY
         width += width % 2; height += height % 2
 
-        let pal = Palette(night: input.night)
-        let unlit = render(items, occ: occ, elev: elev, images: input.images, lit: false, pal: pal, originX: originX, originY: originY, width: width, height: height)
-        let lit = render(items, occ: occ, elev: elev, images: input.images, lit: true, pal: pal, originX: originX, originY: originY, width: width, height: height)
+        let pal = Palette(night: input.night, wallCaps: input.wallCaps)
+        let unlit = render(items, occ: occ, elev: elev, images: input.images, decor: input.decor, lit: false, pal: pal, originX: originX, originY: originY, width: width, height: height)
+        let lit = render(items, occ: occ, elev: elev, images: input.images, decor: input.decor, lit: true, pal: pal, originX: originX, originY: originY, width: width, height: height)
 
         // 场景：锚点转画布坐标；visible = 本模块剪影减去后画模块的剪影（灯光蒙版用，避免透过前屋墙体）
         var sceneMods: [String: Any] = [:]
+        var decorSlots: [[String: Any]] = []
         for (i, it) in items.enumerated() {
             let dx = Double(it.ox - originX), dy = Double(it.oy - originY)
             func tx(_ p: [Double]) -> [Double] { [p[0] + dx, p[1] + dy] }
@@ -119,8 +125,15 @@ public enum HouseComposer {
                 // alt：墙挂灯具被切时的地面替代位；吸顶灯（没有本体）的编辑位落点
                 if let a = L.alt, a.count >= 2 {
                     var q = floorPointLift(a, placed: it.placed, elev: elev)
-                    // 吸顶灯 / 被切的墙挂灯具在编辑模式里就是这个点上的位置框：和徽章位挨得太近时往上（天花板方向）让开
-                    if L.kind == "ceiling" || hidden { q = clearOfBadges(q, badgePts); altPts.append(q) }
+                    if hidden, let a2 = L.alt2, a2.count >= 2 {
+                        // alt 被前排切墙挡住要往里挪（挪进房间可能压到家具）→ 用挪动更少的备选位
+                        let q2 = floorPointLift(a2, placed: it.placed, elev: elev)
+                        if hypot(q2[0] - a2[0], q2[1] - a2[1]) + 2 < hypot(q[0] - a[0], q[1] - a[1]) { q = q2 }
+                    }
+                    // 吸顶灯的编辑位：离徽章太近时往上（天花板方向）让开；被切的墙挂灯具：alt 是素材里挑好的空地，
+                    // 只在合成后徽章位挪得太近时小幅让开（最多 12px），不会被推到床 / 桌子上
+                    if L.kind == "ceiling" { q = clearOfBadges(q, badgePts); altPts.append(q) }
+                    else if hidden { q = clearOfBadges(q, badgePts, minD: 30, maxUp: 12); altPts.append(q) }
                     d["alt"] = tx(q)
                 }
                 switch L.reveal {
@@ -128,8 +141,21 @@ public enum HouseComposer {
                 case .room: d["reveal"] = "room"
                 case nil: break
                 }
-                for (k, poly) in [("shade", L.shade), ("screen", L.screen), ("core", L.core)] where !hidden {
+                for (k, poly) in [("shade", L.shade), ("screen", L.screen), ("core", L.core), ("vent", L.vent),
+                                  ("quad", L.quad), ("display", L.display), ("body", L.body)] where !hidden {
                     if let poly { d[k] = poly.map(tx) }
+                }
+                if !hidden {
+                    // 窗帘贴片 / 家电指示灯：跟着模块平移（墙被切掉时和本体一起不画）
+                    if let p = L.patch { d["patch"] = p }
+                    if let r = L.rect, r.count == 4 { d["rect"] = [r[0] + dx, r[1] + dy, r[2], r[3]] }
+                    if let m = L.mid { d["mid"] = m + dx }
+                    if let l = L.led, l.count >= 2 { d["led"] = tx(l) }
+                    if let door = L.door {
+                        var dd: [String: Any] = ["c": tx(door.c), "s": door.s, "t": door.t, "r": door.r]
+                        if let ry = door.ry { dd["ry"] = ry }
+                        d["door"] = dd
+                    }
                 }
                 lights.append(d)
             }
@@ -139,6 +165,20 @@ public enum HouseComposer {
                 visible = visible.subtracting(path(silhouette(later.placed, ext: later.ext), dx: later.ox - originX, dy: later.oy - originY))
             }
             let key = it.placed.cell.room.isEmpty ? it.placed.cell.module : it.placed.cell.room
+            for slot in it.art.decor ?? [] where slot.at.count == 2 {
+                let placed = input.decor.first { $0.placement.room == key && $0.placement.slot == slot.id }
+                var record: [String: Any] = ["room": key, "slot": slot.id, "surface": slot.surface, "sizes": slot.sizes,
+                                             "x": slot.at[0] + dx, "y": slot.at[1] + dy]
+                if let wall = slot.wall {
+                    record["wall"] = wall
+                    if wallIsHidden(wall: wall, anchor: slot.at, segments: it.placed.segments) { record["hidden"] = "wall cut" }
+                }
+                if let placed {
+                    record["item"] = placed.placement.item
+                    record["rect"] = [Double(placed.x) + dx, Double(placed.y) + dy, Double(placed.image.width), Double(placed.image.height)]
+                } else { record["rect"] = [slot.at[0] + dx - 12, slot.at[1] + dy - 12, 24, 24] }
+                decorSlots.append(record)
+            }
             sceneMods[key] = [
                 "module": it.placed.cell.module,
                 "label": tx(clearLabel(floorPointLift(labelPoint(it.art, segments: it.placed.segments), placed: it.placed, elev: elev), badgePts, alts: altPts)),
@@ -151,7 +191,7 @@ public enum HouseComposer {
                 "walls": it.placed.segments.map { ["side": $0.side.rawValue, "height": $0.height] },
             ]
         }
-        let scene: [String: Any] = ["size": [width, height], "origin": [originX, originY], "modules": sceneMods]
+        let scene: [String: Any] = ["size": [width, height], "origin": [originX, originY], "modules": sceneMods, "decorSlots": decorSlots]
         let data = (try? JSONSerialization.data(withJSONObject: scene, options: [.sortedKeys])) ?? Data()
         let ms = (CFAbsoluteTimeGetCurrent() - t0) * 1000
         return HouseComposeResult(width: width, height: height, originX: originX, originY: originY, milliseconds: ms,
@@ -181,7 +221,7 @@ public enum HouseComposer {
     }
 
     /// alt 位置框和徽章位至少隔 minD：只往上挪（最多 60px）
-    static func clearOfBadges(_ p: [Double], _ badges: [[Double]], minD: Double = 54) -> [Double] {
+    static func clearOfBadges(_ p: [Double], _ badges: [[Double]], minD: Double = 54, maxUp: Double = 60) -> [Double] {
         var q = p
         for _ in 0..<3 {
             for b in badges where b.count >= 2 {
@@ -190,7 +230,7 @@ public enum HouseComposer {
                 q[1] = min(q[1], b[1] - (minD * minD - dx * dx).squareRoot())
             }
         }
-        q[1] = max(q[1], p[1] - 60)
+        q[1] = max(q[1], p[1] - maxUp)
         return q
     }
 
@@ -317,13 +357,19 @@ public enum HouseComposer {
         /// 石砌基座：两种朝向的石块底色 / 灰缝 / 压顶木条下的阴影；石块按位置做 ±明暗抖动
         let stoneSW: (Double, Double, Double), stoneSE: (Double, Double, Double), mortarSW, mortarSE, plinthShadow, ground: CGColor
         let night: Bool
-        init(night: Bool) {
+        init(night: Bool, wallCaps: HouseWallCapColors? = nil) {
             self.night = night
             func c(_ r: Double, _ g: Double, _ b: Double) -> CGColor {
                 let k = night ? (0.46, 0.42, 0.44) : (1.0, 1.0, 1.0)
                 return CGColor(red: r * k.0 / 255, green: g * k.1 / 255, blue: b * k.2 / 255, alpha: 1)
             }
-            capTop = c(108, 66, 38); capEdge = c(38, 20, 11); endFace = c(72, 42, 24); pilaster = c(62, 36, 20)
+            func custom(_ rgb: UInt32?) -> CGColor? {
+                rgb.map { c(Double(($0 >> 16) & 255), Double(($0 >> 8) & 255), Double($0 & 255)) }
+            }
+            capTop = custom(wallCaps?.top) ?? c(108, 66, 38)
+            capEdge = custom(wallCaps?.side) ?? c(38, 20, 11)
+            endFace = custom(wallCaps?.side) ?? c(72, 42, 24)
+            pilaster = custom(wallCaps?.side) ?? c(62, 36, 20)
             // 错层加厚的地台：和模块自带前沿地台同色系（取自模块图地台中段），SW 面亮一点、SE 面暗一点
             slabSW = c(46, 25, 10); slabSE = c(33, 18, 7); slabLine = c(66, 38, 18)
             stoneSW = (104, 90, 76); stoneSE = (72, 62, 53)
@@ -380,9 +426,13 @@ public enum HouseComposer {
     }
 
     static func isHidden(_ L: HouseModuleLight, wall: String, segments: [HouseWallSegment]) -> Bool {
+        wallIsHidden(wall: wall, anchor: L.anchor, segments: segments)
+    }
+
+    public static func wallIsHidden(wall: String, anchor: [Double]?, segments: [HouseWallSegment]) -> Bool {
         let side: HouseWallSegment.Side = wall == "nw" ? .nw : .ne
         let segs = segments.filter { $0.side == side }
-        if let a = L.anchor, a.count >= 2,
+        if let a = anchor, a.count >= 2,
            let s = segs.first(where: { Double(min($0.a.x, $0.b.x)) <= a[0] && a[0] <= Double(max($0.a.x, $0.b.x)) }) {
             return s.height < HouseGrid.wallH
         }
@@ -495,7 +545,7 @@ public enum HouseComposer {
         band(x0, x1, y1 - 2, y1, pal.ground)           // 地线
     }
 
-    static func render(_ items: [Item], occ: Set<[Int]>, elev: [[Int]: Int] = [:], images: [String: HouseModuleImages], lit: Bool, pal: Palette,
+    static func render(_ items: [Item], occ: Set<[Int]>, elev: [[Int]: Int] = [:], images: [String: HouseModuleImages], decor: [HouseDecorImage] = [], lit: Bool, pal: Palette,
                        originX: Int, originY: Int, width: Int, height: Int) -> CGImage? {
         guard let c = Canvas(width: width, height: height) else { return nil }
         func add(_ p: (x: Int, y: Int), _ q: (x: Int, y: Int)) -> (x: Int, y: Int) { (p.x + q.x, p.y + q.y) }
@@ -567,6 +617,19 @@ public enum HouseComposer {
             }
             if let imgs = images[it.placed.cell.module] {
                 c.image(moduleImage(it, imgs, lit: lit), x: ox, y: oy)
+                let room = HouseDecor.roomKey(it.placed.cell)
+                func rank(_ surface: String) -> Int { surface == "rug" ? 0 : surface == "wall" ? 1 : 2 }
+                let decorations = decor.filter { $0.placement.room == room && $0.placement.module == it.placed.cell.module }.sorted {
+                    let left = rank($0.placement.surface), right = rank($1.placement.surface)
+                    if left != right { return left < right }
+                    if $0.placement.at[1] != $1.placement.at[1] { return $0.placement.at[1] < $1.placement.at[1] }
+                    return $0.placement.slot < $1.placement.slot
+                }
+                for decoration in decorations {
+                    if let wall = decoration.placement.wall, wallIsHidden(wall: wall, anchor: decoration.placement.at, segments: it.placed.segments) { continue }
+                    let image = lit ? HouseDecorPixels.brightened(decoration, module: imgs) : decoration.image
+                    c.image(image, x: ox + decoration.x, y: oy + decoration.y)
+                }
             }
         }
         return c.ctx.makeImage()

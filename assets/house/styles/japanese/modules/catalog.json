@@ -1,0 +1,1816 @@
+{
+ "schema": 3,
+ "style": "generated",
+ "grid": {
+  "W": 320,
+  "FH": 132,
+  "WALL_H": 104,
+  "CUT_H": 40,
+  "SLAB": 14,
+  "PX": 2
+ },
+ "modules": {
+  "living": {
+   "footprint": [
+    2,
+    1
+   ],
+   "size": [
+    532,
+    352
+   ],
+   "tip": [
+    186,
+    124
+   ],
+   "region": [
+    [
+     26,
+     86
+    ],
+    [
+     186,
+     20
+    ],
+    [
+     506,
+     152
+    ],
+    [
+     506,
+     256
+    ],
+    [
+     506,
+     270
+    ],
+    [
+     346,
+     336
+    ],
+    [
+     26,
+     204
+    ],
+    [
+     26,
+     190
+    ]
+   ],
+   "label": [
+    55,
+    91
+   ],
+   "badges": [
+    [
+     146,
+     206
+    ],
+    [
+     239,
+     228
+    ],
+    [
+     266,
+     276
+    ],
+    [
+     354,
+     292
+    ]
+   ],
+   "lights": [
+    {
+     "id": "floor_lamp",
+     "kind": "lamp",
+     "role": "light",
+     "slot": 0,
+     "source": [
+      181,
+      86
+     ],
+     "radius": 110,
+     "pool": [
+      186,
+      164,
+      110,
+      44
+     ],
+     "shade": [
+      [
+       173,
+       75
+      ],
+      [
+       189,
+       75
+      ],
+      [
+       191,
+       97
+      ],
+      [
+       171,
+       97
+      ]
+     ],
+     "reveal": [
+      181,
+      116,
+      140,
+      92
+     ]
+    },
+    {
+     "id": "sconce",
+     "kind": "sconce",
+     "role": "light",
+     "slot": 1,
+     "source": [
+      331,
+      125
+     ],
+     "radius": 75,
+     "pool": [
+      301,
+      214,
+      90,
+      36
+     ],
+     "shade": [
+      [
+       323,
+       114
+      ],
+      [
+       339,
+       114
+      ],
+      [
+       341,
+       136
+      ],
+      [
+       321,
+       136
+      ]
+     ],
+     "reveal": [
+      331,
+      155,
+      140,
+      92
+     ],
+     "wall": "ne",
+     "anchor": [
+      331,
+      125
+     ],
+     "strength": 0.85,
+     "alt": [
+      314,
+      187
+     ]
+    },
+    {
+     "id": "tv",
+     "kind": "screen",
+     "role": "tv",
+     "slot": 0,
+     "style": "tv",
+     "screen": [
+      [
+       316,
+       176
+      ],
+      [
+       363,
+       196
+      ],
+      [
+       363,
+       232
+      ],
+      [
+       316,
+       213
+      ]
+     ],
+     "throw": [
+      -40,
+      40
+     ],
+     "radius": 85,
+     "reveal": [
+      258,
+      272,
+      120,
+      75
+     ]
+    },
+    {
+     "id": "ac",
+     "kind": "ac",
+     "role": "ac",
+     "slot": 0,
+     "wall": "nw",
+     "vent": [
+      [
+       87,
+       99
+      ],
+      [
+       122,
+       84
+      ]
+     ],
+     "led": [
+      129,
+      70
+     ],
+     "core": [
+      [
+       85,
+       70
+      ],
+      [
+       135,
+       70
+      ],
+      [
+       137,
+       92
+      ],
+      [
+       83,
+       92
+      ]
+     ],
+     "reveal": [
+      115,
+      112,
+      44,
+      34
+     ],
+     "anchor": [
+      110,
+      81
+     ],
+     "alt": [
+      210,
+      147
+     ]
+    },
+    {
+     "id": "curtain",
+     "kind": "curtain",
+     "role": "curtain",
+     "slot": 0,
+     "wall": "ne",
+     "patch": "curtain-living",
+     "rect": [
+      234,
+      72,
+      78,
+      94
+     ],
+     "mid": 273.0,
+     "quad": [
+      [
+       234.0,
+       72.0
+      ],
+      [
+       312.0,
+       104.2
+      ],
+      [
+       312.0,
+       164.2
+      ],
+      [
+       234.0,
+       132.0
+      ]
+     ],
+     "anchor": [
+      273,
+      118
+     ],
+     "alt": [
+      269,
+      172
+     ]
+    }
+   ],
+   "variants": {
+    "day-unlit": "module-living-day-unlit.png",
+    "day-lit": "module-living-day-lit.png",
+    "night-unlit": "module-living-night-unlit.png",
+    "night-lit": "module-living-night-lit.png",
+    "day-unlit-cut": "module-living-day-unlit-cut.png",
+    "day-lit-cut": "module-living-day-lit-cut.png",
+    "night-unlit-cut": "module-living-night-unlit-cut.png",
+    "night-lit-cut": "module-living-night-lit-cut.png"
+   },
+   "floorLabel": [
+    194,
+    167
+   ],
+   "decor": [
+    {
+     "id": "rug",
+     "surface": "rug",
+     "sizes": [
+      "L"
+     ],
+     "at": [
+      362,
+      268
+     ],
+     "default": null
+    },
+    {
+     "id": "corner",
+     "surface": "floor",
+     "sizes": [
+      "S",
+      "M",
+      "L"
+     ],
+     "at": [
+      412,
+      226
+     ],
+     "default": "monstera",
+     "holiday": true
+    },
+    {
+     "id": "window",
+     "surface": "floor",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      240,
+      162
+     ],
+     "default": null,
+     "holiday": true
+    },
+    {
+     "id": "sofa_side",
+     "surface": "floor",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      268,
+      206
+     ],
+     "default": null
+    },
+    {
+     "id": "wall_nw",
+     "surface": "wall",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      148,
+      94
+     ],
+     "wall": "nw",
+     "default": null,
+     "holiday": true
+    },
+    {
+     "id": "wall_ne",
+     "surface": "wall",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      400,
+      166
+     ],
+     "wall": "ne",
+     "default": "painting_landscape",
+     "holiday": true
+    }
+   ]
+  },
+  "bedroom": {
+   "footprint": [
+    1,
+    1
+   ],
+   "size": [
+    372,
+    286
+   ],
+   "tip": [
+    186,
+    124
+   ],
+   "region": [
+    [
+     26,
+     86
+    ],
+    [
+     186,
+     20
+    ],
+    [
+     346,
+     86
+    ],
+    [
+     346,
+     190
+    ],
+    [
+     346,
+     204
+    ],
+    [
+     186,
+     270
+    ],
+    [
+     26,
+     204
+    ],
+    [
+     26,
+     190
+    ]
+   ],
+   "label": [
+    55,
+    91
+   ],
+   "badges": [
+    [
+     146,
+     213
+    ],
+    [
+     226,
+     213
+    ],
+    [
+     98,
+     200
+    ]
+   ],
+   "lights": [
+    {
+     "id": "bedside",
+     "kind": "lamp",
+     "role": "light",
+     "slot": 0,
+     "source": [
+      183,
+      100
+     ],
+     "radius": 110,
+     "pool": [
+      170,
+      157,
+      100,
+      40
+     ],
+     "shade": [
+      [
+       175,
+       89
+      ],
+      [
+       191,
+       89
+      ],
+      [
+       193,
+       111
+      ],
+      [
+       173,
+       111
+      ]
+     ],
+     "reveal": [
+      183,
+      130,
+      140,
+      92
+     ]
+    },
+    {
+     "id": "ac",
+     "kind": "ac",
+     "role": "ac",
+     "slot": 0,
+     "wall": "nw",
+     "vent": [
+      [
+       89,
+       96
+      ],
+      [
+       124,
+       81
+      ]
+     ],
+     "led": [
+      131,
+      67
+     ],
+     "core": [
+      [
+       87,
+       67
+      ],
+      [
+       137,
+       67
+      ],
+      [
+       139,
+       89
+      ],
+      [
+       85,
+       89
+      ]
+     ],
+     "reveal": [
+      117,
+      109,
+      44,
+      34
+     ],
+     "anchor": [
+      112,
+      78
+     ],
+     "alt": [
+      141,
+      158
+     ]
+    },
+    {
+     "id": "curtain",
+     "kind": "curtain",
+     "role": "curtain",
+     "slot": 0,
+     "wall": "ne",
+     "patch": "curtain-bedroom",
+     "rect": [
+      236,
+      72,
+      76,
+      84
+     ],
+     "mid": 274.0,
+     "quad": [
+      [
+       236.0,
+       73.0
+      ],
+      [
+       312.0,
+       104.4
+      ],
+      [
+       312.0,
+       154.4
+      ],
+      [
+       236.0,
+       123.0
+      ]
+     ],
+     "anchor": [
+      274,
+      114
+     ],
+     "alt": [
+      290,
+      212
+     ],
+     "alt2": [
+      186,
+      232
+     ]
+    }
+   ],
+   "variants": {
+    "day-unlit": "module-bedroom-day-unlit.png",
+    "day-lit": "module-bedroom-day-lit.png",
+    "night-unlit": "module-bedroom-night-unlit.png",
+    "night-lit": "module-bedroom-night-lit.png",
+    "day-unlit-cut": "module-bedroom-day-unlit-cut.png",
+    "day-lit-cut": "module-bedroom-day-lit-cut.png",
+    "night-unlit-cut": "module-bedroom-night-unlit-cut.png",
+    "night-lit-cut": "module-bedroom-night-lit-cut.png"
+   },
+   "floorLabel": [
+    138,
+    230
+   ],
+   "decor": [
+    {
+     "id": "dresser",
+     "surface": "floor",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      126,
+      184
+     ],
+     "default": "spider_plant"
+    },
+    {
+     "id": "wall_nw",
+     "surface": "wall",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      48,
+      116
+     ],
+     "wall": "nw",
+     "default": "painting_cat"
+    },
+    {
+     "id": "wall_ne",
+     "surface": "wall",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      206,
+      94
+     ],
+     "wall": "ne",
+     "default": null
+    }
+   ]
+  },
+  "study": {
+   "footprint": [
+    1,
+    1
+   ],
+   "size": [
+    372,
+    286
+   ],
+   "tip": [
+    186,
+    124
+   ],
+   "region": [
+    [
+     26,
+     86
+    ],
+    [
+     186,
+     20
+    ],
+    [
+     346,
+     86
+    ],
+    [
+     346,
+     190
+    ],
+    [
+     346,
+     204
+    ],
+    [
+     186,
+     270
+    ],
+    [
+     26,
+     204
+    ],
+    [
+     26,
+     190
+    ]
+   ],
+   "label": [
+    100,
+    72
+   ],
+   "badges": [
+    [
+     138,
+     216
+    ],
+    [
+     210,
+     233
+    ],
+    [
+     122,
+     190
+    ]
+   ],
+   "lights": [
+    {
+     "id": "ceiling",
+     "kind": "ceiling",
+     "role": "light",
+     "slot": 0,
+     "pool": [
+      186,
+      197,
+      120,
+      48
+     ],
+     "reveal": [
+      186,
+      197,
+      160,
+      80
+     ],
+     "alt": [
+      186,
+      157
+     ]
+    },
+    {
+     "id": "monitor",
+     "kind": "screen",
+     "role": "tv",
+     "slot": 0,
+     "style": "monitor",
+     "screen": [
+      [
+       232,
+       116
+      ],
+      [
+       256,
+       116
+      ],
+      [
+       258,
+       136
+      ],
+      [
+       230,
+       136
+      ]
+     ],
+     "throw": [
+      -8,
+      35
+     ],
+     "radius": 60,
+     "reveal": [
+      210,
+      188,
+      85,
+      65
+     ]
+    },
+    {
+     "id": "ac",
+     "kind": "ac",
+     "role": "ac",
+     "slot": 0,
+     "wall": "ne",
+     "vent": [
+      [
+       296,
+       103
+      ],
+      [
+       332,
+       118
+      ]
+     ],
+     "led": [
+      304,
+      93
+     ],
+     "core": [
+      [
+       299,
+       92
+      ],
+      [
+       339,
+       92
+      ],
+      [
+       341,
+       114
+      ],
+      [
+       297,
+       114
+      ]
+     ],
+     "reveal": [
+      304,
+      130,
+      44,
+      34
+     ],
+     "anchor": [
+      314,
+      102
+     ],
+     "alt": [
+      274,
+      196
+     ],
+     "alt2": [
+      258,
+      220
+     ]
+    },
+    {
+     "id": "curtain",
+     "kind": "curtain",
+     "role": "curtain",
+     "slot": 0,
+     "wall": "ne",
+     "patch": "curtain-study",
+     "rect": [
+      222,
+      64,
+      70,
+      72
+     ],
+     "mid": 257.0,
+     "quad": [
+      [
+       222.0,
+       64.0
+      ],
+      [
+       292.0,
+       92.0
+      ],
+      [
+       292.0,
+       136.0
+      ],
+      [
+       222.0,
+       108.0
+      ]
+     ],
+     "anchor": [
+      257,
+      100
+     ],
+     "alt": [
+      183,
+      175
+     ]
+    }
+   ],
+   "variants": {
+    "day-unlit": "module-study-day-unlit.png",
+    "day-lit": "module-study-day-lit.png",
+    "night-unlit": "module-study-night-unlit.png",
+    "night-lit": "module-study-night-lit.png",
+    "day-unlit-cut": "module-study-day-unlit-cut.png",
+    "day-lit-cut": "module-study-day-lit-cut.png",
+    "night-unlit-cut": "module-study-night-unlit-cut.png",
+    "night-lit-cut": "module-study-night-lit-cut.png"
+   },
+   "floorLabel": [
+    114,
+    213
+   ],
+   "decor": [
+    {
+     "id": "shelf",
+     "surface": "floor",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      96,
+      178
+     ],
+     "default": "book_stack"
+    },
+    {
+     "id": "desk",
+     "surface": "floor",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      190,
+      200
+     ],
+     "default": null
+    },
+    {
+     "id": "wall_nw",
+     "surface": "wall",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      112,
+      84
+     ],
+     "wall": "nw",
+     "default": "wall_clock"
+    },
+    {
+     "id": "wall_ne",
+     "surface": "wall",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      202,
+      84
+     ],
+     "wall": "ne",
+     "default": null
+    }
+   ]
+  },
+  "generic": {
+   "footprint": [
+    1,
+    1
+   ],
+   "size": [
+    372,
+    286
+   ],
+   "tip": [
+    186,
+    124
+   ],
+   "region": [
+    [
+     26,
+     86
+    ],
+    [
+     186,
+     20
+    ],
+    [
+     346,
+     86
+    ],
+    [
+     346,
+     190
+    ],
+    [
+     346,
+     204
+    ],
+    [
+     186,
+     270
+    ],
+    [
+     26,
+     204
+    ],
+    [
+     26,
+     190
+    ]
+   ],
+   "label": [
+    100,
+    72
+   ],
+   "badges": [
+    [
+     138,
+     216
+    ],
+    [
+     210,
+     233
+    ],
+    [
+     122,
+     190
+    ]
+   ],
+   "lights": [
+    {
+     "id": "entry_light",
+     "kind": "ceiling",
+     "role": "light",
+     "slot": 0,
+     "pool": [
+      178,
+      193,
+      120,
+      48
+     ],
+     "reveal": [
+      178,
+      193,
+      160,
+      80
+     ],
+     "alt": [
+      178,
+      153
+     ]
+    }
+   ],
+   "variants": {
+    "day-unlit": "module-generic-day-unlit.png",
+    "day-lit": "module-generic-day-lit.png",
+    "night-unlit": "module-generic-night-unlit.png",
+    "night-lit": "module-generic-night-lit.png",
+    "day-unlit-cut": "module-generic-day-unlit-cut.png",
+    "day-lit-cut": "module-generic-day-lit-cut.png",
+    "night-unlit-cut": "module-generic-night-unlit-cut.png",
+    "night-lit-cut": "module-generic-night-lit-cut.png"
+   },
+   "floorLabel": [
+    178,
+    193
+   ],
+   "decor": [
+    {
+     "id": "rug",
+     "surface": "rug",
+     "sizes": [
+      "L"
+     ],
+     "at": [
+      186,
+      202
+     ],
+     "default": null
+    },
+    {
+     "id": "door",
+     "surface": "floor",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      110,
+      170
+     ],
+     "default": "spider_plant"
+    },
+    {
+     "id": "wall_nw",
+     "surface": "wall",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      132,
+      96
+     ],
+     "wall": "nw",
+     "default": "wall_clock",
+     "holiday": true
+    },
+    {
+     "id": "wall_ne",
+     "surface": "wall",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      220,
+      90
+     ],
+     "wall": "ne",
+     "default": null,
+     "holiday": true
+    }
+   ]
+  },
+  "kitchen": {
+   "footprint": [
+    1,
+    1
+   ],
+   "size": [
+    372,
+    286
+   ],
+   "tip": [
+    186,
+    124
+   ],
+   "region": [
+    [
+     26,
+     86
+    ],
+    [
+     186,
+     20
+    ],
+    [
+     346,
+     86
+    ],
+    [
+     346,
+     190
+    ],
+    [
+     346,
+     204
+    ],
+    [
+     186,
+     270
+    ],
+    [
+     26,
+     204
+    ],
+    [
+     26,
+     190
+    ]
+   ],
+   "label": [
+    100,
+    72
+   ],
+   "badges": [
+    [
+     125,
+     186
+    ],
+    [
+     247,
+     186
+    ],
+    [
+     186,
+     222
+    ]
+   ],
+   "lights": [
+    {
+     "id": "pendant",
+     "kind": "ceiling",
+     "role": "light",
+     "slot": 0,
+     "pool": [
+      186,
+      173,
+      120,
+      48
+     ],
+     "reveal": [
+      186,
+      173,
+      160,
+      80
+     ],
+     "alt": [
+      186,
+      133
+     ]
+    },
+    {
+     "id": "fridge",
+     "kind": "fridge",
+     "role": "fridge",
+     "slot": 0,
+     "display": [
+      [
+       144,
+       132
+      ],
+      [
+       150,
+       130
+      ],
+      [
+       150,
+       134
+      ],
+      [
+       144,
+       136
+      ]
+     ],
+     "body": [
+      [
+       130,
+       128
+      ],
+      [
+       160,
+       118
+      ],
+      [
+       160,
+       152
+      ],
+      [
+       130,
+       162
+      ]
+     ]
+    },
+    {
+     "id": "curtain",
+     "kind": "curtain",
+     "role": "curtain",
+     "slot": 0,
+     "wall": "nw",
+     "patch": "curtain-kitchen",
+     "rect": [
+      34,
+      64,
+      78,
+      82
+     ],
+     "mid": 72.5,
+     "quad": [
+      [
+       34.0,
+       96.0
+      ],
+      [
+       111.0,
+       64.2
+      ],
+      [
+       111.0,
+       113.0
+      ],
+      [
+       34.0,
+       144.7
+      ]
+     ],
+     "anchor": [
+      72,
+      104
+     ],
+     "alt": [
+      66,
+      187
+     ]
+    }
+   ],
+   "variants": {
+    "day-unlit": "module-kitchen-day-unlit.png",
+    "day-lit": "module-kitchen-day-lit.png",
+    "night-unlit": "module-kitchen-night-unlit.png",
+    "night-lit": "module-kitchen-night-lit.png",
+    "day-unlit-cut": "module-kitchen-day-unlit-cut.png",
+    "day-lit-cut": "module-kitchen-day-lit-cut.png",
+    "night-unlit-cut": "module-kitchen-night-unlit-cut.png",
+    "night-lit-cut": "module-kitchen-night-lit-cut.png"
+   },
+   "floorLabel": [
+    240,
+    212
+   ],
+   "decor": [
+    {
+     "id": "corner",
+     "surface": "floor",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      96,
+      174
+     ],
+     "default": null
+    },
+    {
+     "id": "wall_nw",
+     "surface": "wall",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      130,
+      96
+     ],
+     "wall": "nw",
+     "default": "wall_clock",
+     "holiday": true
+    },
+    {
+     "id": "wall_ne",
+     "surface": "wall",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      200,
+      92
+     ],
+     "wall": "ne",
+     "default": null,
+     "holiday": true
+    }
+   ]
+  },
+  "bathroom": {
+   "footprint": [
+    1,
+    1
+   ],
+   "size": [
+    372,
+    286
+   ],
+   "tip": [
+    186,
+    124
+   ],
+   "region": [
+    [
+     26,
+     86
+    ],
+    [
+     186,
+     20
+    ],
+    [
+     346,
+     86
+    ],
+    [
+     346,
+     190
+    ],
+    [
+     346,
+     204
+    ],
+    [
+     186,
+     270
+    ],
+    [
+     26,
+     204
+    ],
+    [
+     26,
+     190
+    ]
+   ],
+   "label": [
+    100,
+    72
+   ],
+   "badges": [
+    [
+     125,
+     186
+    ],
+    [
+     247,
+     186
+    ],
+    [
+     186,
+     222
+    ]
+   ],
+   "lights": [
+    {
+     "id": "ceiling",
+     "kind": "ceiling",
+     "role": "light",
+     "slot": 0,
+     "pool": [
+      186,
+      190,
+      120,
+      48
+     ],
+     "reveal": [
+      186,
+      190,
+      160,
+      80
+     ],
+     "alt": [
+      186,
+      150
+     ]
+    },
+    {
+     "id": "water_heater",
+     "kind": "water-heater",
+     "role": "water-heater",
+     "slot": 0,
+     "wall": "nw",
+     "display": [
+      [
+       176.8,
+       71.6
+      ],
+      [
+       177.7,
+       68.3
+      ],
+      [
+       180.0,
+       66.2
+      ],
+      [
+       182.2,
+       66.5
+      ],
+      [
+       183.2,
+       69.0
+      ],
+      [
+       182.2,
+       72.3
+      ],
+      [
+       180.0,
+       74.4
+      ],
+      [
+       177.7,
+       74.1
+      ]
+     ],
+     "led": [
+      174.4,
+      75.4
+     ],
+     "body": [
+      [
+       162.5,
+       65.4
+      ],
+      [
+       191.3,
+       53.5
+      ],
+      [
+       191.3,
+       78.6
+      ],
+      [
+       162.5,
+       90.5
+      ]
+     ],
+     "anchor": [
+      176.9,
+      72.0
+     ],
+     "alt": [
+      197,
+      181
+     ]
+    }
+   ],
+   "variants": {
+    "day-unlit": "module-bathroom-day-unlit.png",
+    "day-lit": "module-bathroom-day-lit.png",
+    "night-unlit": "module-bathroom-night-unlit.png",
+    "night-lit": "module-bathroom-night-lit.png",
+    "day-unlit-cut": "module-bathroom-day-unlit-cut.png",
+    "day-lit-cut": "module-bathroom-day-lit-cut.png",
+    "night-unlit-cut": "module-bathroom-night-unlit-cut.png",
+    "night-lit-cut": "module-bathroom-night-lit-cut.png"
+   },
+   "floorLabel": [
+    130,
+    220
+   ],
+   "decor": [
+    {
+     "id": "corner",
+     "surface": "floor",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      226,
+      176
+     ],
+     "default": null
+    },
+    {
+     "id": "tub",
+     "surface": "floor",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      160,
+      198
+     ],
+     "default": "succulent"
+    },
+    {
+     "id": "wall_nw",
+     "surface": "wall",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      54,
+      98
+     ],
+     "wall": "nw",
+     "default": null
+    },
+    {
+     "id": "wall_ne",
+     "surface": "wall",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      300,
+      108
+     ],
+     "wall": "ne",
+     "default": null
+    }
+   ]
+  },
+  "balcony": {
+   "footprint": [
+    1,
+    1
+   ],
+   "size": [
+    372,
+    286
+   ],
+   "tip": [
+    186,
+    124
+   ],
+   "region": [
+    [
+     26,
+     86
+    ],
+    [
+     186,
+     20
+    ],
+    [
+     346,
+     86
+    ],
+    [
+     346,
+     190
+    ],
+    [
+     346,
+     204
+    ],
+    [
+     186,
+     270
+    ],
+    [
+     26,
+     204
+    ],
+    [
+     26,
+     190
+    ]
+   ],
+   "label": [
+    100,
+    72
+   ],
+   "badges": [
+    [
+     125,
+     186
+    ],
+    [
+     247,
+     186
+    ],
+    [
+     186,
+     222
+    ]
+   ],
+   "lights": [
+    {
+     "id": "wall_lamp",
+     "kind": "sconce",
+     "role": "light",
+     "slot": 0,
+     "source": [
+      72,
+      110
+     ],
+     "radius": 80,
+     "pool": [
+      122,
+      190,
+      100,
+      40
+     ],
+     "shade": [
+      [
+       64,
+       99
+      ],
+      [
+       80,
+       99
+      ],
+      [
+       82,
+       121
+      ],
+      [
+       62,
+       121
+      ]
+     ],
+     "reveal": [
+      72,
+      140,
+      140,
+      92
+     ],
+     "wall": "nw",
+     "anchor": [
+      72,
+      110
+     ],
+     "alt": [
+      95,
+      214
+     ]
+    },
+    {
+     "id": "washer",
+     "kind": "washer",
+     "role": "washer",
+     "slot": 0,
+     "door": {
+      "c": [
+       85.6,
+       169.6
+      ],
+      "s": [
+       1,
+       -0.4125
+      ],
+      "t": [
+       0,
+       -1
+      ],
+      "r": 5.48,
+      "ry": 7.23
+     },
+     "display": [
+      [
+       90.2,
+       147.8
+      ],
+      [
+       95.9,
+       145.4
+      ],
+      [
+       95.9,
+       148.1
+      ],
+      [
+       90.2,
+       150.5
+      ]
+     ],
+     "led": [
+      96.6,
+      146.5
+     ],
+     "body": [
+      [
+       72.4,
+       152.7
+      ],
+      [
+       98.0,
+       142.1
+      ],
+      [
+       98.0,
+       180.1
+      ],
+      [
+       72.4,
+       190.7
+      ]
+     ]
+    }
+   ],
+   "variants": {
+    "day-unlit": "module-balcony-day-unlit.png",
+    "day-lit": "module-balcony-day-lit.png",
+    "night-unlit": "module-balcony-night-unlit.png",
+    "night-lit": "module-balcony-night-lit.png",
+    "day-unlit-cut": "module-balcony-day-unlit-cut.png",
+    "day-lit-cut": "module-balcony-day-lit-cut.png",
+    "night-unlit-cut": "module-balcony-night-unlit-cut.png",
+    "night-lit-cut": "module-balcony-night-lit-cut.png"
+   },
+   "floorLabel": [
+    186,
+    197
+   ],
+   "decor": [
+    {
+     "id": "corner",
+     "surface": "floor",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      224,
+      196
+     ],
+     "default": null,
+     "holiday": true
+    },
+    {
+     "id": "chair",
+     "surface": "floor",
+     "sizes": [
+      "S"
+     ],
+     "at": [
+      150,
+      190
+     ],
+     "default": "cat_bed"
+    },
+    {
+     "id": "wall_nw",
+     "surface": "wall",
+     "sizes": [
+      "S",
+      "M"
+     ],
+     "at": [
+      106,
+      100
+     ],
+     "wall": "nw",
+     "default": null,
+     "holiday": true
+    }
+   ]
+  }
+ }
+}

@@ -116,12 +116,22 @@ public struct HouseEdit: Equatable, Sendable {
         public var isAutomatic: Bool { visible == nil && place == nil }
     }
     public struct Change<T: Equatable & Sendable>: Equatable, Sendable { public let before: T; public let after: T }
+    public struct DecorPrefsValue: Equatable, Sendable {
+        public let enabled: Bool
+        public let seasonal: Bool
+        init(_ prefs: HouseDecorPrefs?) { enabled = prefs?.enabled ?? true; seasonal = prefs?.seasonal ?? true }
+    }
 
     public let label: String
     public let home: String
     public let devices: [String: Change<DeviceValue>]
     public let rooms: [String: Change<String?>]
     public let layout: Change<[HouseLayoutCell]?>?
+    public let style: Change<String?>?
+    public let decor: [String: Change<String?>]
+    public let decorPrefs: Change<DecorPrefsValue>?
+    public let pets: [String: Change<HousePet?>]
+    public let petPrefs: Change<Bool>?
 
     public enum Side: Sendable { case before, after }
 
@@ -130,6 +140,10 @@ public struct HouseEdit: Equatable, Sendable {
         return DeviceValue(visible: o?.visible, place: o?.place)
     }
     static func module(_ f: HouseFile, home: String, room: String) -> String? { f.homes[home]?.rooms[room]?.module }
+    static func pet(_ config: HomeHouse?, id: String) -> HousePet? {
+        guard var pet = config?.pets?[id], !pet.deleted else { return nil }
+        pet.updatedAt = .distantPast; return pet
+    }
 
     /// 比较编辑前后的文件；没有实际改动时返回 nil（不进撤销栈）
     public static func diff(label: String, home: String, before: HouseFile, after: HouseFile) -> HouseEdit? {
@@ -146,8 +160,24 @@ public struct HouseEdit: Equatable, Sendable {
         }
         let lb = before.homes[home]?.layout, la = after.homes[home]?.layout
         let layoutChange: Change<[HouseLayoutCell]?>? = (lb != la) ? Change(before: lb, after: la) : nil
-        if ds.isEmpty && rs.isEmpty && layoutChange == nil { return nil }
-        return HouseEdit(label: label, home: home, devices: ds, rooms: rs, layout: layoutChange)
+        let styleChange: Change<String?>? = b.style != a.style ? Change(before: b.style, after: a.style) : nil
+        var decor: [String: Change<String?>] = [:]
+        for key in Set((b.decor ?? [:]).keys).union((a.decor ?? [:]).keys) {
+            let old = b.decor?[key]?.item, new = a.decor?[key]?.item
+            if old != new { decor[key] = Change(before: old, after: new) }
+        }
+        let oldPrefs = DecorPrefsValue(b.decorPrefs), newPrefs = DecorPrefsValue(a.decorPrefs)
+        let prefsChange: Change<DecorPrefsValue>? = oldPrefs != newPrefs ? Change(before: oldPrefs, after: newPrefs) : nil
+        var pets: [String: Change<HousePet?>] = [:]
+        for id in Set((b.pets ?? [:]).keys).union((a.pets ?? [:]).keys) {
+            let old = pet(b, id: id), new = pet(a, id: id)
+            if old != new { pets[id] = Change(before: old, after: new) }
+        }
+        let oldEnabled = b.petPrefs?.enabled ?? true, newEnabled = a.petPrefs?.enabled ?? true
+        let petPrefs = oldEnabled != newEnabled ? Change(before: oldEnabled, after: newEnabled) : nil
+        if ds.isEmpty && rs.isEmpty && layoutChange == nil && styleChange == nil && decor.isEmpty && prefsChange == nil && pets.isEmpty && petPrefs == nil { return nil }
+        return HouseEdit(label: label, home: home, devices: ds, rooms: rs, layout: layoutChange,
+                         style: styleChange, decor: decor, decorPrefs: prefsChange, pets: pets, petPrefs: petPrefs)
     }
 
     /// 文件里这些条目现在是不是还等于 side 那一侧的值（不是的话说明被别处改过，撤销记录作废）
@@ -159,7 +189,12 @@ public struct HouseEdit: Equatable, Sendable {
             let cur = f.homes[home]?.layout
             return cur == (side == .before ? layout.before : layout.after)
         }()
-        return devicesOK && roomsOK && layoutOK
+        let styleOK = style.map { f.homes[home]?.style == (side == .before ? $0.before : $0.after) } ?? true
+        let decorOK = decor.allSatisfy { key, change in f.homes[home]?.decor?[key]?.item == (side == .before ? change.before : change.after) }
+        let prefsOK = decorPrefs.map { DecorPrefsValue(f.homes[home]?.decorPrefs) == (side == .before ? $0.before : $0.after) } ?? true
+        let petsOK = pets.allSatisfy { id, change in Self.pet(f.homes[home], id: id) == (side == .before ? change.before : change.after) }
+        let petPrefsOK = petPrefs.map { (f.homes[home]?.petPrefs?.enabled ?? true) == (side == .before ? $0.before : $0.after) } ?? true
+        return devicesOK && roomsOK && layoutOK && styleOK && decorOK && prefsOK && petsOK && petPrefsOK
     }
 
     public func apply(_ side: Side, to f: inout HouseFile, now: Date = Date()) {
@@ -172,6 +207,30 @@ public struct HouseEdit: Equatable, Sendable {
         if let layout {
             f.setLayout(home: home, layout: side == .before ? layout.before : layout.after, now: now)
         }
+        if let style { f.setStyle(home: home, style: side == .before ? style.before : style.after, now: now) }
+        for (key, change) in decor { f.setDecor(home: home, key: key, item: side == .before ? change.before : change.after, now: now) }
+        if let decorPrefs {
+            let value = side == .before ? decorPrefs.before : decorPrefs.after
+            f.setDecorPrefs(home: home, enabled: value.enabled, seasonal: value.seasonal, now: now)
+        }
+        for (id, change) in pets {
+            var value = (side == .before ? change.before : change.after) ?? f.homes[home]?.pets?[id] ?? HousePet(id: id)
+            value.deleted = (side == .before ? change.before : change.after) == nil; value.updatedAt = now
+            if f.homes[home] == nil { f.homes[home] = HomeHouse() }
+            if f.homes[home]?.pets == nil { f.homes[home]?.pets = [:] }
+            f.homes[home]?.pets?[id] = value
+        }
+        if let petPrefs { f.setPetPrefs(home: home, enabled: side == .before ? petPrefs.before : petPrefs.after, now: now) }
+    }
+
+    func canApplyPets(_ side: Side, to file: HouseFile) -> Bool {
+        var active = Set((file.homes[home]?.pets ?? [:]).values.filter { !$0.deleted }.map(\.id))
+        let previous = active.count
+        for (id, change) in pets {
+            if (side == .before ? change.before : change.after) == nil { active.remove(id) }
+            else { active.insert(id) }
+        }
+        return active.count <= max(previous, HouseFile.petLimit)
     }
 }
 
@@ -199,7 +258,7 @@ public struct HouseUndoStack: Equatable, Sendable {
 
     public mutating func undo(_ f: inout HouseFile, now: Date = Date()) -> Outcome {
         guard let e = undos.last else { return .empty }
-        guard e.matches(f, side: .after) else { clear(); return .stale }
+        guard e.matches(f, side: .after), e.canApplyPets(.before, to: f) else { clear(); return .stale }
         e.apply(.before, to: &f, now: now)
         undos.removeLast(); redos.append(e)
         return .applied(e)
@@ -207,7 +266,7 @@ public struct HouseUndoStack: Equatable, Sendable {
 
     public mutating func redo(_ f: inout HouseFile, now: Date = Date()) -> Outcome {
         guard let e = redos.last else { return .empty }
-        guard e.matches(f, side: .before) else { clear(); return .stale }
+        guard e.matches(f, side: .before), e.canApplyPets(.after, to: f) else { clear(); return .stale }
         e.apply(.after, to: &f, now: now)
         redos.removeLast(); undos.append(e)
         return .applied(e)

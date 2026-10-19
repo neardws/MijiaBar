@@ -78,10 +78,18 @@ public enum DeviceCategory: String, Codable, CaseIterable, Sendable {
     case ac, plug, light, fan, heater, dehumidifier, sensor, tv, camera, speaker, kitchen, printer, purifier, other
     /// 空气净化器 / 新风机（purifier 是净水器）
     case airPurifier = "air-purifier"
+    /// 小屋里画在房间美术里的家电：窗帘、冰箱、洗衣机 / 干衣机、热水器
+    case curtain, fridge, washer
+    case waterHeater = "water-heater"
     public static func guess(_ model: String) -> DeviceCategory {
         let m = model.lowercased()
         func has(_ s: String...) -> Bool { s.contains { m.contains($0) } }
         if has("printer") { return .printer }
+        if has("curtain") { return .curtain }
+        if has("fridge", "refrigerator") { return .fridge }
+        if has("dishwasher") { return .kitchen }
+        if has("washer", "dryer", ".wash.") && !has("hairdryer") { return .washer }
+        if has("waterheater", "water_heater", "gasheater") { return .waterHeater }
         if has("airpurifier", ".airp.", "air_purifier", "airfresh") { return .airPurifier }
         if has(".ysj.", "waterpuri", "water_purifier", ".wp.") { return .purifier }
         if has("acpartner", "aircondition", ".ac.", "airc") { return .ac }

@@ -23,5 +23,7 @@ let package = Package(
         ),
         .executableTarget(name: "mijiabar", dependencies: ["MijiaCore"], swiftSettings: strict),
         .testTarget(name: "MijiaCoreTests", dependencies: ["MijiaCore"], swiftSettings: strict),
+        .testTarget(name: "mijiabarTests", dependencies: ["mijiabar"], swiftSettings: strict),
+        .testTarget(name: "MijiaBarAppTests", dependencies: ["MijiaBarApp"], swiftSettings: strict),
     ]
 )

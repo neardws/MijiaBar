@@ -1,0 +1,50 @@
+{
+  "id": "light-wood",
+  "name": {
+    "zh": "浅木白墙",
+    "en": "Light wood"
+  },
+  "kind": "palette",
+  "parent": "cozy-wood",
+  "version": 1,
+  "theme": {
+    "1": {
+      "color": "#E6E0D4",
+      "saturation": 0.35
+    },
+    "2": {
+      "color": "#C49A6C",
+      "saturation": 0.8
+    },
+    "3": {
+      "color": "#C79B6B",
+      "saturation": 0.8
+    },
+    "4": {
+      "color": "#E4E2DC",
+      "saturation": 0.6
+    }
+  },
+  "bases": {
+    "1": [
+      0.5871,
+      0.4489,
+      0.2888
+    ],
+    "2": [
+      0.249,
+      0.1659,
+      0.0897
+    ],
+    "3": [
+      0.5158,
+      0.3737,
+      0.2498
+    ],
+    "4": [
+      0.7581,
+      0.6895,
+      0.5907
+    ]
+  }
+}

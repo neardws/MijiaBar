@@ -88,6 +88,7 @@ public struct HouseModuleArt: Codable, Equatable, Sendable {
     public var floorLabel: [Double]? = nil
     public var badges: [[Double]]
     public var lights: [HouseModuleLight]
+    public var decor: [HouseDecorSlot]? = nil
     /// "day-unlit" / "day-lit" / "night-unlit" / "night-lit"，以及切墙版 "…-cut"
     public var variants: [String: String]?
     public var fw: Int { footprint.first ?? 1 }
@@ -95,6 +96,7 @@ public struct HouseModuleArt: Codable, Equatable, Sendable {
 }
 
 public struct HouseModuleLight: Codable, Equatable, Sendable {
+    public var pool: [Double]? = nil
     public var id: String
     public var kind: String?
     public var role: String?
@@ -108,6 +110,33 @@ public struct HouseModuleLight: Codable, Equatable, Sendable {
     public var anchor: [Double]?
     /// 本体被切掉时的替代位置（地面点）：App 在这里画一个设备徽章（空调）
     public var alt: [Double]?
+    /// 第二个替代位：alt 在合成布局里会被前排切墙挡住（要沿地面往里挪、可能挪到家具上）时，composer 改用挪动更少的这一个
+    public var alt2: [Double]?
+    /// 空调出风口下沿（两点）：开机时 App 在这里画动态送风（不烘焙进 lit，免得同屋别的灯把它“露”出来）
+    public var vent: [[Double]]?
+    /// 窗帘贴片：图名前缀（+ -day/-night-unlit/-lit）、贴片矩形 [x, y, w, h]、两半分界 x、窗帘四边形
+    public var patch: String?
+    public var rect: [Double]?
+    public var mid: Double?
+    public var quad: [[Double]]?
+    /// 家电显示屏 / 指示灯（冰箱、热水器、洗衣机），App 按状态点亮
+    public var display: [[Double]]?
+    public var led: [Double]?
+    /// 洗衣机滚筒门：圆心、门面上 1px 宽 / 高的屏幕位移、玻璃半径（px）
+    public var door: HouseDoor?
+    /// 家电本体（点击区域；不参与灯光）
+    public var body: [[Double]]?
+    /// 只有灯 / 屏幕 / 空调烘焙了光（lit 图里有它的光）；其他灯具位的状态全由 App 动态画
+    public var bakesLight: Bool { ["light", "tv", "ac"].contains(role ?? "light") }
+}
+
+public struct HouseDoor: Codable, Equatable, Sendable {
+    public var c: [Double]
+    public var s: [Double]
+    public var t: [Double]
+    public var r: Double
+    /// 门面竖直方向的半径（像素画里圆门在门面上不是正圆时），缺省 = r
+    public var ry: Double? = nil
 }
 
 public enum HouseModuleReveal: Codable, Equatable, Sendable {

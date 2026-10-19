@@ -1,6 +1,8 @@
 import os
 os.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 import subprocess
+import sys
+import re
 files={'en':'README.md','zh-Hans':'README.zh-CN.md','zh-Hant':'README.zh-TW.md'}
 names={'en':'English','zh-Hans':'简体中文','zh-Hant':'繁體中文'}
 R='neardws/MijiaBar'
@@ -22,6 +24,7 @@ dark="Dark mode",
 feat=["**QR sign-in** — scan with the Mi Home app, no password. Mainland China server by default; Europe, US, Russia, Singapore and India are one click away. Credentials stay in the macOS Keychain.",
 "**Automatic device list** — all homes, rooms and shared devices with online state. Offline and long-unused devices are hidden by default.",
 "**House cutaway** — pixel-art isometric home at the top of the list: tap fixtures (lights, TV or monitor, air conditioner, entry light) to toggle matched devices, with per-fixture lighting instead of lighting the whole room. Separate day and night art follows local time (~6:00–17:59); **Enlarge** opens a dedicated House window.",
+"**House pets** — up to three customizable pixel cats; choose a palette or generate one from a photo analyzed only on your Mac.",
 "**A page designed for each device type** — air conditioner, fan, light, plug, TV, speaker, camera, printer, kitchen appliances, water purifier, heater, dehumidifier and sensors, each with its own skeuomorphic illustration.",
 "**Restrained motion** — fast, non-bouncy springs (< 300 ms); fan blades spin with speed, the TV screen glows, heaters radiate; the power button ripples; sliders track 1:1, snap and tick the trackpad. Reduce Motion is respected.",
 "**Keyboard first** — `↑/↓` select, `↩` open, `Space` power, `←/→` adjust the main slider, `/` search, `Esc` back, `⌘Q` quit.",
@@ -47,6 +50,7 @@ toc=["功能","截图","安装","登录","Agent / MCP","从源码构建","致谢
 feat=["**扫码登录**：用米家 App 扫一扫，无需密码。默认中国大陆服务器，也可切换欧洲、美国、俄罗斯、新加坡、印度。凭据只存在 macOS 钥匙串。",
 "**自动获取设备**：拉取所有家庭、房间和共享设备及在线状态；离线和久未使用的设备默认隐藏。",
 "**小屋剖面图**：设备列表顶部的像素风等距小屋，点场景里的灯具、电视/显示器、空调、玄关灯等即可开关对应设备，每个点位单独亮灯，不会整间屋一起亮。按本地时间切换白天/夜晚底图（约 6:00–17:59）；点 **放大** 可打开独立小屋窗口。",
+"**小屋宠物**：最多三只可定制的像素猫，可手选配色，或从仅在本机分析的照片生成。",
 "**每类设备单独设计**：空调、风扇、灯、插座、电视、音箱、摄像机、打印机、厨房电器、净水器、取暖器、除湿机、传感器，各有拟物插画。",
 "**克制的动效**：无回弹的快速弹簧（< 300ms）；风扇按风速转动、电视屏幕发光、取暖器热浪；电源键涟漪；滑条 1:1 跟手、松手吸附、跨档触控板轻触。遵循「减弱动态效果」。",
 "**键盘优先**：`↑/↓` 选择、`↩` 打开、`空格` 开关、`←/→` 调节主滑条、`/` 搜索、`Esc` 返回、`⌘Q` 退出。",
@@ -128,7 +132,10 @@ for lang,fn in files.items():
     hh,hl,dh,dl=X[lang]
     lvh,lvl=LV[lang]
     toc=t['toc'][:4]+[hh,lvh]+t['toc'][4:6]+[dh]+t['toc'][6:]
-    prompt=subprocess.run(['.build/debug/mijiabar','setup-prompt'],env={**os.environ,'MIJIABAR_LANG':lang},capture_output=True,text=True).stdout.rstrip()
+    if '--reuse-prompts' in sys.argv:
+        prompt=re.search(r'```text\n(.*?)\n```',open(fn).read(),re.S).group(1)
+    else:
+        prompt=subprocess.run(['.build/debug/mijiabar','setup-prompt'],env={**os.environ,'MIJIABAR_LANG':lang},capture_output=True,text=True).stdout.rstrip()
     o=[f'<p align="center"><img src="Resources/AppIcon.png" width="96" alt="MijiaBar"></p>' if os.path.exists('Resources/AppIcon.png') else '',
        '<h1 align="center">MijiaBar</h1>',f'<p align="center">{t["tag"]}</p>','',badges,'',f'<p align="center">{sw}</p>','',
        f'> {t["note"]}','',

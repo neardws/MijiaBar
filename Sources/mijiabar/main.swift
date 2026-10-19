@@ -207,7 +207,7 @@ mijiabar \(version) — 米家设备命令行 / MCP
   mijiabar get <设备>                         读取状态（设备 = did 或名称）
   mijiabar set <设备> <属性> <值>              设置属性，例: set 客厅空调 tar_temp 26 / set 台灯 on true
   mijiabar action <设备> <动作> [JSON数组]     执行 MIoT 动作
-  mijiabar house <子命令> [--json]            小屋布局：show / slots / hide / unhide / assign / set / room / reset / sync / schema
+  mijiabar house <子命令> [--json]            小屋布局：show / slots / hide / unhide / assign / set / room / reset / sync / schema / pets
                                              （mijiabar house help 查看详细用法，格式见 docs/HOUSE.md）
   mijiabar mcp                               以 stdio MCP 服务器运行
   mijiabar setup-prompt                      打印给 Agent 的安装说明（与设置里的「复制安装说明」相同）

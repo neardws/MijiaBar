@@ -1,0 +1,432 @@
+{
+ "schema": 1,
+ "seasons": {
+  "springFestival": {
+   "calendar": "chinese",
+   "month": 1,
+   "day": 1,
+   "window": 7
+  },
+  "midAutumn": {
+   "calendar": "chinese",
+   "month": 8,
+   "day": 15,
+   "window": 7
+  },
+  "halloween": {
+   "calendar": "gregorian",
+   "month": 10,
+   "day": 31,
+   "window": 7
+  },
+  "christmas": {
+   "calendar": "gregorian",
+   "month": 12,
+   "day": 25,
+   "window": 7
+  }
+ },
+ "items": [
+  {
+   "id": "monstera",
+   "name": {
+    "zh": "龟背竹",
+    "en": "Monstera"
+   },
+   "category": "plant",
+   "surface": "floor",
+   "size": "L",
+   "sprites": {
+    "day": "decor-monstera-day.png",
+    "night": "decor-monstera-night.png"
+   },
+   "anchor": [
+    28,
+    40
+   ]
+  },
+  {
+   "id": "spider_plant",
+   "name": {
+    "zh": "吊兰",
+    "en": "Spider plant"
+   },
+   "category": "plant",
+   "surface": "floor",
+   "size": "M",
+   "sprites": {
+    "day": "decor-spider_plant-day.png",
+    "night": "decor-spider_plant-night.png"
+   },
+   "anchor": [
+    30,
+    58
+   ]
+  },
+  {
+   "id": "succulent",
+   "name": {
+    "zh": "多肉",
+    "en": "Succulent"
+   },
+   "category": "plant",
+   "surface": "floor",
+   "size": "S",
+   "sprites": {
+    "day": "decor-succulent-day.png",
+    "night": "decor-succulent-night.png"
+   },
+   "anchor": [
+    18,
+    24
+   ]
+  },
+  {
+   "id": "bonsai",
+   "name": {
+    "zh": "盆栽",
+    "en": "Potted bonsai"
+   },
+   "category": "plant",
+   "surface": "floor",
+   "size": "S",
+   "sprites": {
+    "day": "decor-bonsai-day.png",
+    "night": "decor-bonsai-night.png"
+   },
+   "anchor": [
+    18,
+    34
+   ]
+  },
+  {
+   "id": "rug_round",
+   "name": {
+    "zh": "圆地毯",
+    "en": "Round rug"
+   },
+   "category": "rug",
+   "surface": "rug",
+   "size": "L",
+   "sprites": {
+    "day": "decor-rug_round-day.png",
+    "night": "decor-rug_round-night.png"
+   },
+   "anchor": [
+    42,
+    18
+   ]
+  },
+  {
+   "id": "rug_stripe",
+   "name": {
+    "zh": "条纹地毯",
+    "en": "Striped rug"
+   },
+   "category": "rug",
+   "surface": "rug",
+   "size": "L",
+   "sprites": {
+    "day": "decor-rug_stripe-day.png",
+    "night": "decor-rug_stripe-night.png"
+   },
+   "anchor": [
+    54,
+    24
+   ]
+  },
+  {
+   "id": "painting_landscape",
+   "name": {
+    "zh": "风景画",
+    "en": "Landscape painting"
+   },
+   "category": "wall",
+   "surface": "wall",
+   "size": "M",
+   "sprites": {
+    "day": {
+     "nw": "decor-painting_landscape-day-nw.png",
+     "ne": "decor-painting_landscape-day-ne.png"
+    },
+    "night": {
+     "nw": "decor-painting_landscape-night-nw.png",
+     "ne": "decor-painting_landscape-night-ne.png"
+    }
+   },
+   "anchor": [
+    14,
+    20
+   ]
+  },
+  {
+   "id": "painting_cat",
+   "name": {
+    "zh": "猫咪挂画",
+    "en": "Cat portrait"
+   },
+   "category": "wall",
+   "surface": "wall",
+   "size": "S",
+   "sprites": {
+    "day": {
+     "nw": "decor-painting_cat-day-nw.png",
+     "ne": "decor-painting_cat-day-ne.png"
+    },
+    "night": {
+     "nw": "decor-painting_cat-night-nw.png",
+     "ne": "decor-painting_cat-night-ne.png"
+    }
+   },
+   "anchor": [
+    10,
+    18
+   ]
+  },
+  {
+   "id": "wall_clock",
+   "name": {
+    "zh": "挂钟",
+    "en": "Wall clock"
+   },
+   "category": "wall",
+   "surface": "wall",
+   "size": "S",
+   "sprites": {
+    "day": {
+     "nw": "decor-wall_clock-day-nw.png",
+     "ne": "decor-wall_clock-day-ne.png"
+    },
+    "night": {
+     "nw": "decor-wall_clock-night-nw.png",
+     "ne": "decor-wall_clock-night-ne.png"
+    }
+   },
+   "anchor": [
+    12,
+    16
+   ]
+  },
+  {
+   "id": "book_stack",
+   "name": {
+    "zh": "书堆",
+    "en": "Book stack"
+   },
+   "category": "book",
+   "surface": "floor",
+   "size": "S",
+   "sprites": {
+    "day": "decor-book_stack-day.png",
+    "night": "decor-book_stack-night.png"
+   },
+   "anchor": [
+    20,
+    22
+   ]
+  },
+  {
+   "id": "cat_bed",
+   "name": {
+    "zh": "猫窝",
+    "en": "Cat bed"
+   },
+   "category": "pet",
+   "surface": "floor",
+   "size": "S",
+   "sprites": {
+    "day": "decor-cat_bed-day.png",
+    "night": "decor-cat_bed-night.png"
+   },
+   "anchor": [
+    20,
+    16
+   ],
+   "petSpot": true
+  },
+  {
+   "id": "cat_tree",
+   "name": {
+    "zh": "猫爬架",
+    "en": "Cat tree"
+   },
+   "category": "pet",
+   "surface": "floor",
+   "size": "L",
+   "sprites": {
+    "day": "decor-cat_tree-day.png",
+    "night": "decor-cat_tree-night.png"
+   },
+   "anchor": [
+    24,
+    64
+   ],
+   "petSpot": true
+  },
+  {
+   "id": "food_bowl",
+   "name": {
+    "zh": "食盆",
+    "en": "Food bowl"
+   },
+   "category": "pet",
+   "surface": "floor",
+   "size": "S",
+   "sprites": {
+    "day": "decor-food_bowl-day.png",
+    "night": "decor-food_bowl-night.png"
+   },
+   "anchor": [
+    32,
+    18
+   ],
+   "petSpot": true
+  },
+  {
+   "id": "dog_bed",
+   "name": {
+    "zh": "狗窝",
+    "en": "Dog bed"
+   },
+   "category": "pet",
+   "surface": "floor",
+   "size": "M",
+   "sprites": {
+    "day": "decor-dog_bed-day.png",
+    "night": "decor-dog_bed-night.png"
+   },
+   "anchor": [
+    28,
+    18
+   ],
+   "petSpot": true
+  },
+  {
+   "id": "lantern",
+   "name": {
+    "zh": "春节灯笼",
+    "en": "Red lantern"
+   },
+   "category": "holiday",
+   "surface": "wall",
+   "size": "M",
+   "sprites": {
+    "day": {
+     "nw": "decor-lantern-day-nw.png",
+     "ne": "decor-lantern-day-ne.png"
+    },
+    "night": {
+     "nw": "decor-lantern-night-nw.png",
+     "ne": "decor-lantern-night-ne.png"
+    }
+   },
+   "anchor": [
+    6,
+    20
+   ],
+   "season": "springFestival"
+  },
+  {
+   "id": "fu",
+   "name": {
+    "zh": "福字",
+    "en": "Fu character"
+   },
+   "category": "holiday",
+   "surface": "wall",
+   "size": "S",
+   "sprites": {
+    "day": {
+     "nw": "decor-fu-day-nw.png",
+     "ne": "decor-fu-day-ne.png"
+    },
+    "night": {
+     "nw": "decor-fu-night-nw.png",
+     "ne": "decor-fu-night-ne.png"
+    }
+   },
+   "anchor": [
+    18,
+    24
+   ],
+   "season": "springFestival",
+   "text": true
+  },
+  {
+   "id": "rabbit_lamp",
+   "name": {
+    "zh": "月饼兔灯",
+    "en": "Rabbit lantern"
+   },
+   "category": "holiday",
+   "surface": "floor",
+   "size": "S",
+   "sprites": {
+    "day": "decor-rabbit_lamp-day.png",
+    "night": "decor-rabbit_lamp-night.png"
+   },
+   "anchor": [
+    18,
+    38
+   ],
+   "season": "midAutumn"
+  },
+  {
+   "id": "pumpkin",
+   "name": {
+    "zh": "南瓜灯",
+    "en": "Jack-o'-lantern"
+   },
+   "category": "holiday",
+   "surface": "floor",
+   "size": "S",
+   "sprites": {
+    "day": "decor-pumpkin-day.png",
+    "night": "decor-pumpkin-night.png"
+   },
+   "anchor": [
+    18,
+    24
+   ],
+   "season": "halloween"
+  },
+  {
+   "id": "xmas_tree",
+   "name": {
+    "zh": "圣诞树",
+    "en": "Christmas tree"
+   },
+   "category": "holiday",
+   "surface": "floor",
+   "size": "L",
+   "sprites": {
+    "day": "decor-xmas_tree-day.png",
+    "night": "decor-xmas_tree-night.png"
+   },
+   "anchor": [
+    24,
+    62
+   ],
+   "season": "christmas"
+  },
+  {
+   "id": "snowman",
+   "name": {
+    "zh": "雪人",
+    "en": "Snowman"
+   },
+   "category": "holiday",
+   "surface": "floor",
+   "size": "M",
+   "sprites": {
+    "day": "decor-snowman-day.png",
+    "night": "decor-snowman-night.png"
+   },
+   "anchor": [
+    16,
+    48
+   ],
+   "season": "christmas"
+  }
+ ]
+}

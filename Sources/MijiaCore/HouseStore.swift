@@ -29,6 +29,13 @@ public struct HomeHouse: Codable, Equatable, Sendable {
     /// nil = 经典四室 / 自动；非空 = 用户的格子布局（最多 3×2）
     public var layout: [HouseLayoutCell]? = nil
     public var layoutUpdatedAt: Date? = nil
+    /// nil = 默认温馨木屋；见 HouseStyles
+    public var style: String? = nil
+    public var styleUpdatedAt: Date? = nil
+    public var decorPrefs: HouseDecorPrefs? = nil
+    public var decor: [String: HouseDecorEntry]? = nil
+    public var pets: [String: HousePet]? = nil
+    public var petPrefs: HousePetPrefs? = nil
     public init() {}
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -36,6 +43,13 @@ public struct HomeHouse: Codable, Equatable, Sendable {
         devices = try c.decodeIfPresent([String: HouseDeviceOverride].self, forKey: .devices) ?? [:]
         layout = try c.decodeIfPresent([HouseLayoutCell].self, forKey: .layout)
         layoutUpdatedAt = try c.decodeIfPresent(Date.self, forKey: .layoutUpdatedAt)
+        style = try c.decodeIfPresent(String.self, forKey: .style)
+        styleUpdatedAt = try c.decodeIfPresent(Date.self, forKey: .styleUpdatedAt)
+        decorPrefs = try c.decodeIfPresent(HouseDecorPrefs.self, forKey: .decorPrefs)
+        decor = try c.decodeIfPresent([String: HouseDecorEntry].self, forKey: .decor)
+        pets = try c.decodeIfPresent([String: HousePet].self, forKey: .pets)
+        for key in pets?.keys.map({ $0 }) ?? [] where pets?[key]?.id.isEmpty == true { pets?[key]?.id = key }
+        petPrefs = try c.decodeIfPresent(HousePetPrefs.self, forKey: .petPrefs)
     }
 }
 
@@ -60,6 +74,16 @@ public struct HouseFile: Codable, Equatable, Sendable {
             for (k, v) in hb.devices where (h.devices[k]?.updatedAt ?? .distantPast) < v.updatedAt { h.devices[k] = v }
             let ta = h.layoutUpdatedAt ?? .distantPast, tb = hb.layoutUpdatedAt ?? .distantPast
             if tb > ta { h.layout = hb.layout; h.layoutUpdatedAt = hb.layoutUpdatedAt }
+            let sa = h.styleUpdatedAt ?? .distantPast, sb = hb.styleUpdatedAt ?? .distantPast
+            if sb > sa { h.style = hb.style; h.styleUpdatedAt = hb.styleUpdatedAt }
+            for (key, entry) in hb.decor ?? [:] where (h.decor?[key]?.updatedAt ?? .distantPast) < entry.updatedAt {
+                if h.decor == nil { h.decor = [:] }; h.decor?[key] = entry
+            }
+            if let prefs = hb.decorPrefs, prefs.updatedAt > (h.decorPrefs?.updatedAt ?? .distantPast) { h.decorPrefs = prefs }
+            for (key, pet) in hb.pets ?? [:] where h.pets?[key] == nil || h.pets![key]!.updatedAt < pet.updatedAt {
+                if h.pets == nil { h.pets = [:] }; h.pets?[key] = pet
+            }
+            if let prefs = hb.petPrefs, h.petPrefs == nil || prefs.updatedAt > h.petPrefs!.updatedAt { h.petPrefs = prefs }
             out.homes[hid] = h
         }
         return out
@@ -70,6 +94,7 @@ public struct HouseFile: Codable, Equatable, Sendable {
         for (hid, var h) in homes {
             h.rooms = h.rooms.filter { $0.value.module != nil || now.timeIntervalSince($0.value.updatedAt) < keep }
             h.devices = h.devices.filter { !$0.value.isEmpty || now.timeIntervalSince($0.value.updatedAt) < keep }
+            h.decor = h.decor?.filter { $0.value.item != nil || now.timeIntervalSince($0.value.updatedAt) < keep }
             homes[hid] = h
         }
     }
@@ -93,15 +118,39 @@ public struct HouseFile: Codable, Equatable, Sendable {
         h.layoutUpdatedAt = now
         homes[home] = h
     }
-    public mutating func reset(home: String, did: String? = nil, room: String? = nil, layout: Bool = false, now: Date = Date()) {
+    public mutating func setStyle(home: String, style: String?, now: Date = Date()) {
+        var h = homes[home] ?? HomeHouse()
+        h.style = style
+        h.styleUpdatedAt = now
+        homes[home] = h
+    }
+    public mutating func setDecor(home: String, key: String, item: String?, now: Date = Date()) {
+        var config = homes[home] ?? HomeHouse()
+        if config.decor == nil { config.decor = [:] }
+        config.decor?[key] = HouseDecorEntry(item: item == "auto" ? nil : item, updatedAt: now)
+        homes[home] = config
+    }
+    public mutating func setDecorPrefs(home: String, enabled: Bool? = nil, seasonal: Bool? = nil, now: Date = Date()) {
+        var config = homes[home] ?? HomeHouse(), prefs = config.decorPrefs ?? HouseDecorPrefs()
+        if let enabled { prefs.enabled = enabled }; if let seasonal { prefs.seasonal = seasonal }
+        prefs.updatedAt = now; config.decorPrefs = prefs; homes[home] = config
+    }
+    public mutating func resetDecor(home: String, now: Date = Date()) {
+        for key in homes[home]?.decor?.keys.map({ $0 }) ?? [] { setDecor(home: home, key: key, item: nil, now: now) }
+    }
+    public mutating func reset(home: String, did: String? = nil, room: String? = nil, layout: Bool = false, style: Bool = false, now: Date = Date()) {
         var h = homes[home] ?? HomeHouse()
         if let did { h.devices[did] = HouseDeviceOverride(updatedAt: now) }
         if let room { h.rooms[room] = HouseRoomOverride(module: nil, updatedAt: now) }
         if layout { h.layout = nil; h.layoutUpdatedAt = now }
-        if did == nil && room == nil && !layout {
+        if style { h.style = nil; h.styleUpdatedAt = now }
+        if did == nil && room == nil && !layout && !style {
             for k in h.devices.keys { h.devices[k] = HouseDeviceOverride(updatedAt: now) }
             for k in h.rooms.keys { h.rooms[k] = HouseRoomOverride(module: nil, updatedAt: now) }
             h.layout = nil; h.layoutUpdatedAt = now
+            h.style = nil; h.styleUpdatedAt = now
+            for key in h.decor?.keys.map({ $0 }) ?? [] { h.decor?[key] = HouseDecorEntry(item: nil, updatedAt: now) }
+            h.decorPrefs = HouseDecorPrefs(updatedAt: now)
         }
         homes[home] = h
     }
@@ -194,14 +243,14 @@ public enum HouseStore {
 
     /// 读取 → 修改 → 原子写回，全程加文件协调锁（同一台 Mac 上 App 和命令行同时写不会互相覆盖）
     @discardableResult
-    public static func update(at url: URL = HouseStore.url, _ f: (inout HouseFile) -> Void) throws -> HouseFile {
+    public static func update(at url: URL = HouseStore.url, _ f: (inout HouseFile) throws -> Void) throws -> HouseFile {
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         var result = HouseFile(); var failure: Error?
         var err: NSError?
         NSFileCoordinator(filePresenter: nil).coordinate(writingItemAt: url, options: .forMerging, error: &err) { u in
             do {
                 var file = readMerged(u)
-                f(&file)
+                try f(&file)
                 file.schema = max(file.schema, HouseFile.currentSchema)
                 file.prune()
                 try file.encoded().write(to: u, options: .atomic)

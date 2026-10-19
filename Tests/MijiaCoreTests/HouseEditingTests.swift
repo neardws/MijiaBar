@@ -52,19 +52,28 @@ private func dev(_ did: String, _ name: String, _ model: String, room: String, r
     }
 
     @Test func dropsOnSpecificBadgeAndSwapsWithIncompatible() {
-        let h = house()
+        // 客厅现在有空调位（默认空调进 ac 灯具位）；这里用户把空调指定成徽章
+        var base = HouseFile(); base.setDevice(home: "h", did: "d1") { $0.place = "badge" }
+        func ap(_ v: HouseDropVerdict) -> ResolvedHouse {
+            var f = base; HouseEditing.apply(v.changes, to: &f, home: "h"); return house(f.homes["h"])
+        }
+        let h = house(base.homes["h"])
         let acSpot = h.rooms[0].devices.first { $0.did == "d1" }?.spot
         #expect(acSpot == .badge("b1"))
         // 落地灯拖到 b3：落地灯位空出来，空调还在 b1
-        let r = applied(HouseEditing.planDrop(src("d3"), roomKey: "r1", spot: .badge("b3"), house: h)).rooms[0]
+        let r = ap(HouseEditing.planDrop(src("d3"), roomKey: "r1", spot: .badge("b3"), house: h)).rooms[0]
         #expect(r.devices.first { $0.did == "d3" }?.spot == .badge("b3"))
         #expect(r.devices.first { $0.did == "d1" }?.spot == .badge("b1"))
         // 落地灯拖到空调占着的 b1：空调不能进落地灯位，改用其他徽章位
         let v = HouseEditing.planDrop(src("d3"), roomKey: "r1", spot: .badge("b1"), house: h)
         #expect(v.changes.last == HouseDropChange(did: "d1", place: "badge"))
-        let r2 = applied(v).rooms[0]
+        let r2 = ap(v).rooms[0]
         #expect(r2.devices.first { $0.did == "d3" }?.spot == .badge("b1"))
         if case .badge? = r2.devices.first(where: { $0.did == "d1" })?.spot {} else { Issue.record("AC should keep a badge") }
+        // 再把空调拖回客厅的空调位
+        let back = HouseEditing.planDrop(src("d1"), roomKey: "r1", spot: .fixture("ac"), house: h)
+        #expect(back == .accept([HouseDropChange(did: "d1", place: "fixture:ac")]))
+        #expect(ap(back).rooms[0].device(at: .fixture("ac"))?.did == "d1")
     }
 
     @Test func dropHiddenDeviceShowsIt() {
@@ -82,7 +91,8 @@ private func dev(_ did: String, _ name: String, _ model: String, room: String, r
     @Test func clearMovesFixtureToBadgeAndBadgeToChip() {
         let h = house()
         #expect(HouseEditing.planClear(did: "d3", house: h) == [HouseDropChange(did: "d3", place: "badge")])
-        #expect(HouseEditing.planClear(did: "d1", house: h) == [HouseDropChange(did: "d1", place: "none")])
+        #expect(HouseEditing.planClear(did: "d1", house: h) == [HouseDropChange(did: "d1", place: "badge")])   // 客厅空调位 → 徽章
+        #expect(HouseEditing.planClear(did: "d4", house: h) == [HouseDropChange(did: "d4", place: "none")])    // 风扇徽章 → 只在按钮行
     }
 }
 
@@ -165,5 +175,25 @@ private func dev(_ did: String, _ name: String, _ model: String, room: String, r
         for i in 0..<5 { edit(&f, &s, at: t0) { $0.setDevice(home: "h", did: "d\(i)", now: self.t0) { $0.place = "none" } } }
         #expect(s.undos.count == 3)
         #expect(s.undos.first?.devices.keys.first == "d2")
+    }
+
+    @Test func decorUndoUsesFreshTombstonesAndPreservesOtherSlots() {
+        var file = HouseFile(), stack = HouseUndoStack()
+        edit(&file, &stack, at: t0) { $0.setDecor(home: "h", key: "r/corner", item: "monstera", now: self.t0) }
+        let remote = file
+        file.setDecor(home: "h", key: "r/desk", item: "books", now: t0)
+        let unrelatedChangeDroppedUndo = stack.rebase(on: file)
+        #expect(!unrelatedChangeDroppedUndo)
+        _ = stack.undo(&file, now: t0.addingTimeInterval(1))
+        #expect(file.homes["h"]?.decor?["r/corner"]?.item == nil)
+        #expect(file.homes["h"]?.decor?["r/corner"]?.updatedAt == t0.addingTimeInterval(1))
+        #expect(HouseFile.merge(remote, file).homes["h"]?.decor?["r/corner"]?.item == nil)
+        #expect(file.homes["h"]?.decor?["r/desk"]?.item == "books")
+        _ = stack.redo(&file, now: t0.addingTimeInterval(2))
+        #expect(file.homes["h"]?.decor?["r/corner"]?.item == "monstera")
+        file.setDecor(home: "h", key: "r/corner", item: "none", now: t0.addingTimeInterval(3))
+        let sameSlotDroppedUndo = stack.rebase(on: file)
+        #expect(sameSlotDroppedUndo)
+        #expect(!stack.canUndo)
     }
 }

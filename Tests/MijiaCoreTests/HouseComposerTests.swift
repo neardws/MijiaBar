@@ -125,6 +125,21 @@ import CoreGraphics
         let ac2 = try lights([.init(room: "b", module: "bedroom", col: 0, row: 0)], "b").first { $0["id"] as? String == "ac" }!
         #expect(ac2["hidden"] == nil)
         #expect(ac2["core"] != nil)
+        #expect((ac2["vent"] as? [[Double]])?.count == 2)   // 送风由 App 按 vent 动态画；隐藏时没有 vent
+        #expect(ac["vent"] == nil)
+        // 客厅空调在 NW 外墙（沙发上方）：最左列可见；左边有房间时隐藏、给 alt
+        let lac = try lights([.init(room: "a", module: "bedroom", col: 0, row: 0), .init(room: "l", module: "living", col: 0, row: 1)], "l")
+            .first { $0["id"] as? String == "ac" }!
+        #expect(lac["hidden"] == nil && lac["vent"] != nil)
+        let lac2 = try lights([.init(room: "g", module: "generic", col: 0, row: 1), .init(room: "l", module: "living", col: 1, row: 1)], "l")
+            .first { $0["id"] as? String == "ac" }!
+        #expect(lac2["hidden"] as? Bool == true && (lac2["alt"] as? [Double])?.count == 2)
+        // 书房空调在 NE 外墙（窗右侧）：第一排可见；后面有房间时隐藏
+        let sac = try lights([.init(room: "s", module: "study", col: 0, row: 0)], "s").first { $0["id"] as? String == "ac" }!
+        #expect(sac["hidden"] == nil && sac["vent"] != nil)
+        let sac2 = try lights([.init(room: "b", module: "bedroom", col: 0, row: 0), .init(room: "s", module: "study", col: 0, row: 1)], "s")
+            .first { $0["id"] as? String == "ac" }!
+        #expect(sac2["hidden"] as? Bool == true)
         // 客厅壁灯在 NE 第 0 段；只有第 1 段后面有房间 → 壁灯不隐藏
         let sc = try lights([.init(room: "s", module: "study", col: 1, row: 0),
                              .init(room: "l", module: "living", col: 0, row: 1)], "l").first { $0["id"] as? String == "sconce" }!
@@ -136,6 +151,37 @@ import CoreGraphics
         #expect(sc2["shade"] == nil)
         // 壁灯被切时给地面 alt 点（App 把灯具位 / 设备徽章挪过去）
         #expect((sc2["alt"] as? [Double])?.count == 2)
+    }
+
+    @Test func curtainAndApplianceSlotsFollowTheirWalls() throws {
+        let (cat, images) = try Self.load()
+        func light(_ layout: [HouseLayoutCell], _ room: String, _ id: String) throws -> [String: Any] {
+            let r = HouseComposer.compose(.init(layout: layout, catalog: cat, images: images))
+            let j = try JSONSerialization.jsonObject(with: r.sceneJSON) as! [String: Any]
+            let lights = ((j["modules"] as! [String: Any])[room] as! [String: Any])["lights"] as! [[String: Any]]
+            return try #require(lights.first { $0["id"] as? String == id }, "\(room) \(id)")
+        }
+        // 客厅窗帘在 NE 外墙：前面一排可见，贴片 rect / mid 跟着模块平移
+        let solo = try light([.init(room: "l", module: "living", col: 0, row: 0)], "l", "curtain")
+        #expect(solo["hidden"] == nil && solo["patch"] as? String == "curtain-living" && (solo["quad"] as? [[Double]])?.count == 4)
+        let shifted = try light([.init(room: "g", module: "generic", col: 0, row: 0), .init(room: "l", module: "living", col: 1, row: 0)], "l", "curtain")
+        let r0 = try #require(solo["rect"] as? [Double]), r1 = try #require(shifted["rect"] as? [Double])
+        let m0 = try #require(solo["mid"] as? Double), m1 = try #require(shifted["mid"] as? Double)
+        #expect(r1[0] - r0[0] == m1 - m0 && r1[2] == r0[2] && r1[3] == r0[3])
+        // 后面有房间 → NE 墙被切 → 窗帘不画贴片、给 alt（徽章兜底）
+        let cut = try light([.init(room: "b", module: "bedroom", col: 0, row: 0), .init(room: "l", module: "living", col: 0, row: 1)], "l", "curtain")
+        #expect(cut["hidden"] as? Bool == true && cut["patch"] == nil && cut["rect"] == nil && (cut["alt"] as? [Double])?.count == 2)
+        // 热水器在卫生间 NW 墙：左边有房间 → 隐藏
+        let wh = try light([.init(room: "w", module: "bathroom", col: 0, row: 0)], "w", "water_heater")
+        #expect(wh["hidden"] == nil && ((wh["display"] as? [[Double]])?.count ?? 0) >= 3 && (wh["led"] as? [Double])?.count == 2)
+        let wh2 = try light([.init(room: "g", module: "generic", col: 0, row: 0), .init(room: "w", module: "bathroom", col: 1, row: 0)], "w", "water_heater")
+        #expect(wh2["hidden"] as? Bool == true && wh2["display"] == nil && (wh2["alt"] as? [Double])?.count == 2)
+        // 冰箱 / 洗衣机落地：不挂墙，任何布局都画；洗衣机门跟着平移
+        let fr = try light([.init(room: "g", module: "generic", col: 0, row: 0), .init(room: "k", module: "kitchen", col: 1, row: 0)], "k", "fridge")
+        #expect(fr["hidden"] == nil && fr["body"] != nil && fr["pool"] == nil)
+        let wa = try light([.init(room: "y", module: "balcony", col: 0, row: 0)], "y", "washer")
+        let door = try #require(wa["door"] as? [String: Any])
+        #expect((door["c"] as? [Double])?.count == 2 && (door["r"] as? Double ?? 0) > 4 && (door["ry"] as? Double ?? 0) > 4)
     }
 
     @Test func gridTipMovesRightAndForward() {
@@ -207,6 +253,26 @@ import CoreGraphics
     }
 
     /// 地面房间名标签不压徽章位；除了挤的阳台，也不压吸顶灯 / 被切灯具的 alt 位置框（含 App 里前右格放玄关的布局）
+    /// 两面后墙都被切时，卧室名标签落在 floorLabel（地毯右侧空地），不压在枕头上
+    @Test func bedroomFloorLabelClearsBedWhenBothWallsCut() throws {
+        let (cat, images) = try Self.load("day")
+        #expect(cat.modules["bedroom"]?.floorLabel != nil, "bedroom needs a floorLabel")
+        #expect(cat.modules["study"]?.floorLabel != nil, "study needs a floorLabel")
+        // composed2：卧室在 (1,1)，前面有厨房、左边有卫生间 → NW / NE 都切
+        let lay: [HouseLayoutCell] = [
+            .init(room: "k", module: "kitchen", col: 0, row: 0), .init(room: "l", module: "living", col: 1, row: 0),
+            .init(room: "w", module: "bathroom", col: 0, row: 1), .init(room: "b", module: "bedroom", col: 1, row: 1),
+            .init(room: "y", module: "balcony", col: 2, row: 1)]
+        let r = HouseComposer.compose(.init(layout: lay, catalog: cat, images: images))
+        let j = try JSONSerialization.jsonObject(with: r.sceneJSON) as! [String: Any]
+        let m = try #require((j["modules"] as? [String: [String: Any]])?["b"])
+        let lab = try #require(m["label"] as? [Double])
+        let badges = try #require(m["badges"] as? [[Double]])
+        // 地板徽章 y≈403；枕头在床上 y≈320–350。标签应贴近地板徽章带
+        let badgeY = badges.map { $0[1] }.min()!
+        #expect(lab[1] > badgeY - 50, "bedroom label \(lab) still on pillows (badgeY=\(badgeY))")
+    }
+
     @Test func floorLabelsClearBadgesAndAltSpots() throws {
         let (cat, images) = try Self.load("day")
         var all = Self.layouts

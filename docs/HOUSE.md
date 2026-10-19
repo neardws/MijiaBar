@@ -57,6 +57,62 @@ pruned after 30 days. The app watches the folder and refreshes the house within 
 
 Unknown fields are ignored, so newer versions can add fields without breaking older ones. `mijiabar house schema` prints the JSON Schema.
 
+## Fixed decorations (Phase 3b, milestone 1)
+
+Decorations are appearance-only sprites in fixed module slots, never device commands or freely placed objects.
+Module catalogs optionally provide `decor` slots (`id`, `surface`, `sizes`, `at`, optional `wall`, `default`, `holiday`).
+Older catalogs without slots render unchanged. Composed houses use the same decorated images in the window and menu bar;
+the legacy hand-drawn classic scene does not have module decor slots. Palette styles share cozy-wood's slots.
+
+Optional home fields keep **schema 1** compatible:
+
+- `decorPrefs: {enabled: true, seasonal: true, updatedAt: "…"}`; defaults apply when absent.
+- `decor: {"<room key>/<slot id>": {item: "monstera", updatedAt: "…"}}`.
+  `item: "none"` keeps a slot empty; `item: null` (or omitted) is a tombstone restoring automatic placement.
+- Overrides merge independently by `updatedAt`, including tombstones. Preferences merge as one timestamped entry.
+  `decor reset` tombstones every decor override without changing preferences. A full `house reset` also resets preferences.
+
+```sh
+mijiabar house decor list --json
+mijiabar house decor list --room '<room key>'
+mijiabar house decor items --json
+mijiabar house decor set '<room key>/<slot id>' monstera
+mijiabar house decor set '<room key>/<slot id>' none
+mijiabar house decor set '<room key>/<slot id>' auto
+mijiabar house decor on
+mijiabar house decor seasonal off
+mijiabar house decor reset
+```
+
+Listing reports preferences, active seasons, overrides, and each module slot's item/source and `hidden: "wall cut"`
+when the composer's wall-light rule hides that wall. If module catalogs are unavailable, overrides are still listed;
+setting an unknown slot or incompatible item returns error JSON rather than guessing. All mutations return JSON.
+The MCP tools `get_house_decor` and `set_house_decor` use the same resolver and validation.
+In the edit window, **Style & decor** combines style cards, decoration/holiday toggles, and categorized sprite tiles.
+Drag a tile onto a compatible visible slot (surface and size), or click a slot to choose an item, None, or Automatic.
+Drag placed decor back to the panel or outside the house to remove it; cut-wall slots are hidden.
+Edits save through the same `house.json`/undo path as device edits. Reset to automatic in this tab resets only decor overrides.
+
+The adjacent **Pets** editor tab adds up to three customizable pixel cats (manual
+palette or on-device photo analysis), with room restrictions and independent
+visibility toggles. Pet edits/removal support ⌘Z and sync through the same store.
+See [HOUSE_PETS.md](HOUSE_PETS.md) for rendering, privacy and manual snapshot review.
+
+Automatic holiday items replace defaults only in compatible `holiday` slots with no live override. An invalid live override
+falls back to its default but still blocks holiday substitution. Dates use local calendar days (including both window endpoints);
+Chinese-calendar holidays ignore leap months and handle lunar-year boundaries. Disabled seasonal placement does not block
+explicit user holiday items. Missing PNGs are skipped, with a single stderr diagnostic per filename.
+
+For asset review, run `MijiaBarApp --house-decor-snapshot /tmp/house-decor --date 2026-10-18`.
+It uses only demo rooms/in-memory overrides, never the real home or `house.json`. Outputs include decor/no-decor day/night
+pairs for three styles, fixed-date holiday scenes, labelled slot overlays with scene JSON, a 3× nearest-neighbour catalog sheet,
+and `edit-decor-{cozy-wood,japanese,modern}.png` editor windows with visible slots (`-light` variants included).
+The optional date controls regular demos; holiday examples always use their documented 2026/2027 dates.
+Each style uses identical demo overrides for day and night; every slot receives a compatible item.
+Slots too scarce to show every catalog item are reported on stderr. Slot overlays describe the day example.
+Composed PNGs are written directly from the composer's CGImage, at the scene JSON's pixel dimensions, without display/Retina scaling.
+The current six-room demo composes at 848×568 pixels; exporting 1696×1136 would be a 2× enlargement, not native 1×.
+
 ## Automatic layout
 
 1. **Room → module** by name (Simplified/Traditional Chinese and English): 客厅/living → `living`; 卧/儿童房/客房/bedroom → `bedroom`;
@@ -73,10 +129,42 @@ Fixture slots (`mijiabar house slots --json`):
 
 | Module | Fixtures (accepts) | Badges |
 |---|---|---|
-| `living` | `floor_lamp` (light), `sconce` (light), `tv` (tv) | 4 |
+| `living` | `floor_lamp` (light), `sconce` (light), `tv` (tv), `ac` (ac, wall unit above the sofa) | 4 |
 | `bedroom` | `bedside` (light), `ac` (ac) | 3 |
-| `study` | `ceiling` (light), `monitor` (light/tv/other, name must mention 显示器/monitor/screen…) | 3 |
+| `study` | `ceiling` (light), `monitor` (light/tv/other, name must mention 显示器/monitor/screen…), `ac` (ac, wall unit beside the window) | 3 |
 | `generic` | `entry_light` (light) | 3 |
+| `kitchen` / `bathroom` / `balcony` (composed layouts) | `pendant` / `ceiling` / `wall_lamp` (light) | 3 |
+
+### Device classes (fixture vs badge)
+
+Devices are either **(A) fixtures** drawn into the room art with an on/off state, or **(B) badges** (pixel icon on the floor).
+`HouseCatalog.deviceClass(category:model:)` decides; `mijiabar house --json` reports it per device as `class`
+(`fixture:<kind>`, `fixture:<kind>(badge)` = type A without art yet, or `badge`), and `house slots --json` lists every fixture's `kind`.
+
+| Class | Kinds | Shown as |
+|---|---|---|
+| A, has art (baked light) | `light`, `screen` (TV / monitor), `ac` (wall unit) | Baked into the module art: lit layer fades in when the device is on (lamp glow, screen picture, AC airflow + green LED) |
+| A, has art (live state) | `curtain`, `fridge`, `water-heater`, `washer` | Drawn into the art; the state is drawn live by the app (never baked, so another light's lit layer can't leak it): **curtain** = closed-curtain patch over the window, sliding in from both sides by `current-position` (0–100 %, partial supported; on/off when there is no position), and the room dims a little in daytime while closed; **fridge** = cyan display on the door (dark when off/offline); **water heater** = display window glows orange with flickering flame cells + red LED while heating (`status` option text contains heat/work/busy…), blue + green LED when on but idle, dark when off; **washer** = green panel display + clothes tumbling in the drum (8 fps) while running, dark when off |
+| A, art planned | `fan`, `air-purifier`, `humidifier`, `dehumidifier`, `heater`, `vacuum` (floor sprites with on/off frames, Phase 3b/3c) | Badge until the art lands |
+| B | plugs, switches, sensors, gateways, remotes, locks, cameras, speakers, printers, water purifiers, kitchen appliances | Badge |
+
+A type-A device falls back to a badge when its room module has no free slot of that kind (no such slot, already taken, or the wall it
+hangs on is cut away in a composed layout — then the badge sits on the slot's floor `alt` point). Every art set — the classic cutaway
+(`house-cutaway.json`), the module catalog and every style pack — must define exactly the fixture set of `HouseCatalog.fixtures`
+(`HouseCatalog.fixtureSetProblems`, checked by unit tests).
+
+Live-state fixture slots:
+
+| Slot id | Kind | Modules (classic cutaway / composed modules) | Notes |
+|---|---|---|---|
+| `curtain` | `curtain` | living, bedroom, study (classic + modules), kitchen (modules) | Wall fixture (`ne`; kitchen `nw`): hidden + badge at `alt` when its wall is cut. Patch `curtain-<module>-{day,night}-{unlit,lit}.png` (classic: `curtain-classic-<room>-…`); the lit patch is revealed with the same per-light reveal masks as the room art |
+| `fridge` | `fridge` | kitchen (modules only) | The fridge already in the kitchen art; `display` quad on the door |
+| `water_heater` | `water-heater` | bathroom (modules only) | Wall unit on the bathroom `nw` wall; hidden + badge when that wall is cut |
+| `washer` | `washer` | balcony (modules only) | Floor appliance (front-loader), visible in every layout |
+
+Classic has no kitchen / bathroom / balcony rooms, so fridge / water heater / washer only appear in composed layouts.
+New device categories: `curtain`, `fridge`, `washer`, `water-heater` (`DeviceCategory.guess`: `curtain`; `fridge` / `refrigerator`;
+`washer` / `dryer` / `.wash.` (not `dishwasher` → kitchen, not `hairdryer`); `waterheater` / `water_heater` / `gasheater`).
 
 ## CLI
 
