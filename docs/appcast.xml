@@ -3,19 +3,20 @@
     <channel>
         <title>MijiaBar</title>
         <item>
-            <title>0.1.13</title>
-            <pubDate>Sun, 18 Oct 2026 18:45:49 +0800</pubDate>
+            <title>0.1.14</title>
+            <pubDate>Tue, 20 Oct 2026 13:59:24 +0800</pubDate>
             <link>https://www.neardws.com/MijiaBar/</link>
-            <sparkle:version>0.1.13</sparkle:version>
-            <sparkle:shortVersionString>0.1.13</sparkle:shortVersionString>
+            <sparkle:version>0.1.14</sparkle:version>
+            <sparkle:shortVersionString>0.1.14</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <description sparkle:format="markdown"><![CDATA[## 0.1.13
+            <description sparkle:format="markdown"><![CDATA[## 0.1.14
 
-- 修复：从 0.1.12 更新后点击菜单栏图标立即闪退（发布包漏了小屋图片资源包；找不到资源时也不再崩溃）/ Fix: crash when clicking the menu-bar icon after updating to 0.1.12 (the app bundle was missing the house art resource bundle; missing resources no longer crash)
-- 新增：和风、现代两套小屋风格（完整重绘）/ New: Japanese and modern house styles (full redraws)
-- 浅木、胡桃木配色变体现在随 App 一起打包 / Light-wood and walnut variants now ship inside the app
+- 新增：小屋装饰——固定装饰位、节日装饰包，编辑窗口新增「风格与装饰」/ New: house decorations: fixed decor slots, a holiday pack and a new Style & Decor panel in the editor
+- 新增：宠物猫——像素短毛猫，6 种花色、8 种动作，最多 3 只；可用照片在本机识别花色（照片不保存）；支持 `mijiabar house pets` 命令和 MCP 工具 / New: pet cats: pixel short-hair cats with 6 coat patterns and 8 actions, up to 3 cats; pick a coat from a photo, analysed on your Mac (the photo is not kept); `mijiabar house pets` CLI and MCP tools
+- 修复：夜里菜单栏小屋里的猫挤在一起 / Fix: cats piling up together in the menu-bar house at night
+- 修复：编辑窗口里窗帘位、冰箱位、洗衣机位、热水器位显示英文 id / Fix: curtain, fridge, washer and water-heater slots showed raw ids in the editor
 ]]></description>
-            <enclosure url="https://github.com/neardws/MijiaBar/releases/download/v0.1.13/MijiaBar-0.1.13.dmg" length="66877496" type="application/octet-stream" sparkle:edSignature="lGuCtyeXbEHSwjWfEuJOuH+p1iNNTYiyNH71vpJXdTWHIZ8ojJMU4xjsklTGAd8w1nWOQm2yskNMvrpz/aAJCw=="/>
+            <enclosure url="https://github.com/neardws/MijiaBar/releases/download/v0.1.14/MijiaBar-0.1.14.dmg" length="69388644" type="application/octet-stream" sparkle:edSignature="gSlZEHleHS4w7ofjLq2MnVzJrL/iiRATSNfnIRm15dWpjObHwuRp6gv1vozmqC/N8rM+dg8RJoB9Xe3eZH88DA=="/>
         </item>
     </channel>
 </rss>
