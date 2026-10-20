@@ -175,6 +175,7 @@ import Testing
         let start = CFAbsoluteTimeGetCurrent()
         for index in 0..<1000 { _ = behavior.pose(pets[index % 3], world: world, context: context, at: date.addingTimeInterval(Double(index))) }
         let duration = CFAbsoluteTimeGetCurrent() - start
+        print("HousePet pose ms: \(String(format: "%.2f", duration * 1000))")
         let budget = ProcessInfo.processInfo.environment["CI"] == nil ? 0.3 : 1.5
         #expect(duration < budget, "1000 cold pose queries took \(duration)s (budget \(budget)s)")
     }
