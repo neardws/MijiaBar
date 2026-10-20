@@ -6,6 +6,24 @@ import MijiaCore
 
 @MainActor @Suite struct HousePetsTests {
     private func rig() throws -> HousePetRig { try #require(HousePetPainter.shared.rig) }
+    private let blackPalette = HousePetPalette(base: "#2E2B30", second: "#1C1A1E", white: "#F2F0EC", eye: "#E9C24A")
+    private func rgba(_ image: CGImage) throws -> [UInt8] {
+        Array(try #require(image.dataProvider?.data) as Data)
+    }
+    private func legacyLighting(_ image: CGImage, lighting: HousePetRig.Lighting, shadow: [Double]) throws -> [UInt8] {
+        var bytes = try rgba(image)
+        for index in stride(from: 0, to: bytes.count, by: 4) where bytes[index + 3] > 0 {
+            for channel in 0..<3 {
+                let value = Double(bytes[index + channel]) / 255
+                let output = bytes[index + 3] < 255 ? value * shadow[channel] : value * lighting.mul[channel] + lighting.add[channel]
+                bytes[index + channel] = UInt8((min(1, max(0, output)) * 255).rounded())
+            }
+        }
+        return bytes
+    }
+    private func luminance(_ colour: [Double]) -> Double {
+        0.2126 * colour[0] + 0.7152 * colour[1] + 0.0722 * colour[2]
+    }
     private func bitmap(_ width: Int = 20, _ height: Int = 20) throws -> CGContext {
         let context = try #require(CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
                                             space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
@@ -137,13 +155,114 @@ import MijiaCore
         let dark = try HousePetRecolor.image(width: 1, height: 1, rgba: [50, 50, 50, 255])
         let light = try HousePetRecolor.image(width: 1, height: 1, rgba: [100, 100, 100, 255])
         let night = try #require(rig.lighting["night"])
-        let expected = try #require(HousePetPainter.illuminate(day, lighting: .init(mul: night.mul.map { $0 * 2 }), shadowMultiplier: night.mul))
+        let regions = try #require(painter.regions(pet: pet))[0]
+        let expected = try #require(HousePetPainter.illuminate(day, lighting: .init(mul: night.mul.map { $0 * 2 }), shadowMultiplier: night.mul, nightRegions: regions))
         let actual = try #require(painter.frame(pet: pet, pose: pose, night: true, lit: true, unlitImage: dark, litImage: light))
         #expect(actual.dataProvider?.data as Data? == expected.dataProvider?.data as Data?)
         let fallback = try #require(painter.frame(pet: pet, pose: pose, night: true, lit: true, unlitImage: nil, litImage: nil))
         let nightLit = try #require(rig.lighting["nightLit"])
-        let expectedFallback = try #require(HousePetPainter.illuminate(day, lighting: nightLit, shadowMultiplier: night.mul))
+        let expectedFallback = try #require(HousePetPainter.illuminate(day, lighting: nightLit, shadowMultiplier: night.mul, nightRegions: regions))
         #expect(fallback.dataProvider?.data as Data? == expectedFallback.dataProvider?.data as Data?)
+    }
+
+    @Test func dayAndDayLitRemainPixelIdentical() throws {
+        let painter = HousePetPainter.shared, rig = try rig(), directory = try #require(painter.directory)
+        for palette in [HousePetPalette(), blackPalette] {
+            for pattern in rig.patterns {
+                let pet = HousePet(pattern: pattern, palette: palette)
+                let frames = try painter.cache.frames(pet: pet, rig: rig, directory: directory, phase: "day")
+                for frameIndex in frames.indices {
+                    let pose = HousePetPose(point: .init(x: 0, y: 0), frameIndex: frameIndex, module: "living", room: "r")
+                    for lit in [false, true] {
+                        let lighting = try #require(rig.lighting[lit ? "dayLit" : "day"])
+                        let actual = try #require(painter.frame(pet: pet, pose: pose, night: false, lit: lit, unlitImage: nil, litImage: nil))
+                        #expect(try rgba(actual) == legacyLighting(frames[frameIndex], lighting: lighting, shadow: [1, 1, 1]))
+                    }
+                }
+            }
+        }
+    }
+
+    @Test func nightPreservesShadowsAndBarelyChangesOrangeCoats() throws {
+        let painter = HousePetPainter.shared, rig = try rig(), directory = try #require(painter.directory)
+        let night = try #require(rig.lighting["night"]), nightLit = try #require(rig.lighting["nightLit"])
+        let dark = try HousePetRecolor.image(width: 1, height: 1, rgba: [40, 40, 40, 255])
+        let light = try HousePetRecolor.image(width: 1, height: 1, rgba: [80, 60, 104, 255])
+        let sampled = HousePetRig.Lighting(mul: zip(night.mul, [2, 1.5, 2.6]).map(*))
+        for palette in [HousePetPalette(), blackPalette] {
+            for pattern in rig.patterns {
+                let pet = HousePet(pattern: pattern, palette: palette)
+                let frames = try painter.cache.frames(pet: pet, rig: rig, directory: directory, phase: "day")
+                for frameIndex in frames.indices {
+                    let pose = HousePetPose(point: .init(x: 0, y: 0), frameIndex: frameIndex, module: "living", room: "r")
+                    for (mode, lighting) in [night, nightLit, sampled].enumerated() {
+                        let actual = try #require(painter.frame(pet: pet, pose: pose, night: true, lit: mode != 0,
+                                                               unlitImage: mode == 2 ? dark : nil, litImage: mode == 2 ? light : nil))
+                        let bytes = try rgba(actual), old = try legacyLighting(frames[frameIndex], lighting: lighting, shadow: night.mul)
+                        var differences = [Double](repeating: 0, count: 3), opaque = 0
+                        for index in stride(from: 0, to: bytes.count, by: 4) {
+                            #expect(bytes[index + 3] == old[index + 3])
+                            if old[index + 3] < 255 {
+                                #expect(Array(bytes[index..<index + 4]) == Array(old[index..<index + 4]))
+                            } else {
+                                opaque += 1
+                                for channel in 0..<3 { differences[channel] += abs(Double(bytes[index + channel]) - Double(old[index + channel])) }
+                            }
+                        }
+                        #expect(opaque > 0)
+                        if palette == HousePetPalette() { #expect(differences.allSatisfy { $0 / Double(opaque) <= 3 }) }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test(arguments: [0, 1, 2]) func blackNightEdgesContrastWithDarkWoodAndEyesCatchLight(mode: Int) throws {
+        let painter = HousePetPainter.shared, rig = try rig(), directory = try #require(painter.directory)
+        let night = try #require(rig.lighting["night"])
+        let dark = try HousePetRecolor.image(width: 1, height: 1, rgba: [40, 40, 40, 255])
+        let light = try HousePetRecolor.image(width: 1, height: 1, rgba: [80, 60, 104, 255])
+        let lighting = mode == 0 ? night : mode == 1 ? try #require(rig.lighting["nightLit"]) :
+            HousePetRig.Lighting(mul: zip(night.mul, [2, 1.5, 2.6]).map(*))
+        let background = zip([42.0, 31, 26], night.mul).map { $0 * $1 / 255 }
+        for pattern in ["solid", "bicolor"] {
+            let pet = HousePet(pattern: pattern, palette: blackPalette)
+            let frames = try painter.cache.frames(pet: pet, rig: rig, directory: directory, phase: "day")
+            let regions = try #require(painter.regions(pet: pet))
+            var eyeCount = 0
+            for frameIndex in frames.indices {
+                let pose = HousePetPose(point: .init(x: 0, y: 0), frameIndex: frameIndex, module: "living", room: "r")
+                let actual = try #require(painter.frame(pet: pet, pose: pose, night: true, lit: mode != 0,
+                                                       unlitImage: mode == 2 ? dark : nil, litImage: mode == 2 ? light : nil))
+                let bytes = try rgba(actual), source = try rgba(frames[frameIndex])
+                let old = try legacyLighting(frames[frameIndex], lighting: lighting, shadow: night.mul)
+                var contrast = 0.0, oldContrast = 0.0, edges = 0
+                for pixel in 0..<(actual.width * actual.height) where source[pixel * 4 + 3] == 255 {
+                    let index = pixel * 4, region = regions[frameIndex][pixel]
+                    if region == 6 {
+                        eyeCount += 1
+                        #expect(luminance((0..<3).map { Double(bytes[index + $0]) / 255 }) > luminance((0..<3).map { Double(old[index + $0]) / 255 }))
+                    }
+                    let row = pixel / actual.width, column = pixel % actual.width
+                    let edge = row == 0 || row == actual.height - 1 || column == 0 || column == actual.width - 1 ||
+                        [pixel - actual.width, pixel + actual.width, pixel - 1, pixel + 1].contains { source[$0 * 4 + 3] == 0 }
+                    guard edge, (1...4).contains(region), luminance((0..<3).map { Double(source[index + $0]) / 255 }) < 0.28 else { continue }
+                    func compositedContrast(_ rgba: [UInt8]) -> Double {
+                        let alpha = Double(rgba[index + 3]) / 255
+                        let composite = (0..<3).map { Double(rgba[index + $0]) / 255 * alpha + background[$0] * (1 - alpha) }
+                        return abs(luminance(composite) - luminance(background))
+                    }
+                    edges += 1; contrast += compositedContrast(bytes); oldContrast += compositedContrast(old)
+                }
+                #expect(edges > 0)
+                #expect(contrast / Double(edges) > 0.08)
+                #expect(oldContrast / Double(edges) < 0.08)
+                let repeated = try #require(painter.frame(pet: pet, pose: pose, night: true, lit: mode != 0,
+                                                         unlitImage: mode == 2 ? dark : nil, litImage: mode == 2 ? light : nil))
+                #expect(try rgba(repeated) == bytes)
+            }
+            #expect(eyeCount > 0)
+        }
     }
 
     @Test func editorAddRemoveUndoAndThreePetLimit() throws {
