@@ -10,6 +10,7 @@ final class HousePetPainter {
     let spots: HousePetSpots?
     let cache = HousePetFrameCache()
     let behavior: HousePetBehavior?
+    private var regionFrames: [String: [[UInt8]]] = [:]
 
     init() {
         let url = AppResources.url("cat-short", "json", subdirectory: "House/pets") ?? AppResources.url("cat-short", "json")
@@ -55,21 +56,61 @@ final class HousePetPainter {
         return count > 0 ? sums.map { $0 / count } : nil
     }
 
-    static func illuminate(_ image: CGImage, lighting: HousePetRig.Lighting, shadowMultiplier: [Double]) -> CGImage? {
+    static func illuminate(_ image: CGImage, lighting: HousePetRig.Lighting, shadowMultiplier: [Double], nightRegions: [UInt8]? = nil,
+                           nightPalette: HousePetPalette = .init()) -> CGImage? {
         guard let provider = image.dataProvider?.data, let pointer = CFDataGetBytePtr(provider) else { return nil }
         var bytes = Array(UnsafeBufferPointer(start: pointer, count: CFDataGetLength(provider)))
+        var coatStrengths = [Double](repeating: 0, count: 5)
+        if nightRegions != nil {
+            let colours = ["#FFFFFF", nightPalette.base, nightPalette.second, nightPalette.white, nightPalette.base]
+            for (region, hex) in colours.enumerated() {
+                let rgb = UInt32(hex.dropFirst(), radix: 16) ?? 0
+                let red = Double((rgb >> 16) & 255), green = Double((rgb >> 8) & 255), blue = Double(rgb & 255)
+                let luminance = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255
+                coatStrengths[region] = min(1, max(0, (0.40 - luminance) / 0.20))
+            }
+        }
         for row in 0..<image.height {
             for column in 0..<image.width {
                 let index = row * image.bytesPerRow + column * 4, alpha = bytes[index + 3]
                 guard alpha > 0 else { continue }
+                let region = nightRegions?[row * image.width + column] ?? 0
+                let coat = alpha == 255 && (1...4).contains(region)
+                let luminance = (0.2126 * Double(bytes[index]) + 0.7152 * Double(bytes[index + 1]) + 0.0722 * Double(bytes[index + 2])) / 255
+                let darkness = coat ? min(1, max(0, (0.28 - luminance) / 0.16)) * coatStrengths[Int(region)] : 0
+                let edge = coat && (row == 0 || pointer[index - image.bytesPerRow + 3] == 0 ||
+                    column == 0 || pointer[index - 1] == 0 || column == image.width - 1 || pointer[index + 7] == 0)
                 for channel in 0..<3 {
                     let value = Double(bytes[index + channel]) / 255
-                    let output = alpha < 255 ? value * shadowMultiplier[channel] : value * lighting.mul[channel] + lighting.add[channel]
+                    var output = alpha < 255 ? value * shadowMultiplier[channel] : value * lighting.mul[channel] + lighting.add[channel]
+                    if coat {
+                        output = max(output, [0.12, 0.14, 0.18][channel] * darkness)
+                        if edge { output += max(0, [0.34, 0.40, 0.50][channel] - output) * 0.16 * darkness }
+                    } else if alpha == 255 && region == 6 {
+                        output += max(0, value - output) * 0.12
+                    }
                     bytes[index + channel] = UInt8((min(1, max(0, output)) * 255).rounded())
                 }
             }
         }
         return try? HousePetRecolor.image(width: image.width, height: image.height, rgba: bytes)
+    }
+
+    func regions(pet: HousePet) -> [[UInt8]]? {
+        if let frames = regionFrames[pet.pattern] { return frames }
+        guard let rig, let directory, let file = rig.sheets[pet.pattern], !file.contains("/"), !file.contains("\\"),
+              let sheet = try? HousePetSheet.load(from: directory.appendingPathComponent(file)) else { return nil }
+        let width = rig.frameSize[0], height = rig.frameSize[1]
+        guard sheet.width >= rig.columns * width, sheet.height >= ((rig.frameCount + rig.columns - 1) / rig.columns) * height else { return nil }
+        let frames = (0..<rig.frameCount).map { frame in
+            (0..<(width * height)).map { pixel in
+                let row = frame / rig.columns * height + pixel / width
+                let column = frame % rig.columns * width + pixel % width
+                return sheet.rgba[(row * sheet.width + column) * 4] & 15
+            }
+        }
+        regionFrames[pet.pattern] = frames
+        return frames
     }
 
     func frame(pet: HousePet, pose: HousePetPose, night: Bool, lit: Bool, unlitImage: CGImage?, litImage: CGImage?) -> CGImage? {
@@ -83,7 +124,9 @@ final class HousePetPainter {
            let ratio = Self.ratio(lit: litSample, unlit: unlitSample) {
             lighting = .init(mul: zip(nightLight.mul, ratio).map(*), add: [0, 0, 0])
         }
-        return Self.illuminate(frame, lighting: lighting, shadowMultiplier: night ? nightLight.mul : [1, 1, 1])
+        let nightRegions = night ? regions(pet: pet)?[pose.frameIndex] : nil
+        return Self.illuminate(frame, lighting: lighting, shadowMultiplier: night ? nightLight.mul : [1, 1, 1],
+                               nightRegions: nightRegions, nightPalette: pet.palette)
     }
 
     func draw(in context: CGContext, pets: [HousePet], world: HousePetWorld, scene: HouseCutawaySceneFile,

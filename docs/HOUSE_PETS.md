@@ -58,6 +58,15 @@ to bytes. Golden vectors in `Tests/Fixtures/pets/cat-short-golden.json` allow ±
 directory, pattern, palette and lighting (day/dayLit/night/nightLit), with bounded
 entries and a lock. Reuse a cache instance; call `clear()` on resource reload.
 
+The app lights cached day frames using the room phase (or the sampled lit/unlit
+ratio at night). Only at night, very dark opaque coat regions receive a gentle
+blue-grey floor and a low-strength, one-pixel cool rim inside the top/side
+silhouette edges. Strength fades with the original coat luminance, leaving light
+coats nearly unchanged; iris regions retain a little more of their original
+colour. Region masks are cached, with no blur, halo, or added silhouette pixels.
+Day/dayLit bytes are unchanged. Partial-alpha ground shadows still receive only
+the existing night shadow multiplier, even in lit rooms.
+
 ## Photo palette and privacy
 
 `HousePetPhoto.analyze(rgba:width:height:mask:eye:species:eyeSamples:extremities:)` is deterministic pure
