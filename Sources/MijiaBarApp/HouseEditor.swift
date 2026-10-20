@@ -38,6 +38,10 @@ enum HouseFixtureNames {
         case "wall_lamp": return L("壁灯位", "Wall lamp")
         case "monitor": return L("显示器位", "Monitor")
         case "entry_light": return L("玄关灯位", "Entry light")
+        case "curtain": return L("窗帘位", "Curtain")
+        case "fridge": return L("冰箱位", "Fridge")
+        case "washer": return L("洗衣机位", "Washer")
+        case "water_heater": return L("热水器位", "Water heater")
         default: return id
         }
     }
