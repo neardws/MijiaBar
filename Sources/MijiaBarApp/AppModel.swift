@@ -52,17 +52,7 @@ final class AppModel: ObservableObject {
         if let s = session { controller.cloud = XiaomiCloud(session: s) }
         if let c = DeviceCache.load() { homes = c.homes; devices = c.devices }
         house = HouseStore.load()
-        houseWatcher = HouseFileWatcher(url: HouseStore.url) { [weak self] in
-            let f = HouseStore.load()
-            Task { @MainActor in
-                guard let self, self.house != f else { return }
-                self.house = f
-                // 外部改动碰到了撤销记录里的条目：清空，避免撤销时把别人的改动改回去
-                if self.houseUndo.rebase(on: f) {
-                    self.houseFlash(L("house.json 在别处被改过，撤销记录已清空", "house.json changed elsewhere; undo history cleared"))
-                }
-            }
-        }
+        watchHouse()
         controller.onNetworkChange = { [weak self] in Task { @MainActor in self?.updateHome() } }
         updateHome()
         if session != nil { Task { await refresh() } }
@@ -70,6 +60,25 @@ final class AppModel: ObservableObject {
         Notifier.shared.start(self)
         GlanceStore.shared.start(self)
         Recorder.shared.start(self)
+    }
+
+    /// 监视 house.json。位置可能被命令行改掉（mijiabar house sync …），兜底轮询时发现路径变了就改监视新位置
+    private func watchHouse() {
+        let url = HouseStore.url
+        houseWatcher = HouseFileWatcher(url: url) { [weak self] in
+            let now = HouseStore.url
+            let f = HouseStore.load(at: now)
+            Task { @MainActor in
+                guard let self else { return }
+                if now != url { self.watchHouse() }
+                guard self.house != f else { return }
+                self.house = f
+                // 外部改动碰到了撤销记录里的条目：清空，避免撤销时把别人的改动改回去
+                if self.houseUndo.rebase(on: f) {
+                    self.houseFlash(L("house.json 在别处被改过，撤销记录已清空", "house.json changed elsewhere; undo history cleared"))
+                }
+            }
+        }
     }
 
     // MARK: 查询
@@ -84,15 +93,19 @@ final class AppModel: ObservableObject {
         return homes.first { h in devices.contains { $0.homeId == h.id } }?.id ?? homes.first?.id
     }
     var currentHomeName: String { homes.first { $0.id == currentHomeId }?.name ?? L("米家", "Mi Home") }
-    private func matches(_ d: Device) -> Bool {
-        (currentHomeId == nil || d.homeId == currentHomeId) &&
+    /// home 由调用方先算好传进来：currentHomeId 本身要扫一遍设备，逐台设备重算会变成 O(n²)
+    private func matches(_ d: Device, home: String?) -> Bool {
+        (home == nil || d.homeId == home) &&
         (search.isEmpty || [displayName(d), d.name, d.model, d.roomName ?? ""].contains { $0.localizedCaseInsensitiveContains(search) })
     }
-    var hiddenCount: Int { devices.filter { matches($0) && isHidden($0) }.count }
+    var hiddenCount: Int { let h = currentHomeId; return devices.filter { matches($0, home: h) && isHidden($0) }.count }
+    /// 列表里可见（搜索、隐藏都已过滤）的设备
+    private func visibleList(home: String?) -> [Device] { devices.filter { matches($0, home: home) && (showHidden || !isHidden($0)) } }
 
     var sections: [DeviceSection] {
-        let list = devices.filter { matches($0) && (showHidden || !isHidden($0)) }
-        let hid = currentHomeId ?? ""
+        let home = currentHomeId
+        let list = visibleList(home: home)
+        let hid = home ?? ""
         var out: [DeviceSection] = []
         let favs = prefs.orderedDevices(home: hid, key: Prefs.favoritesKey, list.filter(isFavorite))
         if !favs.isEmpty { out.append(.init(id: "fav", key: Prefs.favoritesKey, title: L("收藏", "Favorites"), devices: favs)) }
@@ -112,22 +125,35 @@ final class AppModel: ObservableObject {
     @Published var editingOrder = false
     /// 当前家庭里该分区的完整设备顺序（含隐藏、被搜索过滤掉的设备）
     private func fullOrder(_ key: String) -> [String] {
-        let hid = currentHomeId ?? ""
-        let inHome = devices.filter { (currentHomeId == nil || $0.homeId == currentHomeId) }
+        let home = currentHomeId, hid = home ?? ""
+        let inHome = devices.filter { home == nil || $0.homeId == home }
         let ds = key == Prefs.favoritesKey ? inHome.filter(isFavorite) : inHome.filter { !isFavorite($0) && ($0.roomName ?? "") == key }
         return prefs.orderedDevices(home: hid, key: key, ds).map(\.did)
     }
     private func fullRoomOrder() -> [String] {
-        let inHome = devices.filter { (currentHomeId == nil || $0.homeId == currentHomeId) && !isFavorite($0) }
-        return prefs.orderedRooms(home: currentHomeId ?? "", roomKeys(Set(inHome.map { $0.roomName ?? "" })))
+        let home = currentHomeId
+        let inHome = devices.filter { (home == nil || $0.homeId == home) && !isFavorite($0) }
+        return prefs.orderedRooms(home: home ?? "", roomKeys(Set(inHome.map { $0.roomName ?? "" })))
     }
-    private func section(_ key: String) -> DeviceSection? { sections.first { $0.key == key } }
+    /// 只算一个分区的可见设备顺序（右键菜单、排序按钮每行都要问一次，不必每次排好整个列表）
+    private func sectionIds(_ key: String) -> [String]? {
+        let home = currentHomeId
+        let fav = key == Prefs.favoritesKey
+        let ds = visibleList(home: home).filter { fav ? isFavorite($0) : !isFavorite($0) && ($0.roomName ?? "") == key }
+        return ds.isEmpty ? nil : prefs.orderedDevices(home: home ?? "", key: key, ds).map(\.did)
+    }
+    /// 可见房间的顺序（不含收藏）
+    private func visibleRoomKeys() -> [String] {
+        let home = currentHomeId
+        let keys = Set(visibleList(home: home).filter { !isFavorite($0) }.map { $0.roomName ?? "" })
+        return prefs.orderedRooms(home: home ?? "", roomKeys(keys))
+    }
     func canMove(_ d: Device, in key: String, _ mv: Ordering.Move) -> Bool {
-        guard let ids = section(key)?.devices.map(\.did), let i = ids.firstIndex(of: d.did) else { return false }
+        guard let ids = sectionIds(key), let i = ids.firstIndex(of: d.did) else { return false }
         return mv == .down ? i < ids.count - 1 : i > 0
     }
     func canMoveRoom(_ key: String, _ mv: Ordering.Move) -> Bool {
-        let ks = sections.filter { $0.id != "fav" }.map(\.key)
+        let ks = visibleRoomKeys()
         guard let i = ks.firstIndex(of: key) else { return false }
         return mv == .down ? i < ks.count - 1 : i > 0
     }
@@ -140,18 +166,18 @@ final class AppModel: ObservableObject {
         withAnimation(Motion.smooth) { prefs.setOrder(home: currentHomeId ?? "", key: nil, full) }
     }
     func move(_ d: Device, in key: String, _ mv: Ordering.Move) {
-        guard let ids = section(key)?.devices.map(\.did) else { return }
+        guard let ids = sectionIds(key) else { return }
         applyDevices(key, Ordering.moved(ids, d.did, mv))
     }
     func drop(_ did: String, onto target: Device, in key: String) {
-        guard let ids = section(key)?.devices.map(\.did), ids.contains(did) else { return }
+        guard let ids = sectionIds(key), ids.contains(did) else { return }
         applyDevices(key, Ordering.dropped(ids, did, onto: target.did))
     }
     func moveRoom(_ key: String, _ mv: Ordering.Move) {
-        applyRooms(Ordering.moved(sections.filter { $0.id != "fav" }.map(\.key), key, mv))
+        applyRooms(Ordering.moved(visibleRoomKeys(), key, mv))
     }
     func dropRoom(_ key: String, onto target: String) {
-        applyRooms(Ordering.dropped(sections.filter { $0.id != "fav" }.map(\.key), key, onto: target))
+        applyRooms(Ordering.dropped(visibleRoomKeys(), key, onto: target))
     }
     /// 恢复当前家庭的默认顺序
     func resetOrder() { withAnimation(Motion.smooth) { prefs.order?[currentHomeId ?? ""] = nil } }
@@ -160,7 +186,8 @@ final class AppModel: ObservableObject {
     struct Summary { var on = 0; var offline = 0; var acs: [(String, Int, Bool)] = []; var env: String? }
     var summary: Summary {
         var s = Summary()
-        for d in devices where d.homeId == currentHomeId {
+        let home = currentHomeId
+        for d in devices where d.homeId == home {
             if !d.isOnline { s.offline += 1; continue }
             guard let st = states[d.did] else { continue }
             if let ac = ACState.make(st) {
@@ -170,9 +197,6 @@ final class AppModel: ObservableObject {
         }
         return s
     }
-    /// 收藏的空调以迷你卡片显示
-    var favoriteACs: [Device] { sections.first { $0.id == "fav" }?.devices.filter { $0.category == .ac } ?? [] }
-    var flatVisible: [String] { sections.flatMap { $0.devices.map(\.did) } }
 
     func subtitle(_ d: Device) -> String {
         var parts: [String] = []
@@ -226,6 +250,21 @@ final class AppModel: ObservableObject {
     }
 
     // MARK: 状态读写
+    /// 重新读取当前家庭在线设备的状态（手动刷新、回到列表时）。maxAge 内读过的跳过；失败过的重试。最多 4 台同时读
+    func refreshStates(maxAge: TimeInterval = 0) async {
+        guard !mock, controller.cloud != nil else { return }
+        let home = currentHomeId, now = Date()
+        let due = devices.filter { d in
+            d.isOnline && (home == nil || d.homeId == home) && !isHidden(d) &&
+            (stateErrors[d.did] != nil || states[d.did].map { now.timeIntervalSince($0.updated) >= maxAge } ?? true)
+        }
+        await withTaskGroup(of: Void.self) { g in
+            for (i, d) in due.enumerated() {
+                if i >= 4 { await g.next() }
+                g.addTask { await self.loadState(d) }
+            }
+        }
+    }
     func loadStateIfNeeded(_ d: Device) {
         guard !mock, d.isOnline, states[d.did] == nil, stateErrors[d.did] == nil else { return }
         Task { await loadState(d) }
@@ -311,6 +350,8 @@ final class AppModel: ObservableObject {
             for h in hs { for d in try await cloud.devices(in: h) where !all.contains(where: { $0.did == d.did }) { all.append(d) } }
             homes = hs; devices = all; updateHome()
             DeviceCache(homes: hs, devices: all, updated: Date()).save()
+            // 手动刷新也要刷新状态：否则列表里的开关停留在第一次读到的样子，读失败的设备一直显示「无法读取」
+            if !quiet { await refreshStates() }
         } catch {
             if !quiet { showToast(L("刷新失败：", "Refresh failed: ") + error.localizedDescription, error: true) }; handleAuth(error)
         }
@@ -354,12 +395,14 @@ final class AppModel: ObservableObject {
     func setRegion(_ r: String) {
         prefs.region = r
         if !langManual, let d = AppLang.suggested(forRegion: r).first { setLang(d, manual: false) }
-        if var s = session { s.region = r; s.save(); session = s; controller.cloud = XiaomiCloud(session: s); states = [:]; Task { await refresh() } }
+        if var s = session { s.region = r; s.save(); session = s; controller.cloud = XiaomiCloud(session: s); clearDeviceState(); Task { await refresh() } }
     }
     func logout() {
         Session.clear(); DeviceCache.clear()
-        session = nil; controller.cloud = nil; devices = []; homes = []; states = [:]; stateErrors = [:]; page = .list
+        session = nil; controller.cloud = nil; devices = []; homes = []; clearDeviceState(); page = .list
     }
+    /// 换账号 / 地区后，旧的状态、错误和通道标记都不再有效（留着错误会让 loadStateIfNeeded 永远跳过这台设备）
+    private func clearDeviceState() { states = [:]; stateErrors = [:]; transports = [:] }
 
     var cliPath: String { mock ? "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar" : Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/bin/mijiabar").path }
     var mcpConfig: String {

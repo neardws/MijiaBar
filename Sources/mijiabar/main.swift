@@ -2,12 +2,18 @@ import Foundation
 import MijiaCore
 
 // mijiabar —— 给人和 Agent 用的米家命令行 / MCP 服务器
-let version = "0.1.8"
+/// 自身可执行文件的真实路径。不用 argv[0]：按名字从 PATH 运行（~/.local/bin/mijiabar 链接）时它只是 "mijiabar"
+let selfURL = (Bundle.main.executableURL ?? URL(fileURLWithPath: CommandLine.arguments[0])).resolvingSymlinksInPath()
+/// 版本号取所在 App 的 Info.plist（…/MijiaBar.app/Contents/Resources/bin/mijiabar → Contents/Info.plist），不再手写，避免和 App 不一致
+let version: String = {
+    let plist = selfURL.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("Info.plist")
+    return (NSDictionary(contentsOf: plist)?["CFBundleShortVersionString"] as? String) ?? "dev"
+}()
 setvbuf(stdout, nil, _IOLBF, 0)
 
 // setup-prompt 不需要登录信息：在读取钥匙串之前处理，避免触发钥匙串授权弹窗
 if CommandLine.arguments.dropFirst().first == "setup-prompt" {
-    let me = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().path
+    let me = selfURL.path
     print(agentSetupPrompt(cli: me.contains(".app/") ? me : "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar"))
     exit(0)
 }
@@ -89,9 +95,13 @@ let policy = AgentPolicy.load()
     return (p.key, p.format)
 }
 
+/// 弹窗确认。文字里有 Agent 传来的属性值，所以作为参数传给 osascript，不拼进脚本（避免引号、反斜杠改变脚本）
 func confirm(_ msg: String) -> Bool {
-    let script = "display dialog \"\(msg.replacingOccurrences(of: "\"", with: "'"))\" with title \"MijiaBar · Agent\" buttons {\"\(L("拒绝", "Deny"))\", \"\(L("允许", "Allow"))\"} default button 2 cancel button 1 giving up after 60"
-    let p = Process(); p.executableURL = URL(fileURLWithPath: "/usr/bin/osascript"); p.arguments = ["-e", script]
+    let script = ["on run argv",
+                  "display dialog (item 1 of argv) with title \"MijiaBar · Agent\" buttons {(item 2 of argv), (item 3 of argv)} default button 2 cancel button 1 giving up after 60",
+                  "end run"]
+    let p = Process(); p.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+    p.arguments = script.flatMap { ["-e", $0] } + [msg, L("拒绝", "Deny"), L("允许", "Allow")]
     let pipe = Pipe(); p.standardOutput = pipe; p.standardError = Pipe()
     guard (try? p.run()) != nil else { return false }
     p.waitUntilExit()
@@ -226,7 +236,7 @@ do {
     case "house": try await houseCommand(Array(args.dropFirst()))
     case "mcp": await mcp()
     case "setup-prompt":
-        let me = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath().path
+        let me = selfURL.path
         print(agentSetupPrompt(cli: me.contains(".app/") ? me : "/Applications/MijiaBar.app/Contents/Resources/bin/mijiabar"))
     case "lan-get":
         guard let ip = opt(args, "--ip"), let tk = opt(args, "--token") else { fail(usage) }

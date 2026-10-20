@@ -27,6 +27,16 @@ import Testing
         #expect(PropValue.string("abc").coerced(to: "int32") == .string("abc"))
     }
 
+    /// 超出 Int 范围或非有限的数不能让 Int(_:) 崩溃（命令行 set … 1e30 曾经会直接退出）
+    @Test func hugeAndNonFiniteNumbersDoNotTrap() {
+        #expect(PropValue.parse("1e30").coerced(to: "int32") == .double(1e30))
+        #expect(PropValue.double(.infinity).coerced(to: "uint8") == .double(.infinity))
+        #expect(PropValue.double(.nan).description == "nan")
+        #expect(PropValue.double(1e30).description.hasPrefix("1000000000000000"))
+        #expect(PropValue.double(-0.0).description == "0")
+        #expect(PropValue.double(2.5).description == "2.5")
+    }
+
     @Test func describesValuesForDisplay() {
         #expect(PropValue.double(26).description == "26")
         #expect(PropValue.double(26.25).description == "26.2")

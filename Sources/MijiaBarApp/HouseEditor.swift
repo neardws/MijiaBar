@@ -404,6 +404,7 @@ struct HouseEditPanel: View {
                     .font(.system(size: 13, weight: .semibold))
                 Spacer()
                 Button { selection = nil } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }.buttonStyle(.plain)
+                    .help(L("取消选择", "Deselect")).accessibilityLabel(L("取消选择", "Deselect"))
             }
             if candidates.isEmpty {
                 Text(L("这个房间里没有能放在这里的设备", "No device in this room fits here")).font(.system(size: 11)).foregroundStyle(.secondary)
@@ -463,6 +464,8 @@ struct HouseEditPanel: View {
             }
             .buttonStyle(.plain)
             .help(hidden ? L("在小屋里显示", "Show in house") : L("在小屋里隐藏（设备列表不受影响）", "Hide in house (device list unaffected)"))
+            .accessibilityLabel(LF("在小屋里显示「%@」", "Show “%@” in house", m.displayName(d)))
+            .accessibilityValue(hidden ? L("已隐藏", "Hidden") : L("显示", "Shown"))
             Image(systemName: HouseChipStyle.icon(d.category)).font(.system(size: 11))
                 .foregroundStyle(hidden ? Color.secondary : HouseChipStyle.tint(d.category)).frame(width: 16)
             Text(m.displayName(d)).font(.system(size: 12)).lineLimit(1).foregroundStyle(hidden ? .secondary : .primary)

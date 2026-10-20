@@ -10,9 +10,10 @@ enum HitTest {
     static func run() {
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
-        NotificationCenter.default.addObserver(forName: NSMenu.didBeginTrackingNotification, object: nil, queue: nil) { n in
-            menuOpened = true
-            DispatchQueue.main.async { (n.object as? NSMenu)?.cancelTracking() }
+        NotificationCenter.default.addObserver(forName: NSMenu.didBeginTrackingNotification, object: nil, queue: .main) { n in
+            nonisolated(unsafe) let menu = n.object as? NSMenu
+            MainActor.assumeIsolated { menuOpened = true }
+            Task { @MainActor in menu?.cancelTracking() }
         }
         let m = AppModel(mock: true)
         m.session = Session(userId: "demo", ssecurity: "", serviceToken: "", region: "cn")

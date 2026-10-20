@@ -152,11 +152,14 @@ struct DeviceListView: View {
     @State private var cursor = -1
 
     var body: some View {
-        let flat = m.flatVisible
+        // 每次刷新只排一遍分区（收藏空调、键盘导航都从这一份取）
+        let sections = m.sections
+        let flat = sections.flatMap { $0.devices.map(\.did) }
         VStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 8) {
                 header
-                HouseListEmbed()
+                // 搜索、调整顺序时把空间留给列表
+                if m.prefs.showHouse != false && m.search.isEmpty && !m.editingOrder { HouseListEmbed().transition(.opacity) }
                 SummaryBar()
             }.padding(.horizontal, 14).padding(.top, 12)
             HStack(spacing: 6) {
@@ -184,7 +187,7 @@ struct DeviceListView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 2) {
-                            let favACs = m.editingOrder ? [] : m.favoriteACs
+                            let favACs = m.editingOrder ? [] : (sections.first { $0.id == "fav" }?.devices.filter { $0.category == .ac } ?? [])
                             if m.editingOrder {
                                 OrderEditor()
                             } else {
@@ -197,7 +200,7 @@ struct DeviceListView: View {
                                     }
                                 }.padding(.bottom, 4)
                             }
-                            ForEach(m.sections) { sec in
+                            ForEach(sections) { sec in
                                 if !(sec.id == "fav" && sec.devices.isEmpty) {
                                     if sec.id != "fav" || favACs.isEmpty {
                                         SectionTitle(sec.title).contextMenu { if sec.id != "fav" { RoomMenu(key: sec.key) } else { OrderModeButton() } }
@@ -225,6 +228,8 @@ struct DeviceListView: View {
         .focusable()
         .focusEffectDisabled()
         .animation(Motion.smooth, value: m.editingOrder)
+        // 回到列表时，补读两分钟没更新过的状态（详情页之外没有别的地方会刷新灯、风扇这类设备）
+        .task { await m.refreshStates(maxAge: 120) }
         .onKeyPress(.escape) { if m.editingOrder { m.editingOrder = false; return .handled }; return .ignored }
         .onKeyPress(.downArrow) { cursor = min(cursor + 1, max(flat.count - 1, 0)); return .handled }
         .onKeyPress(.upArrow) { cursor = max(cursor - 1, 0); return .handled }

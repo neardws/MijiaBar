@@ -177,7 +177,7 @@ struct HouseArrangeView: View {
                 // 错层：▼ 层 ▲（层后面的 · = 自动图案）
                 Button { setLevel(c, lv - 1) } label: { Image(systemName: "chevron.down").font(.system(size: 9, weight: .bold)) }
                     .buttonStyle(.borderless).disabled(lv <= HouseGrid.levelRange.lowerBound)
-                    .help(L("降低一级", "Lower one step"))
+                    .help(L("降低一级", "Lower one step")).accessibilityLabel(L("降低一级", "Lower one step"))
                 Text((lv > 0 ? "+\(lv)" : "\(lv)") + (c.level == nil && !classic ? "·" : ""))
                     .font(.system(size: 10, weight: .semibold, design: .monospaced))
                     .foregroundStyle(lv == 0 ? Color.secondary : Color.accentColor)
@@ -185,7 +185,7 @@ struct HouseArrangeView: View {
                     .help(c.level == nil ? L("自动错层", "Automatic level") : L("手动设置的层", "Level set by you"))
                 Button { setLevel(c, lv + 1) } label: { Image(systemName: "chevron.up").font(.system(size: 9, weight: .bold)) }
                     .buttonStyle(.borderless).disabled(lv >= HouseGrid.levelRange.upperBound)
-                    .help(L("抬高一级", "Raise one step"))
+                    .help(L("抬高一级", "Raise one step")).accessibilityLabel(L("抬高一级", "Raise one step"))
             }
         }
         .padding(8)

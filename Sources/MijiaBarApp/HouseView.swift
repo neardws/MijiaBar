@@ -514,14 +514,14 @@ private struct HouseRoomLightLayer: View {
                     image(lit)
                         .mask(revealMask(reveal))
                         .opacity(k)
-                        .animation(.easeInOut(duration: 0.35), value: k)
+                        .animation(Motion.smooth, value: k)
                 }
                 // 灯具本体（灯罩 / 屏幕）一定亮：合成场景的电视 reveal 只是地上的椭圆，盖不到抬高的屏幕
                 if let core = light.corePolygon {
                     image(lit)
                         .mask(HousePolygon(points: core).fill(Color.white))
                         .opacity(k)
-                        .animation(.easeInOut(duration: 0.35), value: k)
+                        .animation(Motion.smooth, value: k)
                 }
             }
             ForEach(module.lights) { light in
@@ -530,7 +530,7 @@ private struct HouseRoomLightLayer: View {
                     image(unlit)
                         .mask(HousePolygon(points: core).fill(Color.white))
                         .opacity(1 - k)
-                        .animation(.easeInOut(duration: 0.35), value: k)
+                        .animation(Motion.smooth, value: k)
                 }
             }
             // 空调送风：动态像素粒子（不烘焙进 lit——同屋的灯开着时 lit 会把烘焙的送风也露出来）
@@ -700,7 +700,7 @@ struct HouseBadge: View {
             }
         }
         .frame(width: 76, height: 56)
-        .animation(.easeInOut(duration: 0.35), value: device.on)
+        .animation(Motion.smooth, value: device.on)
     }
 }
 
@@ -867,10 +867,10 @@ struct HouseListEmbed: View {
                     if contentWidth > 0 {
                         cutaway(rooms: rooms, phase: phase, width: contentWidth)
                     }
-                    HouseDeviceChipRow(rooms: rooms, topPadding: 4) { did in
+                    HouseDeviceChipRow(rooms: rooms, onToggle: { did in
                         guard let d = m.device(did) else { return }
                         withoutAnimation { m.toggle(d) }
-                    }
+                    }, topPadding: 4)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background {
@@ -894,6 +894,8 @@ struct HouseListEmbed: View {
             }
             .padding(.horizontal, 7).padding(.vertical, 3).background(Theme.tile, in: Capsule())
             Circle().fill(cozy ? Color.green : Color.secondary.opacity(0.45)).frame(width: 6, height: 6)
+                .help(cozy ? L("设备已开", "Devices on") : L("已关灯", "Lights off"))
+                .accessibilityLabel(cozy ? L("设备已开", "Devices on") : L("已关灯", "Lights off"))
             Spacer(minLength: 0)
             expandButton
         }
@@ -921,19 +923,6 @@ struct HouseListEmbed: View {
         }, layout: m.houseLayoutCells, style: m.houseStyle, decorConfig: m.house.homes[m.houseHomeKey] ?? HomeHouse(), petsRestOnly: Self.petsRestOnly, petDate: snapshotDate)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Theme.stroke))
-        .overlay(alignment: .topTrailing) {
-            Button { HouseWindow.open(model: m) } label: {
-                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.92))
-                    .padding(6)
-                    .background(.black.opacity(0.45), in: Circle())
-            }
-            .buttonStyle(.plain).hoverHighlight()
-            .help(L("放大", "Enlarge"))
-            .accessibilityLabel(L("放大", "Enlarge"))
-            .padding(6)
-        }
         .accessibilityElement(children: .contain)
     }
 }
@@ -959,6 +948,7 @@ struct HouseTapChip: View {
 @MainActor
 enum HouseWindow {
     private static var window: NSWindow?
+    private static var closeObserver: NSObjectProtocol?
 
     static func open(model: AppModel) {
         if let w = window { w.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true); return }
@@ -971,8 +961,12 @@ enum HouseWindow {
         w.contentView = NSHostingView(rootView: root)
         w.center()
         window = w
-        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: w, queue: .main) { _ in
-            MainActor.assumeIsolated { window?.contentView = nil; window = nil; model.houseUndo.clear(); model.houseNotice = nil }
+        // 关窗时移除观察者，否则每开关一次窗口就多留一个（还持有 model）
+        closeObserver = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: w, queue: .main) { _ in
+            MainActor.assumeIsolated {
+                window?.contentView = nil; window = nil; model.houseUndo.clear(); model.houseNotice = nil
+                if let o = closeObserver { NotificationCenter.default.removeObserver(o); closeObserver = nil }
+            }
         }
         w.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

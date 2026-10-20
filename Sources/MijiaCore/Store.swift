@@ -154,6 +154,8 @@ public struct Prefs: Codable, Equatable, Sendable {
     public var menuBarDid: String?
     /// 家庭 id → 房间 / 设备顺序（见 Order.swift）
     public var order: [String: HomeOrder]?
+    /// 设备列表顶部是否显示小屋（nil = 默认显示）
+    public var showHouse: Bool?
     public init() {}
     public static func load() -> Prefs { loadJSON(Prefs.self, "prefs.json") ?? Prefs() }
     public func save() { saveJSON(self, "prefs.json") }
