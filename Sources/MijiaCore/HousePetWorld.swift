@@ -64,6 +64,7 @@ public final class HousePetWorld: @unchecked Sendable {
     public let spots: [Spot]
     public let rooms: Set<String>
     public let cellSize: Double
+    private let edgeLengths: [[Double]]
     private let lock = NSLock()
     private var paths: [String: [Int]] = [:]
 
@@ -153,6 +154,9 @@ public final class HousePetWorld: @unchecked Sendable {
             }
         }
         self.nodes = nodes; self.edges = edges; self.spots = spots.sorted { $0.id < $1.id }; rooms = Set(nodes.map(\.room))
+        edgeLengths = edges.enumerated().map { index, neighbors in
+            neighbors.map { nodes[index].point.distance(to: nodes[$0.node].point) }
+        }
     }
 
     public func path(from: Int, to: Int, room: String? = nil, allowedRooms: Set<String>? = nil) -> [Int] {
@@ -161,21 +165,85 @@ public final class HousePetWorld: @unchecked Sendable {
         let key = "\(from):\(to):\(room ?? "*"):" + (allowedRooms?.sorted().joined(separator: ",") ?? "*")
         lock.lock(); let cached = paths[key]; lock.unlock()
         if let cached { return cached }
-        var open: Set<Int> = [from], cost = [from: 0.0], previous: [Int: Int] = [:]
-        while let current = open.min(by: { left, right in
-            let leftScore = cost[left, default: .infinity] + nodes[left].point.distance(to: nodes[to].point)
-            let rightScore = cost[right, default: .infinity] + nodes[right].point.distance(to: nodes[to].point)
-            return leftScore == rightScore ? left < right : leftScore < rightScore
-        }) {
-            if current == to { break }; open.remove(current)
-            for edge in edges[current] where (room == nil || nodes[edge.node].room == room) && (allowedRooms == nil || allowedRooms!.contains(nodes[edge.node].room)) {
-                let nextCost = cost[current, default: .infinity] + nodes[current].point.distance(to: nodes[edge.node].point)
-                if nextCost < cost[edge.node, default: .infinity] { cost[edge.node] = nextCost; previous[edge.node] = current; open.insert(edge.node) }
+        var state = [SearchNode](repeating: .init(), count: nodes.count)
+        let restrictRooms = allowedRooms.map { !$0.isSuperset(of: rooms) } ?? false
+        if room != nil || restrictRooms {
+            for node in nodes { state[node.id].allowed = (room == nil || node.room == room) && (!restrictRooms || allowedRooms!.contains(node.room)) }
+        }
+        var heap = [Int](repeating: 0, count: nodes.count)
+        let result = state.withUnsafeMutableBufferPointer { state in
+            heap.withUnsafeMutableBufferPointer { heap -> [Int] in
+                var open = Frontier(heap: heap, state: state)
+                state[from].cost = 0
+                open.insert(from, score: nodes[from].point.distance(to: nodes[to].point))
+                while let current = open.pop() {
+                    if current == to { break }
+                    for (index, edge) in edges[current].enumerated() where state[edge.node].allowed {
+                        let nextCost = state[current].cost + edgeLengths[current][index]
+                        if nextCost < state[edge.node].cost {
+                            state[edge.node].cost = nextCost; state[edge.node].previous = current
+                            if state[edge.node].heuristic < 0 { state[edge.node].heuristic = nodes[edge.node].point.distance(to: nodes[to].point) }
+                            open.insert(edge.node, score: nextCost + state[edge.node].heuristic)
+                        }
+                    }
+                }
+                guard state[to].cost < .infinity else { return [] }
+                var current = to, result = [to]
+                while current != from, state[current].previous >= 0 {
+                    current = state[current].previous; result.append(current)
+                }
+                result.reverse(); return result
             }
         }
-        var result: [Int] = []
-        if cost[to] != nil { var current = to; result = [to]; while current != from, let parent = previous[current] { result.append(parent); current = parent }; result.reverse() }
         lock.lock(); if paths.count >= 4096 { paths.removeAll() }; paths[key] = result; lock.unlock()
         return result
+    }
+
+    private struct SearchNode {
+        var allowed = true
+        var cost = Double.infinity
+        var previous = -1
+        var heuristic = -1.0
+        var position = -1
+        var score = Double.infinity
+    }
+
+    private struct Frontier {
+        let heap: UnsafeMutableBufferPointer<Int>
+        let state: UnsafeMutableBufferPointer<SearchNode>
+        var count = 0
+        func precedes(_ left: Int, _ right: Int) -> Bool {
+            state[left].score == state[right].score ? left < right : state[left].score < state[right].score
+        }
+        func swap(_ left: Int, _ right: Int) {
+            let saved = heap[left]; heap[left] = heap[right]; heap[right] = saved
+            state[heap[left]].position = left; state[heap[right]].position = right
+        }
+        mutating func insert(_ node: Int, score: Double) {
+            state[node].score = score
+            if state[node].position < 0 { state[node].position = count; heap[count] = node; count += 1 }
+            var index = state[node].position
+            while index > 0 {
+                let parent = (index - 1) / 2
+                guard precedes(heap[index], heap[parent]) else { break }
+                swap(index, parent); index = parent
+            }
+        }
+        mutating func pop() -> Int? {
+            guard count > 0 else { return nil }
+            let first = heap[0]; count -= 1
+            let last = heap[count]; state[first].position = -1
+            if count > 0 {
+                heap[0] = last; state[last].position = 0
+                var index = 0
+                while index * 2 + 1 < count {
+                    let left = index * 2 + 1, right = left + 1
+                    let child = right < count && precedes(heap[right], heap[left]) ? right : left
+                    guard precedes(heap[child], heap[index]) else { break }
+                    swap(index, child); index = child
+                }
+            }
+            return first
+        }
     }
 }

@@ -47,12 +47,33 @@ public final class HousePetBehavior: @unchecked Sendable {
         var action: String
         var rest: HousePetWorld.Spot
     }
-    private struct Plan { var segments: [Segment] }
+    private struct TimedSegment { var start: Double; var duration: Double; var movement: Int }
+    private struct Plan {
+        var timeline: [TimedSegment]
+        var movements: [Segment]
+        init(timeline: [TimedSegment], movements: [Segment]) { self.timeline = timeline; self.movements = movements }
+        init(segments: [Segment]) {
+            movements = segments
+            timeline = segments.enumerated().map { .init(start: $0.element.start, duration: $0.element.duration, movement: $0.offset) }
+        }
+    }
     private struct Route: Hashable { var from: Int; var to: Int }
+    private struct TravelTemplate { var reachable: Bool; var timeline: [TimedSegment] }
+    private struct RequestKey: Hashable {
+        var world: ObjectIdentifier
+        var pet: String
+        var home: String?
+        var day: Date
+        var zone: String
+        var rooms: Set<String>
+        var petIDs: [String]
+    }
+    private struct PreparedKey { var text: String; var roster: [String]; var rank: Int }
     private let rig: HousePetRig
     private let lock = NSLock()
     private var plans: [String: Plan] = [:]
     private var retainedWorlds: [ObjectIdentifier: HousePetWorld] = [:]
+    private var preparedKeys: [RequestKey: PreparedKey] = [:]
     public init(rig: HousePetRig) { self.rig = rig }
 
     private static func seed(_ text: String) -> UInt64 {
@@ -92,12 +113,20 @@ public final class HousePetBehavior: @unchecked Sendable {
         guard let first = world.nodes.first(where: { rooms.contains($0.room) && (pet.homeRoom == nil || $0.room == pet.homeRoom) }) else {
             return .init(point: .init(x: 0, y: 0), facing: "SE", action: "idle", frameIndex: 0, mirrored: false, jumpLift: 0, module: "", room: "", visible: false)
         }
-        let roster = Array(Set(context.petIDs + [pet.id])).sorted(), rank = roster.firstIndex(of: pet.id) ?? 0
         let identity = ObjectIdentifier(world)
-        let key = "\(identity)|\(pet.id)|\(pet.homeRoom ?? "*")|\(day.timeIntervalSince1970)|\(context.timeZone.identifier)|" + rooms.sorted().joined(separator: ",") + "|" + roster.joined(separator: ",")
         lock.lock(); defer { lock.unlock() }
-        if plans.count > 24 { plans.removeAll(); retainedWorlds.removeAll() }
+        if plans.count > 24 { plans.removeAll(); retainedWorlds.removeAll(); preparedKeys.removeAll() }
         retainedWorlds[identity] = world
+        let request = RequestKey(world: identity, pet: pet.id, home: pet.homeRoom, day: day, zone: context.timeZone.identifier, rooms: rooms, petIDs: context.petIDs)
+        let prepared: PreparedKey
+        if let cached = preparedKeys[request] { prepared = cached } else {
+            let roster = Array(Set(context.petIDs + [pet.id])).sorted()
+            let text = "\(identity)|\(pet.id)|\(pet.homeRoom ?? "*")|\(day.timeIntervalSince1970)|\(context.timeZone.identifier)|" + rooms.sorted().joined(separator: ",") + "|" + roster.joined(separator: ",")
+            prepared = .init(text: text, roster: roster, rank: roster.firstIndex(of: pet.id) ?? 0)
+            if preparedKeys.count >= 24 { preparedKeys.removeAll() }
+            preparedKeys[request] = prepared
+        }
+        let key = prepared.text, roster = prepared.roster, rank = prepared.rank
         func reservedSpots() -> [HousePetWorld.Spot] {
             var separated: [HousePetWorld.Spot] = []
             for room in rooms.sorted() {
@@ -113,35 +142,50 @@ public final class HousePetBehavior: @unchecked Sendable {
         }
         func build() -> Plan {
             let spots = reservedSpots()
-            var routes: [Route: [Int]] = [:]
+            var templates: [Route: TravelTemplate] = [:]
             var state = Self.seed("\(calendar.component(.year, from: day))-\(calendar.component(.month, from: day))-\(calendar.component(.day, from: day))|\(pet.id)")
             func random(_ count: Int) -> Int { state = state &* 6364136223846793005 &+ 1442695040888963407; return Int((state >> 32) % UInt64(max(1, count))) }
-            var segments: [Segment] = [], time = 0.0, current = spots[random(spots.count)]
-            func append(_ from: HousePetPoint, _ to: HousePetPoint, _ node: Int, _ facing: String, _ action: String, _ duration: Double, rest: HousePetWorld.Spot) {
-                segments.append(.init(start: time, duration: duration, from: from, to: to, node: node, facing: facing, action: action, rest: rest)); time += duration
-            }
+            var timeline: [TimedSegment] = [], movements: [Segment] = [], time = 0.0, currentIndex = random(spots.count)
+            timeline.reserveCapacity(min(32768, max(4096, world.nodes.count * 192)))
+            var stationary = [Int](repeating: -1, count: spots.count * 6)
             while time < 90000 {
-                let action = ["idle", "sit", "groom", "lookup", "stretch", "sleep"][random(6)]
-                append(current.point, current.point, current.node, current.facing, action, Double(8 + random(53)), rest: current)
-                let next = spots[random(spots.count)], route = Route(from: current.node, to: next.node)
-                let path: [Int]
-                if let cached = routes[route] { path = cached } else {
-                    path = world.path(from: current.node, to: next.node, room: pet.homeRoom, allowedRooms: rooms); routes[route] = path
+                let current = spots[currentIndex]
+                let actionIndex = random(6), stationaryIndex = currentIndex * 6 + actionIndex
+                let duration = Double(8 + random(53))
+                if stationary[stationaryIndex] < 0 {
+                    stationary[stationaryIndex] = movements.count
+                    movements.append(.init(start: 0, duration: 0, from: current.point, to: current.point, node: current.node,
+                                           facing: current.facing, action: ["idle", "sit", "groom", "lookup", "stretch", "sleep"][actionIndex], rest: current))
                 }
-                guard !path.isEmpty else { continue }
-                Self.travel(path: path, from: current.point, target: next, world: world) { from, to, node, facing, action, duration in
-                    append(from, to, node, facing, action, duration, rest: next)
+                timeline.append(.init(start: time, duration: duration, movement: stationary[stationaryIndex])); time += duration
+                let nextIndex = random(spots.count), next = spots[nextIndex], route = Route(from: currentIndex, to: nextIndex)
+                let template: TravelTemplate
+                if let cached = templates[route] { template = cached } else {
+                    let path = world.path(from: current.node, to: next.node, room: pet.homeRoom, allowedRooms: rooms)
+                    var moves: [TimedSegment] = []
+                    moves.reserveCapacity(path.count + 1)
+                    Self.travel(path: path, from: current.point, target: next, world: world) { from, to, node, facing, action, duration in
+                        moves.append(.init(start: 0, duration: duration, movement: movements.count))
+                        movements.append(.init(start: 0, duration: duration, from: from, to: to, node: node, facing: facing, action: action, rest: next))
+                    }
+                    template = .init(reachable: !path.isEmpty, timeline: moves); templates[route] = template
                 }
-                current = next
+                guard template.reachable else { continue }
+                for var move in template.timeline {
+                    move.start = time; timeline.append(move); time += move.duration
+                }
+                currentIndex = nextIndex
             }
-            return .init(segments: segments)
+            return .init(timeline: timeline, movements: movements)
         }
         let base: Plan
         if let cached = plans[key] { base = cached } else { base = build(); plans[key] = base }
         func segment(_ plan: Plan, _ elapsed: Double) -> Segment {
-            var low = 0, high = plan.segments.count
-            while low < high { let middle = (low + high) / 2; if plan.segments[middle].start <= elapsed { low = middle + 1 } else { high = middle } }
-            return plan.segments[max(0, low - 1)]
+            var low = 0, high = plan.timeline.count
+            while low < high { let middle = (low + high) / 2; if plan.timeline[middle].start <= elapsed { low = middle + 1 } else { high = middle } }
+            let timed = plan.timeline[max(0, low - 1)]
+            var result = plan.movements[timed.movement]; result.start = timed.start; result.duration = timed.duration
+            return result
         }
         var selected = segment(base, elapsed), localTime = elapsed
         let change = context.changedAt ?? day
