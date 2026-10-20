@@ -228,7 +228,6 @@ struct DeviceListView: View {
         .focusable()
         .focusEffectDisabled()
         .animation(Motion.smooth, value: m.editingOrder)
-        .animation(Motion.smooth, value: m.search.isEmpty)
         // 回到列表时，补读两分钟没更新过的状态（详情页之外没有别的地方会刷新灯、风扇这类设备）
         .task { await m.refreshStates(maxAge: 120) }
         .onKeyPress(.escape) { if m.editingOrder { m.editingOrder = false; return .handled }; return .ignored }
