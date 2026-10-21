@@ -211,6 +211,9 @@ spots, clipping and lighting all use identical module coordinates.
 Open **Enlarge → Edit → Pets**, next to **Style & decor**. **Show pets** is
 independent of each pet's enabled toggle. Each card offers a name, six patterned
 previews, base/second/white/eye color wells, and **Roam freely** or a room restriction.
+Static pattern tiles crop to the opaque bounds of the shown sit SE frame at elapsed zero;
+animated card previews crop to the shared union opaque bounds of the sit/idle SE frames.
+Both add a one-pixel margin and use integer device-pixel nearest-neighbour scaling (fractional fit only when necessary).
 **Add pet → Choose manually** starts an orange tabby & white cat. The three-pet
 limit counts disabled cats; remove a cat to free a slot. Remove and all other edits
 use the existing window's ⌘Z/redo stack, with fresh timestamps and deletion
@@ -281,7 +284,7 @@ pet JSON/PNGs. `verify-app-bundle.sh` checks the rig, spots and all six encoded
 sheets. App loading uses `AppResources` with both nested and processed-flat
 resource lookups; no implicit package bundle accessor is used.
 
-Art regeneration belongs to `scripts/house_pets/` (added later by the art pipeline).
+Art regeneration belongs to `scripts/house_pets/`.
 Do not hand-edit encoded sheets or spot assets. After regenerating, run the
 golden, grid, sheet and resource tests. Run `swift build` and `scripts/test.sh`;
 unit tests must not launch the app or any GUI.
