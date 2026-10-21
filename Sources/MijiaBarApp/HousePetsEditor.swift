@@ -39,22 +39,61 @@ enum HousePetPatterns {
     }
 }
 
+@MainActor
+private final class HousePetPreviewCache {
+    static let shared = HousePetPreviewCache()
+    private struct Key: Hashable {
+        let directory: URL
+        let rig: String
+        let pattern: String
+        let palette: [String]
+        let animated: Bool
+    }
+    private var cache: [Key: [Int: CGImage]] = [:]
+
+    func frames(pet: HousePet, painter: HousePetPainter, animated: Bool) -> [Int: CGImage]? {
+        guard let rig = painter.rig, let directory = painter.directory else { return nil }
+        let key = Key(directory: directory, rig: rig.id, pattern: pet.pattern,
+                      palette: [pet.palette.base, pet.palette.second, pet.palette.white, pet.palette.eye], animated: animated)
+        if let frames = cache[key] { return frames }
+        guard let frames = try? painter.cache.frames(pet: pet, rig: rig, directory: directory, phase: "day") else { return nil }
+        let indices = HousePetPreviewGeometry.frameIndices(rig: rig, animated: animated)
+        guard indices.allSatisfy({ frames.indices.contains($0) }),
+              let pixels = try? indices.map({ try HousePetSheet.decode(frames[$0]).rgba }) else { return nil }
+        let bounds = HousePetPreviewGeometry.unionBounds(frames: pixels, width: rig.frameSize[0], height: rig.frameSize[1])
+        let rect = bounds.map { CGRect(x: $0.x, y: $0.y, width: $0.width, height: $0.height) }
+        let cropped = Dictionary(uniqueKeysWithValues: indices.map { index in
+            (index, rect.flatMap { frames[index].cropping(to: $0) } ?? frames[index])
+        })
+        if cache.count >= 32 { cache.removeAll() }
+        cache[key] = cropped
+        return cropped
+    }
+}
+
 struct HousePetPreview: View {
     let pet: HousePet
     var size: CGFloat = 140
     var animated = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.displayScale) private var backingScale
     @State private var lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
     @State private var visible = true
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 8, paused: !animated || reduceMotion || lowPower || !visible)) { tick in
             let time = animated && !reduceMotion && !lowPower ? tick.date.timeIntervalSinceReferenceDate : 0
-            if let rig = HousePetPainter.shared.rig, let directory = HousePetPainter.shared.directory,
-               let frames = try? HousePetPainter.shared.cache.frames(pet: pet, rig: rig, directory: directory, phase: "day") {
+            if let rig = HousePetPainter.shared.rig,
+               let frames = HousePetPreviewCache.shared.frames(pet: pet, painter: HousePetPainter.shared, animated: animated) {
                 let action = Int(time / 6) % 2 == 0 ? "sit" : "idle"
                 let index = rig.frame(action: action, facing: "SE", elapsed: time).index
-                Image(decorative: frames[index], scale: 1).resizable().interpolation(.none).scaledToFit()
+                if let image = frames[index] {
+                    let scale = HousePetPreviewGeometry.displayScale(width: image.width, height: image.height,
+                                                                    boxWidth: size, boxHeight: size, backingScale: backingScale)
+                    Image(decorative: image, scale: 1).resizable().interpolation(.none)
+                        .frame(width: CGFloat(image.width) * scale, height: CGFloat(image.height) * scale)
+                        .frame(width: size, height: size, alignment: .bottom)
+                }
             }
         }
         .frame(width: size, height: size).accessibilityHidden(true)
@@ -72,7 +111,7 @@ struct HousePetAppearanceFields: View {
             ForEach(HousePetRig.patterns, id: \.self) { pattern in
                 Button { pet.pattern = pattern } label: {
                     VStack(spacing: 2) {
-                        HousePetPreview(pet: patterned(pattern), size: 34, animated: false)
+                        HousePetPreview(pet: patterned(pattern), size: 52, animated: false)
                         Text(HousePetPatterns.name(pattern)).font(.system(size: 10))
                     }.frame(maxWidth: .infinity).padding(4)
                         .background(pet.pattern == pattern ? Color.accentColor.opacity(0.15) : Theme.tile, in: RoundedRectangle(cornerRadius: 7))
