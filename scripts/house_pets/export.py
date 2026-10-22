@@ -10,7 +10,7 @@ from cat import ACTIONS
 out = Path(sys.argv[1]); out.mkdir(parents=True, exist_ok=True)
 ss = int(sys.argv[2]) if len(sys.argv) > 2 else 5
 cache = out / 'frames.pkl'
-BBOX = (-40, -70, 40, 14)
+BBOX = (-54, -70, 54, 24)
 if cache.exists() and '--rerender' not in sys.argv:
     FR = pickle.load(open(cache, 'rb'))
 else:

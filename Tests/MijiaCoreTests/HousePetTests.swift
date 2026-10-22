@@ -18,6 +18,39 @@ import Testing
               catalog: try catalog(), spots: try spots())
     }
 
+    @Test func sleepingOpaqueBoundsMatchSittingVisualWeight() throws {
+        let rig = try Self.rig(), width = rig.frameSize[0], height = rig.frameSize[1]
+        for pattern in rig.patterns {
+            let sheet = try HousePetSheet.load(from: Self.directory.appendingPathComponent(try #require(rig.sheets[pattern])))
+            func bounds(_ index: Int) throws -> (width: Int, height: Int) {
+                let originX = index % rig.columns * width, originY = index / rig.columns * height
+                var minX = width, minY = height, maxX = -1, maxY = -1
+                for row in 0..<height {
+                    for column in 0..<width {
+                        let offset = ((originY + row) * sheet.width + originX + column) * 4
+                        if sheet.rgba[offset + 3] == 255 {
+                            minX = min(minX, column); maxX = max(maxX, column)
+                            minY = min(minY, row); maxY = max(maxY, row)
+                        }
+                    }
+                }
+                try #require(maxX >= minX && maxY >= minY)
+                return (maxX - minX + 1, maxY - minY + 1)
+            }
+            for facing in ["SE", "NE"] {
+                let sitting = try #require(rig.actions["sit"]?.frames[facing]).map { try bounds($0) }
+                let sitWidth = try #require(sitting.map(\.width).max()), sitHeight = try #require(sitting.map(\.height).max())
+                let sleeping = try #require(rig.actions["sleep"]?.frames[facing])
+                #expect(!sleeping.isEmpty)
+                for index in sleeping {
+                    let sleep = try bounds(index)
+                    #expect(sleep.width * 100 >= sitWidth * 85)
+                    #expect(sleep.height * 100 >= sitHeight * 85)
+                }
+            }
+        }
+    }
+
     @Test func goldenRecolorAndEncodedPixels() throws {
         struct Golden: Decodable {
             struct Sample: Decodable { var pattern: String; var x: Int; var y: Int; var encoded: [UInt8]; var rgba: [UInt8]; var palette: HousePetPalette; var lighting: String }

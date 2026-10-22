@@ -164,25 +164,25 @@ def lookup(k):
     return sit(eyes='open', head_yaw=0.35, head_pitch=-0.45 - 0.05 * k, ears=0.6, breath=k * 0.5)
 
 def sleep(breath=0.0, ear_twitch=0.0):
-    b = breath; R0 = 11.0
+    b = breath; R0 = 18.2
     ang = np.radians([-150, -105, -60, -15])
-    spine = [V(R0 * np.cos(a), R0 * np.sin(a), 8.5 + b * 0.5) for a in ang]
-    spine_r = [11.0, 11.8 + b * 0.4, 11.2, 10.0]
+    spine = [V(R0 * np.cos(a), R0 * np.sin(a), 14.0 + b * 0.5) for a in ang]
+    spine_r = [18.2, 19.5 + b * 0.4, 18.5, 16.5]
     na = np.radians([5, 28])
-    neck = [V(R0 * 0.9 * np.cos(a), R0 * 0.9 * np.sin(a), 8.0) for a in na]
+    neck = [V(R0 * 0.9 * np.cos(a), R0 * 0.9 * np.sin(a), 13.2) for a in na]
     ha = np.radians(42)
-    hc = V(12.5 * np.cos(ha) + 1.0, 12.5 * np.sin(ha), 10.5 + b * 0.3)
+    hc = V(20.6 * np.cos(ha) + 1.7, 20.6 * np.sin(ha), 17.3 + b * 0.3)
     # head lies on its chin, facing outward-front (toward +x+y), slightly toward camera
     H = head_R(0.80, 0.30, 0.25)
-    legs = [('FL', [V(12, 3, 5), V(17, 5, 3.4), V(20.5, 8.0, 2.6)], [3.8, 3.4, 3.2]),
-            ('FR', [V(13, 0, 4.5), V(18, 1.5, 3.2), V(21.5, 3.5, 2.5)], [3.6, 3.3, 3.1])]
-    thighs = [('thighL', (V(-6.5, -8.5, 9.0), rotz(np.radians(-130)), V(9.4, 5.8, 8.0)))]
+    legs = [('FL', [V(19.8, 5.0, 8.3), V(28.1, 8.3, 5.6), V(33.8, 13.2, 4.3)], [6.3, 5.6, 5.3]),
+            ('FR', [V(21.5, 0, 7.4), V(29.7, 2.5, 5.3), V(35.5, 5.8, 4.1)], [5.9, 5.4, 5.1])]
+    thighs = [('thighL', (V(-10.7, -14.0, 14.9), rotz(np.radians(-130)), V(15.5, 9.6, 13.2)))]
     ta = np.radians([-160, -125, -85, -45, -5, 25, 48])
-    tail = [V(21.5 * np.cos(a) + 0.5, 21.5 * np.sin(a), 3.6) for a in ta]
-    tail[0] = V(R0 * np.cos(np.radians(-160)) - 1, R0 * np.sin(np.radians(-160)) - 1, 6.0)
-    return dict(spine=spine, spine_r=spine_r, neck=neck, neck_r=[8.0, 7.4], head_c=hc, head_R=H, legs=legs, thighs=thighs,
-                back_up=V(0, 0, 1), tail=tail, tail_r=[3.6, 3.5, 3.4, 3.3, 3.1, 3.0, 2.8], tail_up=V(0, 0, 1), eyes='closed',
-                paw_dir={'FL': V(0.6, -0.6, 0), 'FR': V(0.6, -0.6, 0)}, head_scale=1.2)
+    tail = [V(35.5 * np.cos(a) + 0.8, 35.5 * np.sin(a), 5.9) for a in ta]
+    tail[0] = V(R0 * np.cos(np.radians(-160)) - 1.7, R0 * np.sin(np.radians(-160)) - 1.7, 9.9)
+    return dict(spine=spine, spine_r=spine_r, neck=neck, neck_r=[13.2, 12.2], head_c=hc, head_R=H, legs=legs, thighs=thighs,
+                back_up=V(0, 0, 1), tail=tail, tail_r=[5.9, 5.8, 5.6, 5.4, 5.1, 5.0, 4.6], tail_up=V(0, 0, 1), eyes='closed',
+                paw_dir={'FL': V(0.6, -0.6, 0), 'FR': V(0.6, -0.6, 0)}, head_scale=1.98)
 
 def stretch(k):
     """play bow: k in 0..1 amount, yawn eyes"""

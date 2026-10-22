@@ -2,6 +2,20 @@
 
 Python 3 + numpy + Pillow + OpenCV (same as `scripts/house_modules`). Everything is regenerated from code; the app never runs these.
 
+For the bundled sheets, use `python3 scripts/house_pets/export.py OUT 6` from the
+repository root (6× supersampling matches the existing art). Use a fresh output
+directory after changing geometry or the render bounds; otherwise `frames.pkl`
+reuses old renders. Preserve the bundled JSON's `lighting` block when copying the
+generated rig and six pattern PNGs, then run `python3 scripts/house_pets/golden.py OUT`
+with that lighting block restored and copy `cat-short-golden.json` into `Tests/Fixtures/pets/`.
+
+Sleep geometry stays curled with closed eyes; its opaque bounds (alpha 255,
+excluding ground shadows) must reach at least 85% of the largest sit-frame width
+and height for the same facing. `sleepingOpaqueBoundsMatchSittingVisualWeight`
+checks every sleep frame in both facings and all six patterns. Runtime scale
+remains integer nearest-neighbour; the expanded render bounds accommodate the
+wider curl without clipping it.
+
 - `sdfcat.py` – SDF primitives + ray-marcher in the module iso camera (`house_modules/appliance_render.py`), at cell resolution (1 cell = 2 module px).
 - `cat.py` – the short-hair cat rig: pose builders (`stand`, `walk`, `sit`, `groom`, `lookup`, `sleep`, `stretch`, `jump`) and `ACTIONS` (fps, loop, frames).
 - `patterns.py` – region codes per coat pattern (solid, tabby, tabbyWhite, bicolor, calico, colorpoint) from part-local coordinates, so stripes/patches stick to the body in every frame.
