@@ -4,11 +4,11 @@
  "species": "cat",
  "cellPx": 2,
  "frameSize": [
-  40,
-  43
+  45,
+  46
  ],
  "anchor": [
-  20.0,
+  22.0,
   36.0
  ],
  "columns": 8,
