@@ -100,13 +100,14 @@ public struct HouseModuleLight: Codable, Equatable, Sendable {
     public var id: String
     public var kind: String?
     public var role: String?
+    public var slot: Int? = nil
     public var reveal: HouseModuleReveal?
     public var shade: [[Double]]?
     public var screen: [[Double]]?
     public var core: [[Double]]?
     /// 灯具装在哪面墙上（"nw"/"ne"）；那面墙被切时灯具本体不可见
     public var wall: String?
-    /// 墙挂灯具本体所在点（模块 PNG 内）：用来判断它落在哪一段墙上
+    /// 模块 PNG 内的定位点：墙挂灯具判断所在墙段，落地电器取脚底中心
     public var anchor: [Double]?
     /// 本体被切掉时的替代位置（地面点）：App 在这里画一个设备徽章（空调）
     public var alt: [Double]?

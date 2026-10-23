@@ -112,6 +112,7 @@ public enum HouseComposer {
             var altPts: [[Double]] = []
             for L in it.art.lights {
                 var d: [String: Any] = ["id": L.id, "kind": L.kind ?? "lamp", "role": L.role ?? "light"]
+                if let slot = L.slot { d["slot"] = slot }
                 var hidden = false
                 if let wall = L.wall {
                     hidden = isHidden(L, wall: wall, segments: it.placed.segments)
@@ -146,6 +147,7 @@ public enum HouseComposer {
                     if let poly { d[k] = poly.map(tx) }
                 }
                 if !hidden {
+                    if let anchor = L.anchor, anchor.count >= 2 { d["anchor"] = tx(anchor) }
                     // 窗帘贴片 / 家电指示灯：跟着模块平移（墙被切掉时和本体一起不画）
                     if let p = L.patch { d["patch"] = p }
                     if let r = L.rect, r.count == 4 { d["rect"] = [r[0] + dx, r[1] + dy, r[2], r[3]] }
