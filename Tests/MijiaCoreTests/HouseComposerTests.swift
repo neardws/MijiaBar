@@ -54,6 +54,32 @@ import CoreGraphics
         print("HouseComposer ms: " + times.sorted { $0.key < $1.key }.map { "\($0.key)=\(String(format: "%.2f", $0.value))" }.joined(separator: " "))
     }
 
+    @Test func floorApplianceAnchorsFollowBodiesAcrossLayouts() throws {
+        let (catalog, images) = try Self.load()
+        for layout in Self.layouts.values {
+            let result = HouseComposer.compose(.init(layout: layout, catalog: catalog, images: images))
+            let scene = try #require(try JSONSerialization.jsonObject(with: result.sceneJSON) as? [String: Any])
+            let modules = try #require(scene["modules"] as? [String: [String: Any]])
+            for cell in layout {
+                let lights = try #require(modules[cell.room]?["lights"] as? [[String: Any]])
+                let originals = try #require(catalog.modules[cell.module]?.lights)
+                for original in originals where ["fan", "air-purifier", "dehumidifier", "heater"].contains(original.role) {
+                    let light = try #require(lights.first { $0["id"] as? String == original.id })
+                    #expect(light["hidden"] == nil && light["wall"] == nil && light["alt"] == nil)
+                    #expect(light["slot"] as? Int == 0)
+                    let anchor = try #require(light["anchor"] as? [Double])
+                    let body = try #require(light["body"] as? [[Double]])
+                    #expect(anchor == [(body[2][0] + body[3][0]) / 2, body[2][1]])
+                    let originalAnchor = try #require(original.anchor)
+                    let originalBody = try #require(original.body)
+                    #expect(anchor[0] - originalAnchor[0] == body[0][0] - originalBody[0][0])
+                    #expect(anchor[1] - originalAnchor[1] == body[0][1] - originalBody[0][1])
+                }
+                for light in lights where light["hidden"] as? Bool == true { #expect(light["anchor"] == nil) }
+            }
+        }
+    }
+
     @Test func sharedWallsHaveOneOwnerAndAreCut() {
         let six = Self.layouts["six-cells"]!
         let cells = six.map { ($0, 1) }

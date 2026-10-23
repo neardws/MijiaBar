@@ -67,7 +67,7 @@ private func resolve(_ ds: [Device], _ cfg: HomeHouse? = nil, hidden: Set<String
         #expect(living.device(at: .fixture("ac"))?.did == "d1")
         let bed = h.rooms[1]
         #expect(bed.device(at: .fixture("ac"))?.did == "d2")
-        #expect(bed.devices.first { $0.did == "d4" }?.spot == .badge("b1"))
+        #expect(bed.devices.first { $0.did == "d4" }?.spot == .fixture("fan"))
         #expect(h.rooms[2].placed.count == 2)   // 插座、温湿度计都是徽章
         #expect(h.rooms[3].devices.first?.spot == .badge("b1"))
     }
@@ -104,8 +104,8 @@ private func resolve(_ ds: [Device], _ cfg: HomeHouse? = nil, hidden: Set<String
         #expect(k("isa.camera.hlc7") == .badge)
         #expect(k("minij.washer.v5") == .fixture(.washer))
         #expect(k("zimi.waterheater.e1") == .fixture(.waterHeater))
-        // 已有灯具位美术：灯 / 屏幕 / 空调 / 窗帘 / 冰箱 / 热水器 / 洗衣机；落地电器（风扇等）先显示徽章
-        #expect(k("lumi.acpartner.mcn02").hasFixtureArt && !k("zhimi.fan.za5").hasFixtureArt && !k("cuco.plug.v3").hasFixtureArt)
+        // 已有灯具位美术包含四种落地电器；加湿器和扫地机仍显示徽章
+        #expect(k("lumi.acpartner.mcn02").hasFixtureArt && k("zhimi.fan.za5").hasFixtureArt && !k("cuco.plug.v3").hasFixtureArt)
         for model in ["lumi.curtain.hagl05", "viomi.fridge.x3", "minij.washer.v5", "zimi.waterheater.e1"] { #expect(k(model).hasFixtureArt, "\(model)") }
         // 每个灯具位都有 kind，而且是已实现的
         for m in HouseModule.allCases { for f in HouseCatalog.fixtures(m) { #expect(HouseCatalog.fixtureKind(m, f.id)?.implemented == true) } }
@@ -115,9 +115,59 @@ private func resolve(_ ds: [Device], _ cfg: HomeHouse? = nil, hidden: Set<String
     }
 
     @Test func fixtureSetValidation() {
-        #expect(HouseCatalog.fixtureSetProblems(.study, lightIds: ["ceiling", "monitor", "ac", "curtain"]).isEmpty)
-        #expect(HouseCatalog.fixtureSetProblems(.study, lightIds: ["ceiling", "monitor", "curtain"]) == ["study: missing fixture ac"])
-        #expect(HouseCatalog.fixtureSetProblems(.study, lightIds: ["ceiling", "monitor", "ac", "curtain", "fan"]) == ["study: unknown fixture fan"])
+        let ids = ["ceiling", "monitor", "ac", "curtain", "fan", "heater"]
+        #expect(HouseCatalog.fixtureSetProblems(.study, lightIds: ids).isEmpty)
+        #expect(HouseCatalog.fixtureSetProblems(.study, lightIds: ids.filter { $0 != "ac" }) == ["study: missing fixture ac"])
+        #expect(HouseCatalog.fixtureSetProblems(.study, lightIds: ids + ["humidifier"]) == ["study: unknown fixture humidifier"])
+    }
+
+    @Test func floorApplianceSlots() {
+        let categories: [(String, DeviceCategory, HouseFixtureKind, Set<HouseModule>)] = [
+            ("fan", .fan, .fan, [.living, .bedroom, .study]),
+            ("air_purifier", .airPurifier, .airPurifier, [.living, .bedroom]),
+            ("dehumidifier", .dehumidifier, .dehumidifier, [.living, .bedroom, .bathroom]),
+            ("heater", .heater, .heater, [.living, .bedroom, .study]),
+        ]
+        for (id, category, kind, modules) in categories {
+            #expect(kind.implemented)
+            #expect(HouseCatalog.deviceClass(category: category).hasFixtureArt)
+            for module in HouseModule.allCases {
+                let fixture = HouseCatalog.fixture(module, id)
+                #expect((fixture != nil) == modules.contains(module))
+                if let fixture {
+                    #expect(fixture.accepts == [category])
+                    #expect(HouseCatalog.fixtureKind(module, id) == kind)
+                }
+            }
+        }
+        #expect(!HouseFixtureKind.humidifier.implemented && !HouseFixtureKind.vacuum.implemented)
+    }
+
+    @Test func floorApplianceCatalogGeometry() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let base = try HouseComposer.loadCatalog(from: root.appendingPathComponent("assets/house/modules/catalog.json"))
+        let directories = ["Sources/MijiaBarApp/Resources/House/modules", "assets/house/modules"]
+            + ["light-wood", "walnut", "japanese", "modern"].map { "assets/house/styles/\($0)/modules" }
+        for directory in directories {
+            let catalog = try HouseComposer.loadCatalog(from: root.appendingPathComponent(directory + "/catalog.json"))
+            for module in HouseModule.allCases {
+                let lights = try #require(catalog.modules[module.rawValue]?.lights)
+                #expect(HouseCatalog.fixtureSetProblems(module, lightIds: lights.map(\.id)).isEmpty)
+                for light in lights where ["fan", "air-purifier", "dehumidifier", "heater"].contains(light.role) {
+                    #expect(light.kind == HouseCatalog.fixtureKind(module, light.id)?.rawValue)
+                    #expect(light.role == light.kind && light.slot == 0)
+                    #expect(!light.bakesLight && light.wall == nil && light.alt == nil)
+                    let anchor = try #require(light.anchor)
+                    let body = try #require(light.body)
+                    #expect(anchor.count == 2 && body.count == 4)
+                    #expect(anchor == [(body[2][0] + body[3][0]) / 2, body[2][1]])
+                    let expected = try #require(base.modules[module.rawValue]?.lights.first { $0.id == light.id })
+                    #expect(light == expected)
+                }
+            }
+        }
+        let bundled = try Data(contentsOf: root.appendingPathComponent("Sources/MijiaBarApp/Resources/House/modules/catalog.json"))
+        #expect(bundled == (try Data(contentsOf: root.appendingPathComponent("assets/house/modules/catalog.json"))))
     }
 
     @Test func tvNeverLandsOnStudyMonitor() {
