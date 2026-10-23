@@ -75,17 +75,27 @@ public enum HouseCatalog {
             HouseFixture("tv", [.tv], hints: ["电视", "電視", "tv", "投影", "projector"]),
             HouseFixture("ac", [.ac]),
             HouseFixture("curtain", [.curtain]),
+            HouseFixture("fan", [.fan]),
+            HouseFixture("air_purifier", [.airPurifier]),
+            HouseFixture("dehumidifier", [.dehumidifier]),
+            HouseFixture("heater", [.heater]),
         ]
         case .bedroom: return [
             HouseFixture("bedside", [.light], hints: ["床头", "床頭", "台灯", "檯燈", "bedside", "nightstand", "lamp"]),
             HouseFixture("ac", [.ac]),
             HouseFixture("curtain", [.curtain]),
+            HouseFixture("fan", [.fan]),
+            HouseFixture("air_purifier", [.airPurifier]),
+            HouseFixture("dehumidifier", [.dehumidifier]),
+            HouseFixture("heater", [.heater]),
         ]
         case .study: return [
             HouseFixture("ceiling", [.light], hints: ["吸顶", "吸頂", "主灯", "主燈", "顶灯", "頂燈", "ceiling"]),
             HouseFixture("monitor", [.light, .tv, .other], hints: ["显示器", "顯示器", "屏幕", "螢幕", "挂灯", "掛燈", "monitor", "display", "screen"], hintRequired: true),
             HouseFixture("ac", [.ac]),
             HouseFixture("curtain", [.curtain]),
+            HouseFixture("fan", [.fan]),
+            HouseFixture("heater", [.heater]),
         ]
         case .generic: return [
             HouseFixture("entry_light", [.light]),
@@ -99,6 +109,7 @@ public enum HouseCatalog {
         case .bathroom: return [
             HouseFixture("ceiling", [.light], hints: ["吸顶", "吸頂", "镜", "鏡", "ceiling", "mirror"]),
             HouseFixture("water_heater", [.waterHeater]),
+            HouseFixture("dehumidifier", [.dehumidifier]),
         ]
         case .balcony: return [
             HouseFixture("wall_lamp", [.light], hints: ["壁灯", "壁燈", "wall"]),
@@ -157,6 +168,10 @@ public enum HouseCatalog {
         if f.accepts(.fridge) { return .fridge }
         if f.accepts(.washer) { return .washer }
         if f.accepts(.waterHeater) { return .waterHeater }
+        if f.accepts(.fan) { return .fan }
+        if f.accepts(.airPurifier) { return .airPurifier }
+        if f.accepts(.dehumidifier) { return .dehumidifier }
+        if f.accepts(.heater) { return .heater }
         return .light
     }
 
@@ -176,7 +191,7 @@ public enum HouseCatalog {
 public enum HouseDeviceClass: Hashable, Sendable {
     case fixture(HouseFixtureKind)
     case badge
-    /// 现在就有灯具位美术的 A 类；其余 A 类（风扇、净化器……）先按徽章显示，见 docs/HOUSE.md
+    /// 现在就有灯具位美术的 A 类；其余 A 类（加湿器、扫地机）先按徽章显示，见 docs/HOUSE.md
     public var hasFixtureArt: Bool {
         if case .fixture(let k) = self { return k.implemented }
         return false
@@ -189,7 +204,7 @@ public enum HouseFixtureKind: String, CaseIterable, Sendable {
     // A2：落地电器小精灵（与 3b 装饰共用图层），扫地机与 3c 宠物共用寻路
     case fan, airPurifier = "air-purifier", humidifier, dehumidifier, heater, vacuum
     /// 已有灯具位美术
-    public var implemented: Bool { [.light, .screen, .ac, .curtain, .fridge, .waterHeater, .washer].contains(self) }
+    public var implemented: Bool { [.light, .screen, .ac, .curtain, .fridge, .waterHeater, .washer, .fan, .airPurifier, .dehumidifier, .heater].contains(self) }
 }
 
 /// 设备在小屋里的位置
@@ -417,4 +432,3 @@ public enum HouseResolver {
         }
     }
 }
-

@@ -159,6 +159,21 @@ def spec(module):
         floor_label = P(g, 0.55, 0.55, 0)   # 两面后墙都被切时：阳台地板中央
     else:
         raise KeyError(module)
+    floor_anchors = {
+        'living': {'fan': (176, 252), 'dehumidifier': (248, 258), 'heater': (308, 288), 'air_purifier': (388, 272)},
+        'bedroom': {'fan': (96, 212), 'dehumidifier': (155, 232), 'heater': (198, 218), 'air_purifier': (236, 222)},
+        'study': {'fan': (118, 222), 'heater': (218, 232)},
+        'bathroom': {'dehumidifier': (200, 202)},
+    }
+    floor_sizes = {'fan': (26, 38), 'dehumidifier': (22, 30), 'heater': (22, 32), 'air_purifier': (16, 42)}
+    for fixture_id, (anchor_x, anchor_y) in floor_anchors.get(module, {}).items():
+        width, height = floor_sizes[fixture_id]
+        half_width = width // 2
+        role = fixture_id.replace('_', '-')
+        lights.append(dict(id=fixture_id, kind=role, role=role, slot=0, anchor=[anchor_x, anchor_y], body=[
+            [anchor_x - half_width, anchor_y - height], [anchor_x + half_width, anchor_y - height],
+            [anchor_x + half_width, anchor_y], [anchor_x - half_width, anchor_y],
+        ]))
     d = dict(label=lab, badges=badges, lights=lights)
     if floor_label: d['floorLabel'] = floor_label
     return fw, g, d
