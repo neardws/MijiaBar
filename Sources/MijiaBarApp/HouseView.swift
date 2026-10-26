@@ -909,7 +909,8 @@ struct HouseListEmbed: View {
             }
             .padding(.horizontal, 8).padding(.vertical, 4)
             .background(Theme.tile, in: Capsule())
-            .overlay(Capsule().stroke(Theme.stroke))
+            .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
+            .compositingGroup()
         }
         .buttonStyle(.plain).hoverHighlight()
         .help(L("在窗口中打开小屋", "Open house in a window"))
@@ -937,7 +938,8 @@ struct HouseTapChip: View {
             }
             .padding(.horizontal, 10).padding(.vertical, 6)
             .background(on ? tint.opacity(0.14) : Theme.tile, in: Capsule())
-            .overlay(Capsule().stroke(on ? tint.opacity(0.35) : Theme.stroke))
+            .overlay(Capsule().strokeBorder(on ? tint.opacity(0.35) : Theme.stroke, lineWidth: 1))
+            .compositingGroup()
         }
         .buttonStyle(.plain).hoverHighlight()
     }
