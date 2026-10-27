@@ -206,7 +206,8 @@
       272,
       120,
       75
-     ]
+     ],
+     "absentVariant": {"patch": "absent-living-tv", "rect": [304, 164, 74, 88]}
     },
     {
      "id": "ac",
@@ -259,7 +260,8 @@
      "alt": [
       210,
       147
-     ]
+     ],
+     "absentVariant": {"patch": "absent-living-ac", "rect": [78, 46, 72, 74]}
     },
     {
      "id": "curtain",
@@ -798,7 +800,8 @@
      "alt": [
       141,
       158
-     ]
+     ],
+     "absentVariant": {"patch": "absent-bedroom-ac", "rect": [78, 46, 72, 74]}
     },
     {
      "id": "curtain",
@@ -1273,7 +1276,8 @@
       180,
       85,
       65
-     ]
+     ],
+     "absentVariant": {"patch": "absent-study-monitor", "rect": [222, 96, 50, 62]}
     },
     {
      "id": "ac",
