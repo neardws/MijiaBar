@@ -28,7 +28,7 @@ import Testing
         for index in 0..<1000 {
             fingerprint.add(behavior.pose(pets[index % 3], world: world, context: context, at: date.addingTimeInterval(Double(index))))
         }
-        #expect(fingerprint.value == 787020977557581161)
+        #expect(fingerprint.value == 4424427575587748970)
     }
 
     @Test func calendarReactionsAndBatchFingerprint() throws {
@@ -81,7 +81,7 @@ import Testing
         }
         var fingerprint = Fingerprint()
         for (_, pose) in results { fingerprint.add(pose) }
-        #expect(fingerprint.value == 787020977557581161)
+        #expect(fingerprint.value == 4424427575587748970)
     }
 
     @Test func pathFingerprint() throws {
@@ -100,6 +100,6 @@ import Testing
                 }
             }
         }
-        #expect(fingerprint.value == 5314581484295840740)
+        #expect(fingerprint.value == 9949502419996380670)
     }
 }

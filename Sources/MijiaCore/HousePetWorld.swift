@@ -50,6 +50,7 @@ public final class HousePetWorld: @unchecked Sendable {
     public struct Edge: Sendable {
         public let node: Int
         public let jump: Bool
+        public var stairs: Bool = false
     }
     public struct Spot: Sendable {
         public let id: String
@@ -64,6 +65,7 @@ public final class HousePetWorld: @unchecked Sendable {
     public let spots: [Spot]
     public let rooms: Set<String>
     public let cellSize: Double
+    public let doorways: [HouseDoorway]
     private let edgeLengths: [[Double]]
     private let lock = NSLock()
     private var paths: [String: [Int]] = [:]
@@ -72,7 +74,10 @@ public final class HousePetWorld: @unchecked Sendable {
                 origin: HousePetPoint = .init(x: 0, y: 0), offsets: [String: HousePetPoint] = [:],
                 decor: [HouseDecorPlacement] = [], items: HouseDecorCatalog? = nil) {
         let scale = max(1, source.cellsPerGrid)
-        cellSize = hypot(160, 66) / Double(scale)
+        let doorways = HouseDoorwayPlanner.plan(layout: layout, catalog: catalog)
+        self.doorways = doorways
+        let cellSize = hypot(160, 66) / Double(scale)
+        self.cellSize = cellSize
         let modules = source.sets[source.artSets[style] ?? "cozy"] ?? [:]
         var nodes: [Node] = [], edges: [[Edge]] = [], spots: [Spot] = []
         var nodeMap: [String: Int] = [:]
@@ -85,12 +90,44 @@ public final class HousePetWorld: @unchecked Sendable {
         for cell in layout {
             guard let module = modules[cell.module], let art = catalog.modules[cell.module], module.grid.count == 2 else { continue }
             let room = HouseDecor.roomKey(cell)
+            let walk = module.walk.map { Array($0) }
+            var passages: Set<[Int]> = []
+            for doorway in doorways where doorway.back == cell || doorway.front == cell {
+                let columns = art.fw * scale, rows = art.fh * scale
+                let alongCount = doorway.axis == .u ? rows : columns
+                let start = Double(doorway.axis == .u ? cell.row : cell.col)
+                for along in 0..<alongCount where doorway.contains(along: start + (Double(along) + 0.5) / Double(scale)) {
+                    let boundaryCell = doorway.axis == .u
+                        ? [doorway.back == cell ? columns - 1 : 0, along]
+                        : [along, doorway.back == cell ? rows - 1 : 0]
+                    var queue = [boundaryCell], parents = [boundaryCell: boundaryCell], cursor = 0
+                    while cursor < queue.count {
+                        let position = queue[cursor]; cursor += 1
+                        let column = position[0], row = position[1]
+                        if walk.indices.contains(row), walk[row].indices.contains(column), walk[row][column] == "." {
+                            var current = position
+                            passages.insert(current)
+                            while current != boundaryCell {
+                                current = parents[current]!; passages.insert(current)
+                            }
+                            break
+                        }
+                        for delta in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                            let next = [column + delta.0, row + delta.1]
+                            guard next[0] >= 0, next[0] < columns, next[1] >= 0, next[1] < rows, parents[next] == nil else { continue }
+                            parents[next] = position; queue.append(next)
+                        }
+                    }
+                }
+            }
             for (row, line) in module.walk.enumerated() {
-                for (col, token) in line.enumerated() where token == "." {
+                for (col, token) in line.enumerated() where token == "." || passages.contains([col, row]) {
                     let id = nodes.count; nodeMap[key(room, col, row)] = id
+                    let localU = (Double(col) + 0.5) / Double(scale), localV = (Double(row) + 0.5) / Double(scale)
+                    let lift = doorways.map { $0.floorLift(in: cell, u: Double(cell.col) + localU, v: Double(cell.row) + localV) }.max() ?? 0
                     nodes.append(.init(id: id, room: room, module: cell.module, col: col, row: row,
-                                       u: cell.col * scale + col, v: cell.row * scale + row, elevation: HouseLevels.elevation(cell),
-                                       point: point([(Double(col) + 0.5) / Double(scale), (Double(row) + 0.5) / Double(scale)], cell: cell, art: art)))
+                                       u: cell.col * scale + col, v: cell.row * scale + row, elevation: HouseLevels.elevation(cell) + Int(lift.rounded()),
+                                       point: point([localU, localV], cell: cell, art: art, height: lift)))
                     edges.append([])
                 }
             }
@@ -110,11 +147,16 @@ public final class HousePetWorld: @unchecked Sendable {
                     && max(leftCell.col, rightCell.col) < min(leftCell.col + leftArt.fw, rightCell.col + rightArt.fw)
                 guard horizontal || vertical else { continue }
                 let leftNodes = nodes.filter { $0.room == HouseDecor.roomKey(leftCell) }, rightNodes = nodes.filter { $0.room == HouseDecor.roomKey(rightCell) }
+                let doorway = doorways.first { $0.connects(HouseDecor.roomKey(leftCell), HouseDecor.roomKey(rightCell)) }
                 for left in leftNodes {
                     for right in rightNodes {
                         let du = abs(left.u - right.u), dv = abs(left.v - right.v)
                         if (horizontal && dv == 0 && du <= 2) || (vertical && du == 0 && dv <= 2) {
-                            edges[left.id].append(.init(node: right.id, jump: true)); edges[right.id].append(.init(node: left.id, jump: true))
+                            let along = (Double(horizontal ? left.v : left.u) + 0.5) / Double(scale)
+                            let walk = doorway?.contains(along: along) == true
+                            let stairs = walk && doorway?.stairs == true
+                            edges[left.id].append(.init(node: right.id, jump: !walk, stairs: stairs))
+                            edges[right.id].append(.init(node: left.id, jump: !walk, stairs: stairs))
                         }
                     }
                 }
@@ -155,7 +197,7 @@ public final class HousePetWorld: @unchecked Sendable {
         }
         self.nodes = nodes; self.edges = edges; self.spots = spots.sorted { $0.id < $1.id }; rooms = Set(nodes.map(\.room))
         edgeLengths = edges.enumerated().map { index, neighbors in
-            neighbors.map { nodes[index].point.distance(to: nodes[$0.node].point) }
+            neighbors.map { nodes[index].point.distance(to: nodes[$0.node].point) + ($0.jump ? 6 * cellSize : 0) }
         }
     }
 

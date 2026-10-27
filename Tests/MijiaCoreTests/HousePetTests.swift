@@ -171,7 +171,7 @@ import Testing
             let world = try Self.world(level: level), from = try #require(world.nodes.first { $0.room == "c" }), to = try #require(world.nodes.first { $0.room == "b" })
             let path = world.path(from: from.id, to: to.id)
             #expect(path.count > 2)
-            #expect(zip(path, path.dropFirst()).contains { left, right in world.edges[left].contains { $0.node == right && $0.jump } })
+            #expect(zip(path, path.dropFirst()).contains { world.nodes[$0.0].room != world.nodes[$0.1].room })
             #expect(world.path(from: from.id, to: to.id, room: "c").isEmpty)
         }
         let catalog = try Self.catalog(), spots = try Self.spots()

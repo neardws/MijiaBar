@@ -86,6 +86,7 @@ struct HouseCutawayModule: Decodable {
     let lights: [HouseLightSpec]
     /// 合成场景：本模块剪影减去后画模块（前方房间）的剪影；灯光蒙版用它，光不会透过前屋的墙
     var visible: [[[Double]]]? = nil
+    var petVisible: [[[Double]]]? = nil
 }
 
 /// 场景来源：经典四室 = 手绘整图 + house-cutaway.json（按模块名查）；

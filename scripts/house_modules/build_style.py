@@ -122,6 +122,10 @@ def build(style, selected, prefix):
         existing = json.loads(catalog_path.read_text()) if catalog_path.exists() else None
         module_build.main()
         catalog = json.loads(catalog_path.read_text())
+        from doorways import doorway_ranges, stair_ranges
+        for module, art in catalog['modules'].items():
+            art['doorwayRanges'] = doorway_ranges(module, art['footprint'], style)
+            art['stairRanges'] = stair_ranges(module, art['footprint'], style)
         if existing:
             catalog['modules'] = {**existing['modules'], **catalog['modules']}
         curtains.WINDOWS = {key: value for key, value in windows.items() if key in selected}

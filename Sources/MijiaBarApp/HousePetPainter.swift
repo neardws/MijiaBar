@@ -152,7 +152,7 @@ final class HousePetPainter {
                 Self.drawImage(silhouette, in: context, rect: CGRect(x: 0, y: 0, width: rig.frameSize[0], height: rig.frameSize[1]))
                 context.restoreGState()
             }
-            Self.drawFrame(image, in: context, rig: rig, pose: pose, polygons: module.visible ?? [module.region])
+            Self.drawFrame(image, in: context, rig: rig, pose: pose, polygons: module.petVisible ?? module.visible ?? [module.region])
         }
     }
 
