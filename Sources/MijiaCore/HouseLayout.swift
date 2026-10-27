@@ -137,7 +137,15 @@ public enum HouseCatalog {
     public static func badgeIds(_ m: HouseModule) -> [String] { (0..<badgeCount(m)).map { "b\($0 + 1)" } }
 
     /// 能进小屋的设备类型（other 认不出是什么，不画）
-    public static func showable(_ c: DeviceCategory) -> Bool { c != .other }
+    public static func showable(_ c: DeviceCategory, model: String = "", name: String = "") -> Bool {
+        c != .other || isVacuum(category: c, model: model, name: name)
+    }
+
+    public static func isVacuum(category: DeviceCategory, model: String = "", name: String = "") -> Bool {
+        if deviceClass(category: category, model: model) == .fixture(.vacuum) { return true }
+        let text = (category.rawValue + " " + model + " " + name).lowercased()
+        return ["vacuum", "roborock", "sweeper", ".robot.", "扫地", "掃地", "扫拖", "掃拖"].contains { text.contains($0) }
+    }
 
     /// 设备分类（docs/HOUSE.md「设备分类」）：A = 画进房间美术、有开关状态的灯具；B = 只用地上的像素徽章。
     /// A 类在所在模块没有空位（没有这种灯具位 / 已被占 / 所在墙被切掉）时退回徽章。
@@ -304,7 +312,7 @@ public enum HouseResolver {
         var excluded: [ExcludedHouseRoom] = []
         for (key, ds) in groups {
             let title = ds.first?.roomName.flatMap { $0.isEmpty ? nil : $0 } ?? L("未分配房间", "Unassigned")
-            let shown = ds.filter { visible($0) && HouseCatalog.showable($0.category) }
+            let shown = ds.filter { visible($0) && HouseCatalog.showable($0.category, model: $0.model, name: name($0)) }
             let o = roomOverride(key, ds.first)
             if o?.module == "none" {
                 excluded.append(.init(key: key, title: title, module: HouseModule.from(roomName: ds.first?.roomName), reason: .excluded, deviceCount: shown.count))
@@ -342,7 +350,7 @@ public enum HouseResolver {
             let ds = groups[win.key] ?? []
             for d in ds where !visible(d) { hidden.append(d.did) }
             rooms.append(ResolvedHouseRoom(key: win.key, title: win.title, module: mod,
-                                           devices: place(ds.filter { visible($0) && HouseCatalog.showable($0.category) }, in: mod, cfg: cfg, name: name)))
+                                           devices: place(ds.filter { visible($0) && HouseCatalog.showable($0.category, model: $0.model, name: name($0)) }, in: mod, cfg: cfg, name: name)))
         }
         // 没进小屋的房间里，用户明确隐藏的设备也报告出来
         for e in excluded { for d in groups[e.key] ?? [] where !visible(d) { hidden.append(d.did) } }
@@ -370,12 +378,12 @@ public enum HouseResolver {
                 ?? (cell.room.hasPrefix("name:") ? String(cell.room.dropFirst(5)) : mod.title)
             for d in ds where !visible(d) { hidden.append(d.did) }
             rooms.append(ResolvedHouseRoom(key: cell.room, title: title, module: mod,
-                                           devices: place(ds.filter { visible($0) && HouseCatalog.showable($0.category) }, in: mod, cfg: cfg, name: name)))
+                                           devices: place(ds.filter { visible($0) && HouseCatalog.showable($0.category, model: $0.model, name: name($0)) }, in: mod, cfg: cfg, name: name)))
         }
         var excluded: [ExcludedHouseRoom] = []
         for (key, ds) in groups where !seen.contains(key) {
             let title = ds.first?.roomName.flatMap { $0.isEmpty ? nil : $0 } ?? L("未分配房间", "Unassigned")
-            let shown = ds.filter { visible($0) && HouseCatalog.showable($0.category) }
+            let shown = ds.filter { visible($0) && HouseCatalog.showable($0.category, model: $0.model, name: name($0)) }
             let reason: ExcludedHouseRoom.Reason = key.isEmpty ? .unassigned : cfg.rooms[key]?.module == "none" ? .excluded : .notInLayout
             excluded.append(.init(key: key, title: title, module: HouseModule.from(roomName: ds.first?.roomName), reason: reason, deviceCount: shown.count))
             for d in ds where !visible(d) { hidden.append(d.did) }

@@ -96,19 +96,31 @@ extension Snapshot {
             return (source, session)
         }
         func render(source: HouseSceneSource, session: HousePetSceneSession, night: Bool, lights: Bool,
-                    roster: [HousePet], poses: [String: HousePetPose]) throws -> CGImage {
+                    roster: [HousePet], poses: [String: HousePetPose], reaction: HousePetContext? = nil, at time: Date? = nil) throws -> CGImage {
             guard let base = lights ? session.lit : session.unlit else { throw HousePetError.resource }
             let context = try canvas(base.width, base.height)
             HousePetPainter.drawImage(base, in: context, rect: CGRect(x: 0, y: 0, width: base.width, height: base.height))
-            let state = HousePetContext(night: night, lights: Dictionary(uniqueKeysWithValues: session.world.rooms.map { ($0, lights) }),
+            let state = reaction ?? HousePetContext(night: night, lights: Dictionary(uniqueKeysWithValues: session.world.rooms.map { ($0, lights) }),
                                         rooms: session.world.rooms, petIDs: roster.map(\.id))
             HousePetPainter.shared.draw(in: context, pets: roster, world: session.world, scene: source.scene, context: state,
-                                        date: date, unlit: session.unlit, lit: session.lit, poses: poses)
+                                        date: time ?? date, unlit: session.unlit, lit: session.lit, poses: poses)
             guard let image = context.makeImage() else { throw HousePetError.resource }; return image
         }
         for style in ["cozy-wood", "japanese", "modern"] {
             config.style = style
             model.houseEdit("snapshot") { $0.setStyle(home: home, style: style) }
+            let reactionLayout: [HouseLayoutCell] = [.init(room: "lounge", module: "living", col: 0, row: 0, level: 0),
+                                                   .init(room: "bed", module: "bedroom", col: 2, row: 1, level: 0),
+                                                   .init(room: "entry", module: "generic", col: 2, row: 0, level: 0)]
+            let (reactionSource, reactionSession) = try composed(style: style, phase: .day, cells: reactionLayout)
+            let event = date
+            for name in ["ac", "entry", "vacuum"] {
+                let state = HousePetContext(changedAt: event, acRooms: name == "ac" ? ["lounge"] : [],
+                                            vacuumRooms: name == "vacuum" ? ["lounge", "entry"] : [],
+                                            entryAt: name == "entry" ? event : nil, entryRoom: name == "entry" ? "entry" : nil)
+                try write(render(source: reactionSource, session: reactionSession, night: false, lights: false,
+                                 roster: [pets[0]], poses: [:], reaction: state, at: event.addingTimeInterval(120)), "pets-react-\(name)-\(style)")
+            }
             for phase in [HousePhase.day, .night] {
                 let (source, session) = try composed(style: style, phase: phase, cells: layout)
                 var poses: [String: HousePetPose] = [:]

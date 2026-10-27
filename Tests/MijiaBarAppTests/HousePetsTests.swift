@@ -5,6 +5,52 @@ import MijiaCore
 @testable import MijiaBarApp
 
 @MainActor @Suite struct HousePetsTests {
+    @Test func deviceReactionsUseCachedStatusWithoutPowerOrPolling() throws {
+        let model = AppModel(mock: true)
+        let vacuum = Device(did: "test-vacuum", name: "Cleaner", model: "roborock.vacuum.a1", isOnline: true,
+                            homeId: "h", homeName: "", roomName: "Entry", roomId: "entry")
+        let contact = Device(did: "test-contact", name: "Contact", model: "lumi.sensor_magnet.aq2", isOnline: true,
+                             homeId: "h", homeName: "", roomName: "Entry", roomId: "entry")
+        model.devices = [vacuum, contact]
+        model.homes = [Home(id: "h", name: "Test", ownerId: "0", rooms: [])]
+        model.houseEdit("test") { $0.setLayout(home: "h", layout: [.init(room: "entry", module: "generic", col: 0, row: 0, level: 0)]) }
+        let status = SpecProperty(siid: 2, iid: 1, type: "urn:miot-spec-v2:property:status:0", description: "Status",
+                                  format: "uint8", access: ["read"], unit: nil, range: nil,
+                                  options: [ValueOption(value: 1, description: "Cleaning"), ValueOption(value: 2, description: "Idle")])
+        let closed = SpecProperty(siid: 2, iid: 2, type: "urn:miot-spec-v2:property:contact-state:0", description: "Contact",
+                                  format: "bool", access: ["read"], unit: nil, range: nil, options: nil)
+        let spec = DeviceSpec(type: "", description: "", services: [SpecService(iid: 2, type: "urn:miot-spec-v2:service:vacuum:0", description: "", properties: [status, closed], actions: [])])
+        model.states[vacuum.did] = DeviceState(values: ["2.1": .int(1)], spec: spec, legacy: false, source: "test")
+        model.states[contact.did] = DeviceState(values: ["2.2": .bool(true)], spec: spec, legacy: false, source: "test")
+        let rooms = model.houseRooms
+        let cleaner = try #require(rooms.flatMap(\.devices).first { $0.did == vacuum.did })
+        #expect(cleaner.model == vacuum.model && cleaner.isVacuum && cleaner.busy && !cleaner.on)
+        #expect(HousePetsLayer.state(rooms: rooms, phase: .day, config: HomeHouse(), restOnly: false).vacuumRooms == ["entry"])
+        let before = HousePetsLayer.entryContacts(rooms: rooms)
+        #expect(before[contact.did] == true)
+        model.states[contact.did]?.values["2.2"] = .bool(false)
+        let after = HousePetsLayer.entryContacts(rooms: model.houseRooms)
+        #expect(HousePetsLayer.openedEntry(old: before, new: after, rooms: model.houseRooms) == "entry")
+        #expect(HousePetsLayer.openedEntry(old: [:], new: after, rooms: model.houseRooms) == nil)
+        #expect(HousePetsLayer.openedEntry(old: after, new: after, rooms: model.houseRooms) == nil)
+        model.states[vacuum.did]?.values["2.1"] = .int(2)
+        #expect(HousePetsLayer.state(rooms: model.houseRooms, phase: .day, config: HomeHouse(), restOnly: false).vacuumRooms.isEmpty)
+        model.states[vacuum.did]?.values["2.1"] = .int(1)
+        model.devices[0].isOnline = false; model.devices[1].isOnline = false
+        #expect(HousePetsLayer.state(rooms: model.houseRooms, phase: .day, config: HomeHouse(), restOnly: false).vacuumRooms.isEmpty)
+        #expect(HousePetsLayer.entryContacts(rooms: model.houseRooms).isEmpty)
+    }
+
+    @Test func acAndVacuumContextAndNonEntryContacts() {
+        let devices = [HouseDevice(did: "ac", name: "AC", category: .ac, spot: nil, on: true, online: true, toggleable: true),
+                       HouseDevice(did: "vac", name: "扫地机", category: .other, spot: nil, on: true, online: true, toggleable: true),
+                       HouseDevice(did: "contact", name: "Contact", category: .sensor, spot: nil, on: false, online: true, toggleable: false, contactClosed: false)]
+        let room = HouseRoom(key: "a", title: "Bedroom", module: .bedroom, devices: devices, lighting: .from(devices))
+        let state = HousePetsLayer.state(rooms: [room], phase: .day, config: HomeHouse(), restOnly: false)
+        #expect(state.acRooms == ["a"] && state.vacuumRooms == ["a"])
+        #expect(HousePetsLayer.entryContacts(rooms: [room]).isEmpty)
+    }
+
     private func rig() throws -> HousePetRig { try #require(HousePetPainter.shared.rig) }
     private let blackPalette = HousePetPalette(base: "#2E2B30", second: "#1C1A1E", white: "#F2F0EC", eye: "#E9C24A")
     private func rgba(_ image: CGImage) throws -> [UInt8] {

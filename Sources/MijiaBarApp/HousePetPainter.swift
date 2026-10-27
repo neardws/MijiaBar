@@ -211,7 +211,8 @@ final class HousePetSceneSession {
         let origin = source.scene.origin ?? [0, 0]
         world = HousePetWorld(layout: cells, catalog: catalog, spots: spots, style: HouseStyles.resolve(style),
                               origin: .init(x: origin[0], y: origin[1]), offsets: offsets,
-                              decor: decor, items: HouseModuleAssets.decorCatalog)
+                              decor: decor, items: HouseModuleAssets.decorCatalog,
+                              roomTitles: Dictionary(rooms.map { ($0.key, $0.title) }, uniquingKeysWith: { first, _ in first }))
         unlit = source.unlit.cgImage(forProposedRect: nil, context: nil, hints: nil)
         lit = source.lit.cgImage(forProposedRect: nil, context: nil, hints: nil)
     }
@@ -233,13 +234,32 @@ struct HousePetsLayer: View {
     @State private var session: HousePetSceneSession?
     @State private var changedAt: Date?
     @State private var changedRoom: String?
+    @State private var entryAt: Date?
+    @State private var entryRoom: String?
 
     static func state(rooms: [HouseRoom], phase: HousePhase, config: HomeHouse, restOnly: Bool) -> HousePetContext {
         let lights = Dictionary(rooms.map { ($0.key, $0.lighting.levels.values.contains { $0 > 0 }) }, uniquingKeysWith: { $0 || $1 })
         let tv = Set(rooms.filter { room in room.devices.contains { $0.on && $0.category == .tv } }.map(\.key))
+        let ac = Set(rooms.filter { room in room.devices.contains { $0.on && $0.category == .ac } }.map(\.key))
+        let vacuum = Set(rooms.filter { room in room.devices.contains { $0.isVacuum && ($0.on || $0.busy) } }.map(\.key))
         return .init(night: phase == .night, lights: lights, tvRooms: tv, rooms: Set(rooms.map(\.key)),
                      petIDs: (config.pets ?? [:]).values.filter { $0.enabled && !$0.deleted }.map(\.id).sorted(),
-                     restOnly: restOnly, enabled: config.petPrefs?.enabled ?? true)
+                     restOnly: restOnly, enabled: config.petPrefs?.enabled ?? true, acRooms: ac, vacuumRooms: vacuum)
+    }
+
+    static func entryContacts(rooms: [HouseRoom]) -> [String: Bool] {
+        var contacts: [String: Bool] = [:]
+        for room in rooms where HouseModule.isEntryFoyer(roomName: room.title) || HouseModule.isEntryFoyer(roomName: room.key) {
+            for device in room.devices where device.online {
+                if let closed = device.contactClosed { contacts[device.did] = closed }
+            }
+        }
+        return contacts
+    }
+
+    static func openedEntry(old: [String: Bool], new: [String: Bool], rooms: [HouseRoom]) -> String? {
+        guard let did = new.keys.sorted().first(where: { old[$0] == true && new[$0] == false }) else { return nil }
+        return rooms.first { $0.devices.contains { $0.did == did } }?.key
     }
 
     private var fingerprint: String {
@@ -247,7 +267,8 @@ struct HousePetsLayer: View {
         var appearance = config; appearance.pets = nil; appearance.petPrefs = nil
         let encoded = (try? encoder.encode(appearance).base64EncodedString()) ?? ""
         let cells = (try? encoder.encode(source.layout ?? layout).base64EncodedString()) ?? ""
-        return encoded + "|" + cells + "|" + phase.assetName + "|" + (style ?? "") + "|\(ObjectIdentifier(source.unlit))|\(ObjectIdentifier(source.lit))"
+        let titles = rooms.sorted { $0.key < $1.key }.map { $0.key + "=" + $0.title }.joined(separator: "|")
+        return encoded + "|" + cells + "|" + titles + "|" + phase.assetName + "|" + (style ?? "") + "|\(ObjectIdentifier(source.unlit))|\(ObjectIdentifier(source.lit))"
     }
 
     var body: some View {
@@ -272,6 +293,11 @@ struct HousePetsLayer: View {
             changedAt = Date(); changedRoom = new.keys.sorted().first { old[$0] != new[$0] }
         }
         .onChange(of: state.tvRooms) { old, new in changedAt = Date(); changedRoom = old.symmetricDifference(new).sorted().first }
+        .onChange(of: state.acRooms) { old, new in changedAt = Date(); changedRoom = old.symmetricDifference(new).sorted().first }
+        .onChange(of: state.vacuumRooms) { old, new in changedAt = Date(); changedRoom = old.symmetricDifference(new).sorted().first }
+        .onChange(of: Self.entryContacts(rooms: rooms)) { old, new in
+            if let room = Self.openedEntry(old: old, new: new, rooms: rooms) { entryAt = Date(); entryRoom = room }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) { _ in lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled }
     }
 
@@ -281,6 +307,7 @@ struct HousePetsLayer: View {
                                                     bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
         context.translateBy(x: 0, y: source.artSize.height); context.scaleBy(x: 1, y: -1)
         var state = state; state.changedAt = changedAt; state.changedRoom = changedRoom
+        state.entryAt = entryAt; state.entryRoom = entryRoom
         HousePetPainter.shared.draw(in: context, pets: Array((config.pets ?? [:]).values), world: session.world, scene: source.scene,
                                     byRoom: source.byRoom, context: state, date: date, unlit: session.unlit, lit: session.lit, poses: poses)
         return context.makeImage()

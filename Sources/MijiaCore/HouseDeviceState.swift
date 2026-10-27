@@ -13,7 +13,7 @@ public enum HouseDeviceState {
         return min(1, max(0, (v - lo) / (hi - lo)))
     }
 
-    public static let busyWords = ["busy", "wash", "rins", "spin", "dry", "run", "work", "heat"]
+    public static let busyWords = ["busy", "wash", "rins", "spin", "dry", "run", "work", "heat", "clean", "sweep", "mop", "清扫", "清掃", "清洁", "清潔", "拖地"]
     /// status 属性的当前选项描述里有「工作中」的词 → true；没有 status 属性 / 读不到 → otherwise
     public static func busy(_ st: DeviceState?, otherwise: Bool) -> Bool {
         guard let st, let spec = st.spec, let p = spec.prop(named: "status"), let opts = p.options,

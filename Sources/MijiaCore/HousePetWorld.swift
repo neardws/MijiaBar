@@ -75,7 +75,7 @@ public final class HousePetWorld: @unchecked Sendable {
 
     public init(layout: [HouseLayoutCell], catalog: HouseModuleCatalog, spots source: HousePetSpots, style: String = "cozy-wood",
                 origin: HousePetPoint = .init(x: 0, y: 0), offsets: [String: HousePetPoint] = [:],
-                decor: [HouseDecorPlacement] = [], items: HouseDecorCatalog? = nil) {
+                decor: [HouseDecorPlacement] = [], items: HouseDecorCatalog? = nil, roomTitles: [String: String] = [:]) {
         let scale = max(1, source.cellsPerGrid)
         let doorways = HouseDoorwayPlanner.plan(layout: layout, catalog: catalog)
         self.doorways = doorways
@@ -191,13 +191,32 @@ public final class HousePetWorld: @unchecked Sendable {
                     spots.append(.init(id: room + "/decor/" + placement.slot, kind: "sleep", node: node, point: nodes[node].point, facing: "SE", priority: 0))
                 }
             }
+            let authoredAC = spots.contains { $0.kind == "ac" && nodes[$0.node].room == room }
             for light in art.lights {
+                if light.role == "ac" || light.kind == "ac" {
+                    let vent = (light.vent ?? []).filter { $0.count >= 2 }
+                    let center = vent.isEmpty ? light.alt ?? [Double(art.tip[0]), Double(art.tip[1]) + 66] :
+                        [vent.map { $0[0] }.reduce(0, +) / Double(vent.count), vent.map { $0[1] }.reduce(0, +) / Double(vent.count)]
+                    if center.count >= 2 && !authoredAC {
+                        let dx = center[0] - Double(art.tip[0]), dy = center[1] - Double(art.tip[1])
+                        let uv = [(dx / 160 + dy / 66) / 2, (dy / 66 - dx / 160) / 2]
+                        if let node = nearest(point(uv, cell: cell, art: art), room: room) {
+                            spots.append(.init(id: room + "/ac/" + light.id, kind: "ac", node: node, point: nodes[node].point, facing: "SE", priority: 2))
+                        }
+                    }
+                    continue
+                }
                 guard let pool = light.pool, pool.count >= 2 else { continue }
                 let dx = pool[0] - Double(art.tip[0]), dy = pool[1] - Double(art.tip[1])
                 let uv = [(dx / 160 + dy / 66) / 2, (dy / 66 - dx / 160) / 2]
                 if let node = nearest(point(uv, cell: cell, art: art), room: room) {
                     spots.append(.init(id: room + "/light/" + light.id, kind: "light", node: node, point: nodes[node].point, facing: "SE", priority: 2))
                 }
+            }
+            if (HouseModule.isEntryFoyer(roomName: room) || HouseModule.isEntryFoyer(roomName: roomTitles[room])),
+               !spots.contains(where: { $0.kind == "entry" && nodes[$0.node].room == room }),
+               let node = nearest(point([Double(art.fw) / 2, Double(art.fh) / 2], cell: cell, art: art), room: room) {
+                spots.append(.init(id: room + "/entry", kind: "entry", node: node, point: nodes[node].point, facing: "SE", priority: 2))
             }
             if !spots.contains(where: { nodes[$0.node].room == room && ["sleep", "perch"].contains($0.kind) }), let node = nodes.first(where: { $0.room == room }) {
                 spots.append(.init(id: room + "/sleep", kind: "sleep", node: node.id, point: node.point, facing: "SE", priority: 3))
