@@ -34,6 +34,7 @@ public struct HomeHouse: Codable, Equatable, Sendable {
     public var styleUpdatedAt: Date? = nil
     public var decorPrefs: HouseDecorPrefs? = nil
     public var decor: [String: HouseDecorEntry]? = nil
+    public var freeDecor: [String: HouseFreeDecorEntry]? = nil
     public var pets: [String: HousePet]? = nil
     public var petPrefs: HousePetPrefs? = nil
     public init() {}
@@ -47,6 +48,7 @@ public struct HomeHouse: Codable, Equatable, Sendable {
         styleUpdatedAt = try c.decodeIfPresent(Date.self, forKey: .styleUpdatedAt)
         decorPrefs = try c.decodeIfPresent(HouseDecorPrefs.self, forKey: .decorPrefs)
         decor = try c.decodeIfPresent([String: HouseDecorEntry].self, forKey: .decor)
+        freeDecor = try c.decodeIfPresent([String: HouseFreeDecorEntry].self, forKey: .freeDecor)
         pets = try c.decodeIfPresent([String: HousePet].self, forKey: .pets)
         for key in pets?.keys.map({ $0 }) ?? [] where pets?[key]?.id.isEmpty == true { pets?[key]?.id = key }
         petPrefs = try c.decodeIfPresent(HousePetPrefs.self, forKey: .petPrefs)
@@ -80,6 +82,9 @@ public struct HouseFile: Codable, Equatable, Sendable {
                 if h.decor == nil { h.decor = [:] }; h.decor?[key] = entry
             }
             if let prefs = hb.decorPrefs, prefs.updatedAt > (h.decorPrefs?.updatedAt ?? .distantPast) { h.decorPrefs = prefs }
+            for (key, entry) in hb.freeDecor ?? [:] where h.freeDecor?[key] == nil || h.freeDecor![key]!.updatedAt < entry.updatedAt {
+                if h.freeDecor == nil { h.freeDecor = [:] }; h.freeDecor?[key] = entry
+            }
             for (key, pet) in hb.pets ?? [:] where h.pets?[key] == nil || h.pets![key]!.updatedAt < pet.updatedAt {
                 if h.pets == nil { h.pets = [:] }; h.pets?[key] = pet
             }
@@ -95,6 +100,7 @@ public struct HouseFile: Codable, Equatable, Sendable {
             h.rooms = h.rooms.filter { $0.value.module != nil || now.timeIntervalSince($0.value.updatedAt) < keep }
             h.devices = h.devices.filter { !$0.value.isEmpty || now.timeIntervalSince($0.value.updatedAt) < keep }
             h.decor = h.decor?.filter { $0.value.item != nil || now.timeIntervalSince($0.value.updatedAt) < keep }
+            h.freeDecor = h.freeDecor?.filter { $0.value.item != nil || now.timeIntervalSince($0.value.updatedAt) < keep }
             homes[hid] = h
         }
     }
@@ -137,6 +143,12 @@ public struct HouseFile: Codable, Equatable, Sendable {
     }
     public mutating func resetDecor(home: String, now: Date = Date()) {
         for key in homes[home]?.decor?.keys.map({ $0 }) ?? [] { setDecor(home: home, key: key, item: nil, now: now) }
+        for key in homes[home]?.freeDecor?.keys.map({ $0 }) ?? [] { setFreeDecor(home: home, key: key, item: nil, cell: homes[home]?.freeDecor?[key]?.cell ?? [], now: now) }
+    }
+    public mutating func setFreeDecor(home: String, key: String, item: String?, cell: [Int], now: Date = Date()) {
+        var config = homes[home] ?? HomeHouse()
+        if config.freeDecor == nil { config.freeDecor = [:] }
+        config.freeDecor?[key] = .init(item: item, cell: cell, updatedAt: now); homes[home] = config
     }
     public mutating func reset(home: String, did: String? = nil, room: String? = nil, layout: Bool = false, style: Bool = false, now: Date = Date()) {
         var h = homes[home] ?? HomeHouse()
@@ -151,6 +163,7 @@ public struct HouseFile: Codable, Equatable, Sendable {
             h.style = nil; h.styleUpdatedAt = now
             for key in h.decor?.keys.map({ $0 }) ?? [] { h.decor?[key] = HouseDecorEntry(item: nil, updatedAt: now) }
             h.decorPrefs = HouseDecorPrefs(updatedAt: now)
+            for (key, entry) in h.freeDecor ?? [:] { h.freeDecor?[key] = .init(item: nil, cell: entry.cell, updatedAt: now) }
         }
         homes[home] = h
     }

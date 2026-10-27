@@ -112,6 +112,7 @@ public enum HouseComposer {
         // 场景：锚点转画布坐标；visible = 本模块剪影减去后画模块的剪影（灯光蒙版用，避免透过前屋墙体）
         var sceneMods: [String: Any] = [:]
         var decorSlots: [[String: Any]] = []
+        var freeDecor: [[String: Any]] = []
         for (i, it) in items.enumerated() {
             let dx = Double(it.ox - originX), dy = Double(it.oy - originY)
             func tx(_ p: [Double]) -> [Double] { [p[0] + dx, p[1] + dy] }
@@ -207,6 +208,11 @@ public enum HouseComposer {
                 } else { record["rect"] = [slot.at[0] + dx - 12, slot.at[1] + dy - 12, 24, 24] }
                 decorSlots.append(record)
             }
+            for placed in input.decor where placed.placement.room == key && placed.placement.freeCell != nil {
+                freeDecor.append(["key": key + "/" + String(placed.placement.slot.dropFirst(5)), "room": key,
+                                  "item": placed.placement.item, "cell": placed.placement.freeCell ?? [],
+                                  "rect": [Double(placed.x) + dx, Double(placed.y) + dy, Double(placed.image.width), Double(placed.image.height)]])
+            }
             var record: [String: Any] = [
                 "module": it.placed.cell.module,
                 "label": tx(clearLabel(floorPointLift(labelPoint(it.art, segments: it.placed.segments), placed: it.placed, elev: elev), badgePts, alts: altPts)),
@@ -221,7 +227,7 @@ public enum HouseComposer {
             if !passages.isEmpty { record["petVisible"] = polygons(petVisible) }
             sceneMods[key] = record
         }
-        let scene: [String: Any] = ["size": [width, height], "origin": [originX, originY], "modules": sceneMods, "decorSlots": decorSlots]
+        let scene: [String: Any] = ["size": [width, height], "origin": [originX, originY], "modules": sceneMods, "decorSlots": decorSlots, "freeDecor": freeDecor]
         let data = (try? JSONSerialization.data(withJSONObject: scene, options: [.sortedKeys])) ?? Data()
         let ms = (CFAbsoluteTimeGetCurrent() - t0) * 1000
         return HouseComposeResult(width: width, height: height, originX: originX, originY: originY, milliseconds: ms,

@@ -120,7 +120,7 @@ struct HouseSceneSource {
             var modules: [String: HouseCutawayModule] = [:]
             for cell in cells { modules[cell.module] = source.scene.modules[cell.room] }
             return HouseSceneSource(unlit: source.unlit, lit: source.lit,
-                                    scene: HouseCutawaySceneFile(size: source.scene.size, modules: modules, decorSlots: source.scene.decorSlots), byRoom: false)
+                                    scene: HouseCutawaySceneFile(size: source.scene.size, modules: modules, decorSlots: source.scene.decorSlots, freeDecor: source.scene.freeDecor, origin: source.scene.origin), byRoom: false, layout: cells)
         }
         if let layout, !HouseLayoutSolver.isClassicGeometry(layout),
            let c = HouseModuleAssets.composedScene(layout: layout, phase: phase, style: style, config: config) { return c }
@@ -135,8 +135,17 @@ struct HouseCutawaySceneFile: Decodable {
     let size: [Double]
     let modules: [String: HouseCutawayModule]
     var decorSlots: [HouseDecorSceneSlot]? = nil
+    var freeDecor: [HouseFreeDecorSceneItem]? = nil
     var origin: [Double]? = nil
     var artSize: CGSize { CGSize(width: size[0], height: size[1]) }
+}
+
+struct HouseFreeDecorSceneItem: Decodable {
+    let key: String
+    let room: String
+    let item: String
+    let cell: [Int]
+    let rect: [Double]
 }
 
 struct HouseDecorSceneSlot: Decodable {

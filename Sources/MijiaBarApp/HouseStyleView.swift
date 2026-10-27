@@ -57,7 +57,10 @@ struct HouseStyleView: View {
     }
 
     private func removeDecor(_ key: String) {
-        m.houseEdit(L("不放", "None")) { $0.setDecor(home: m.houseHomeKey, key: key, item: "none") }
+        m.houseEdit(L("不放", "None")) {
+            if key.hasPrefix("free:") { $0.setFreeDecor(home: m.houseHomeKey, key: String(key.dropFirst(5)), item: nil, cell: []) }
+            else { $0.setDecor(home: m.houseHomeKey, key: key, item: "none") }
+        }
     }
 
     @ViewBuilder

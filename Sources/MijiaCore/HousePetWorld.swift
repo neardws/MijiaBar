@@ -130,8 +130,11 @@ public final class HousePetWorld: @unchecked Sendable {
                 HousePetFurniture(definition: $0, module: cell.module,
                                   tip: point([0, 0], cell: cell, art: art), spots: module.spots)
             }
+            let blockers = Set(decor.filter { $0.room == room && $0.freeCell != nil }.flatMap { placement in
+                HouseFreeDecor.footprint(cell: placement.freeCell ?? [], size: items?.items.first(where: { $0.id == placement.item })?.size ?? "S")
+            })
             for (row, line) in module.walk.enumerated() {
-                for (col, token) in line.enumerated() where token == "." || passages.contains([col, row]) {
+                for (col, token) in line.enumerated() where (token == "." || passages.contains([col, row])) && !blockers.contains(.init(col, row)) {
                     let id = nodes.count; nodeMap[key(room, col, row)] = id
                     let localU = (Double(col) + 0.5) / Double(scale), localV = (Double(row) + 0.5) / Double(scale)
                     let lift = doorways.map { $0.floorLift(in: cell, u: Double(cell.col) + localU, v: Double(cell.row) + localV) }.max() ?? 0

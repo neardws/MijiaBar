@@ -24,6 +24,8 @@ let houseUsage = """
   mijiabar house style [list|set <id>|show] [--home H] [--json]
   mijiabar house decor list [--room R] [--json]
   mijiabar house decor set <room/slot> <item|none|auto> [--home H]
+  mijiabar house decor place <room> <item> --cell c,r [--id f1] [--home H]
+  mijiabar house decor move <room/id> --cell c,r | remove <room/id>
   mijiabar house decor on|off | seasonal on|off | items | reset
   mijiabar house pets list [--json] | on | off
   mijiabar house pets analyze <photo> [--json]
@@ -330,6 +332,7 @@ nonisolated(unsafe) let houseSchema: [String: Any] = [
             "layout": ["type": ["array", "null"], "description": "Phase 2 grid layout (max 3×2); null = classic four", "items": ["$ref": "#/$defs/cell"]],
             "layoutUpdatedAt": ["type": "string", "format": "date-time"],
             "decor": ["type": ["object", "null"], "additionalProperties": ["$ref": "#/$defs/decor"]],
+            "freeDecor": ["type": ["object", "null"], "additionalProperties": ["type": "object", "required": ["cell", "updatedAt"], "properties": ["item": ["type": ["string", "null"]], "cell": ["type": "array", "items": ["type": "integer", "minimum": 0], "minItems": 2, "maxItems": 2], "updatedAt": ["type": "string", "format": "date-time"]]]],
             "pets": ["type": ["object", "null"], "propertyNames": ["pattern": "^p_[0-9a-fA-F]{4,6}$"], "additionalProperties": ["$ref": "#/$defs/pet"], "description": "At most 3 non-deleted pets; tombstones do not count"],
             "petPrefs": ["type": ["object", "null"], "properties": ["enabled": ["type": "boolean", "default": true], "updatedAt": ["type": "string", "format": "date-time"]]],
             "decorPrefs": ["type": ["object", "null"], "properties": ["enabled": ["type": "boolean", "default": true], "seasonal": ["type": "boolean", "default": true], "updatedAt": ["type": "string", "format": "date-time"]]],
@@ -361,7 +364,7 @@ nonisolated(unsafe) let houseSchema: [String: Any] = [
     let asJSON = args.contains("--json")
     let pos = { () -> [String] in
         var out: [String] = []; var i = 0
-        while i < rest.count { if ["--home", "--room", "--visible", "--place", "--photo", "--name", "--species", "--rig", "--pattern", "--palette", "--enabled", "--out", "--action", "--phase"].contains(rest[i]) { i += 2; continue }; if rest[i] != "--json" { out.append(rest[i]) }; i += 1 }
+        while i < rest.count { if ["--home", "--room", "--visible", "--place", "--photo", "--name", "--species", "--rig", "--pattern", "--palette", "--enabled", "--out", "--action", "--phase", "--cell", "--id"].contains(rest[i]) { i += 2; continue }; if rest[i] != "--json" { out.append(rest[i]) }; i += 1 }
         return out
     }()
     switch sub {
@@ -424,7 +427,8 @@ nonisolated(unsafe) let houseSchema: [String: Any] = [
     case "style":
         print(json(try await houseStyle(pos: pos, rest: rest, asJSON: asJSON)))
     case "decor":
-        print(json(try await houseDecor(pos: pos, rest: rest)))
+        do { print(json(try await houseDecor(pos: houseDecorArguments(rest), rest: rest))) }
+        catch { print(json(["ok": false, "error": error.localizedDescription, "reason": "invalidArguments"])) }
     default: print(houseUsage)
     }
 }
@@ -482,10 +486,10 @@ nonisolated(unsafe) let houseMCPTools: [[String: Any]] = [
      "inputSchema": ["type": "object", "properties": ["home": ["type": "string"]]]],
     ["name": "set_house_pets", "description": L("仅改变外观，绝不控制设备。添加、修改、移除宠物或开关显示。photoPath 只用于添加本地照片，绝不保存或上传照片。", "Appearance only, never controls devices. Add, update, remove pets or enable/disable their display. photoPath is local and add-only; photos are never saved or uploaded."),
      "inputSchema": ["type": "object", "required": ["op"], "properties": ["op": ["enum": ["add", "update", "remove", "enable", "disable"]], "pet": ["type": "string"], "home": ["type": "string"], "name": ["type": "string"], "species": ["enum": ["cat", "dog"]], "rig": ["enum": HousePetRig.supported.keys.sorted()], "pattern": ["enum": HousePetRig.allPatterns], "palette": ["$ref": "#/$defs/petPalette"], "room": ["type": ["string", "null"]], "enabled": ["type": "boolean"], "photoPath": ["type": "string"]], "$defs": ["petPalette": houseSchema["$defs"].flatMap { ($0 as? [String: Any])?["petPalette"] } ?? [:]]]],
-    ["name": "get_house_decor", "description": "Appearance only, never controls devices. List fixed decoration slots, current items, preferences and active seasons.",
+    ["name": "get_house_decor", "description": "Appearance only, never controls devices. List fixed slots and free floor entries (cell, at, hidden reason), preferences and active seasons.",
      "inputSchema": ["type": "object", "properties": ["home": ["type": "string"], "room": ["type": "string"]]]],
-    ["name": "set_house_decor", "description": "Appearance only, never controls devices. Set slot room/slot and item id|none|auto, or enabled, or seasonal. One operation per call.",
-     "inputSchema": ["type": "object", "properties": ["home": ["type": "string"], "slot": ["type": "string"], "item": ["type": "string"], "enabled": ["type": "boolean"], "seasonal": ["type": "boolean"]]]],
+    ["name": "set_house_decor", "description": "Appearance only, never controls devices. Set slot/item, enabled, seasonal, or free {action: place|move|remove, room, id?, item?, cell:[col,row]}. Move/remove require id; place requires item. Zero-based cells, floor only, max 4 per room. One operation per call; errors include reason.",
+     "inputSchema": ["type": "object", "properties": ["home": ["type": "string"], "slot": ["type": "string"], "item": ["type": "string"], "enabled": ["type": "boolean"], "seasonal": ["type": "boolean"], "free": ["type": "object", "required": ["action", "room"], "properties": ["action": ["type": "string", "enum": ["place", "move", "remove"]], "room": ["type": "string"], "id": ["type": "string"], "item": ["type": "string"], "cell": ["type": "array", "items": ["type": "integer", "minimum": 0], "minItems": 2, "maxItems": 2]]]]]],
     ["name": "set_house_style", "description": "设置小屋风格：cozy-wood | light-wood | walnut | japanese | modern | auto。",
      "inputSchema": ["type": "object", "properties": ["style": ["type": "string"], "home": ["type": "string"]], "required": ["style"]]],
     ["name": "reset_house", "description": "把小屋恢复自动：整个家、一台设备或一个房间。",
@@ -560,8 +564,19 @@ nonisolated(unsafe) let houseMCPTools: [[String: Any]] = [
         if let home = a["home"] as? String { rest += ["--home", home] }
         if let room = a["room"] as? String { rest += ["--room", room] }
         if name == "get_house_decor" { return try await houseDecor(pos: ["list"], rest: rest) }
-        let operations = [a["slot"] != nil || a["item"] != nil, a["enabled"] != nil, a["seasonal"] != nil].filter { $0 }.count
+        let operations = [a["slot"] != nil || a["item"] != nil, a["enabled"] != nil, a["seasonal"] != nil, a["free"] != nil].filter { $0 }.count
         guard operations == 1 else { return ["ok": false, "error": L("每次只修改一项", "Specify exactly one operation")] }
+        if let free = a["free"] as? [String: Any] {
+            guard let action = free["action"] as? String, ["place", "move", "remove"].contains(action), let room = free["room"] as? String else { return ["ok": false, "error": L("需要自由摆放操作和房间", "Expected free action and room")] }
+            if let cell = free["cell"] as? [Int], cell.count == 2 { rest += ["--cell", "\(cell[0]),\(cell[1])"] }
+            if action == "place" {
+                guard let item = free["item"] as? String else { return ["ok": false, "reason": "unknownItem", "error": HouseFreeDecor.Reason.unknownItem.message] }
+                if let id = free["id"] as? String { rest += ["--id", id] }
+                return try await houseDecor(pos: [action, room, item], rest: rest)
+            }
+            guard let id = free["id"] as? String else { return ["ok": false, "reason": "unknownItem", "error": HouseFreeDecor.Reason.unknownItem.message] }
+            return try await houseDecor(pos: [action, room + "/" + id], rest: rest)
+        }
         if let enabled = a["enabled"] as? Bool { return try await houseDecor(pos: [enabled ? "on" : "off"], rest: rest) }
         if let seasonal = a["seasonal"] as? Bool { return try await houseDecor(pos: ["seasonal", seasonal ? "on" : "off"], rest: rest) }
         guard let slot = a["slot"] as? String, let item = a["item"] as? String else { return ["ok": false, "error": L("需要位置和装饰", "Expected slot and item")] }

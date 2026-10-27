@@ -218,7 +218,7 @@ final class HousePetSceneSession {
                   let target = module.region.first, let original = art.region.first, target.count >= 2, original.count >= 2 else { continue }
             offsets[HouseDecor.roomKey(cell)] = .init(x: target[0] - original[0], y: target[1] - original[1])
         }
-        let decor = HouseModuleAssets.decorations(layout: cells, catalog: catalog, phase: .day, config: config).map(\.placement)
+        let decor = HouseModuleAssets.decorations(layout: cells, catalog: catalog, phase: .day, config: config, style: style).map(\.placement)
         let origin = source.scene.origin ?? [0, 0]
         world = HousePetWorld(layout: cells, catalog: catalog, spots: spots, style: HouseStyles.resolve(style),
                               origin: .init(x: origin[0], y: origin[1]), offsets: offsets,

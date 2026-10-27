@@ -129,6 +129,7 @@ public struct HouseEdit: Equatable, Sendable {
     public let layout: Change<[HouseLayoutCell]?>?
     public let style: Change<String?>?
     public let decor: [String: Change<String?>]
+    public let freeDecor: [String: Change<HouseFreeDecorEntry?>]
     public let decorPrefs: Change<DecorPrefsValue>?
     public let pets: [String: Change<HousePet?>]
     public let petPrefs: Change<Bool>?
@@ -143,6 +144,10 @@ public struct HouseEdit: Equatable, Sendable {
     static func pet(_ config: HomeHouse?, id: String) -> HousePet? {
         guard var pet = config?.pets?[id], !pet.deleted else { return nil }
         pet.updatedAt = .distantPast; return pet
+    }
+    static func free(_ config: HomeHouse?, key: String) -> HouseFreeDecorEntry? {
+        guard var entry = config?.freeDecor?[key], entry.item != nil else { return nil }
+        entry.updatedAt = .distantPast; return entry
     }
 
     /// 比较编辑前后的文件；没有实际改动时返回 nil（不进撤销栈）
@@ -167,6 +172,11 @@ public struct HouseEdit: Equatable, Sendable {
             if old != new { decor[key] = Change(before: old, after: new) }
         }
         let oldPrefs = DecorPrefsValue(b.decorPrefs), newPrefs = DecorPrefsValue(a.decorPrefs)
+        var freeDecor: [String: Change<HouseFreeDecorEntry?>] = [:]
+        for key in Set((b.freeDecor ?? [:]).keys).union((a.freeDecor ?? [:]).keys) {
+            let old = free(b, key: key), new = free(a, key: key)
+            if old != new { freeDecor[key] = Change(before: old, after: new) }
+        }
         let prefsChange: Change<DecorPrefsValue>? = oldPrefs != newPrefs ? Change(before: oldPrefs, after: newPrefs) : nil
         var pets: [String: Change<HousePet?>] = [:]
         for id in Set((b.pets ?? [:]).keys).union((a.pets ?? [:]).keys) {
@@ -175,9 +185,9 @@ public struct HouseEdit: Equatable, Sendable {
         }
         let oldEnabled = b.petPrefs?.enabled ?? true, newEnabled = a.petPrefs?.enabled ?? true
         let petPrefs = oldEnabled != newEnabled ? Change(before: oldEnabled, after: newEnabled) : nil
-        if ds.isEmpty && rs.isEmpty && layoutChange == nil && styleChange == nil && decor.isEmpty && prefsChange == nil && pets.isEmpty && petPrefs == nil { return nil }
+        if ds.isEmpty && rs.isEmpty && layoutChange == nil && styleChange == nil && decor.isEmpty && freeDecor.isEmpty && prefsChange == nil && pets.isEmpty && petPrefs == nil { return nil }
         return HouseEdit(label: label, home: home, devices: ds, rooms: rs, layout: layoutChange,
-                         style: styleChange, decor: decor, decorPrefs: prefsChange, pets: pets, petPrefs: petPrefs)
+                         style: styleChange, decor: decor, freeDecor: freeDecor, decorPrefs: prefsChange, pets: pets, petPrefs: petPrefs)
     }
 
     /// 文件里这些条目现在是不是还等于 side 那一侧的值（不是的话说明被别处改过，撤销记录作废）
@@ -194,7 +204,8 @@ public struct HouseEdit: Equatable, Sendable {
         let prefsOK = decorPrefs.map { DecorPrefsValue(f.homes[home]?.decorPrefs) == (side == .before ? $0.before : $0.after) } ?? true
         let petsOK = pets.allSatisfy { id, change in Self.pet(f.homes[home], id: id) == (side == .before ? change.before : change.after) }
         let petPrefsOK = petPrefs.map { (f.homes[home]?.petPrefs?.enabled ?? true) == (side == .before ? $0.before : $0.after) } ?? true
-        return devicesOK && roomsOK && layoutOK && styleOK && decorOK && prefsOK && petsOK && petPrefsOK
+        let freeOK = freeDecor.allSatisfy { key, change in Self.free(f.homes[home], key: key) == (side == .before ? change.before : change.after) }
+        return devicesOK && roomsOK && layoutOK && styleOK && decorOK && freeOK && prefsOK && petsOK && petPrefsOK
     }
 
     public func apply(_ side: Side, to f: inout HouseFile, now: Date = Date()) {
@@ -209,6 +220,10 @@ public struct HouseEdit: Equatable, Sendable {
         }
         if let style { f.setStyle(home: home, style: side == .before ? style.before : style.after, now: now) }
         for (key, change) in decor { f.setDecor(home: home, key: key, item: side == .before ? change.before : change.after, now: now) }
+        for (key, change) in freeDecor {
+            let value = side == .before ? change.before : change.after
+            f.setFreeDecor(home: home, key: key, item: value?.item, cell: value?.cell ?? [], now: now)
+        }
         if let decorPrefs {
             let value = side == .before ? decorPrefs.before : decorPrefs.after
             f.setDecorPrefs(home: home, enabled: value.enabled, seasonal: value.seasonal, now: now)

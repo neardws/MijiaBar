@@ -25,6 +25,14 @@ enum HouseDecorFiles {
         }
         return nil
     }
+    static func spots() -> HousePetSpots? {
+        for root in roots {
+            for path in ["pets/pet-spots.json", "pet-spots.json"] {
+                if let spots = try? HousePetSpots.load(from: root.appendingPathComponent(path)) { return spots }
+            }
+        }
+        return nil
+    }
     static func modules(style: String?) -> HouseModuleCatalog? {
         let id = HouseStyles.resolve(style), own = HouseStyles.info(id).hasOwnCatalog
         for root in roots {
@@ -64,6 +72,19 @@ enum HouseDecorFiles {
     } else { layout = [] }
     func error(_ message: String) -> [String: Any] { ["ok": false, "error": message] }
     switch sub {
+    case "place", "move", "remove":
+        guard pos.count == (sub == "place" ? 3 : 2) else { return error(L("需要房间和装饰，或房间/标识", "Expected room and item, or room/id")) }
+        let parts = (opt(rest, "--cell") ?? "").split(separator: ",", omittingEmptySubsequences: false)
+        let cell = parts.compactMap { Int($0) }
+        guard sub == "remove" || (parts.count == 2 && cell.count == 2) else { return ["ok": false, "reason": "blocked", "error": L("需要 --cell 列,行", "Expected --cell col,row")] }
+        var result: [String: Any] = [:]
+        try HouseStore.update { current in
+            let live = current.homes[home.id] ?? HomeHouse()
+            result = houseFreeDecorEdit(action: sub, target: pos[1], item: sub == "place" ? pos[2] : nil,
+                                       cell: cell, id: opt(rest, "--id"), home: home.id, file: &current,
+                                       layout: live.layout ?? layout, modules: HouseDecorFiles.modules(style: live.style), items: items, spots: HouseDecorFiles.spots())
+        }
+        return result
     case "set":
         guard pos.count == 3 else { return error(L("需要 room/slot 和 item|none|auto", "Expected room/slot and item|none|auto")) }
         let key = pos[1], itemID = pos[2]
@@ -93,7 +114,9 @@ enum HouseDecorFiles {
     default: return error(L("未知装饰命令：", "Unknown decor command: ") + sub)
     }
     let prefs = config.decorPrefs ?? HouseDecorPrefs(), now = Date(), filter = opt(rest, "--room")
-    let placements = items.flatMap { items in modules.map { HouseDecor.resolve(layout: layout, catalog: $0, overrides: config.decor ?? [:], prefs: prefs, date: now, items: items, includeHidden: true) } } ?? []
+    let grids = modules.flatMap { modules in HouseDecorFiles.spots().map { HouseFreeDecor.grids(layout: layout, catalog: modules, spots: $0, style: config.style) } } ?? []
+    let placements = items.flatMap { items in modules.map { HouseDecor.resolve(layout: layout, catalog: $0, overrides: config.decor ?? [:], prefs: prefs, date: now, items: items, includeHidden: true, free: config.freeDecor ?? [:], grids: grids) } } ?? []
+    let free = houseFreeDecorList(config: config, placements: placements, room: filter)
     let hidden = modules.map { HouseDecor.hiddenSlots(layout: layout, catalog: $0) } ?? []
     var slots: [[String: Any]] = []
     for cell in layout where filter == nil || filter == HouseDecor.roomKey(cell) {
@@ -109,7 +132,7 @@ enum HouseDecorFiles {
     }
     let overrides = (config.decor ?? [:]).filter { filter == nil || $0.key.hasPrefix(filter! + "/") }
     let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
-    return ["ok": true, "home": home.id, "slots": slots, "prefs": try JSONSerialization.jsonObject(with: encoder.encode(prefs)),
+    return ["ok": true, "home": home.id, "slots": slots, "free": free, "prefs": try JSONSerialization.jsonObject(with: encoder.encode(prefs)),
             "activeSeasons": items.map { HouseSeasons.activeSeasons(on: now, seasons: $0.seasons) } ?? [],
             "overrides": try JSONSerialization.jsonObject(with: encoder.encode(overrides)),
             "catalogAvailable": modules != nil, "itemsAvailable": items != nil]
