@@ -1,0 +1,731 @@
+{
+  "auto-rooms-after-day" : {
+    "cells" : [
+      {
+        "col" : 0,
+        "module" : "living",
+        "room" : "living",
+        "row" : 0
+      },
+      {
+        "col" : 2,
+        "module" : "bedroom",
+        "room" : "bedroom",
+        "row" : 0
+      },
+      {
+        "col" : 0,
+        "module" : "kitchen",
+        "room" : "kitchen",
+        "row" : 1
+      },
+      {
+        "col" : 1,
+        "module" : "bathroom",
+        "room" : "bathroom",
+        "row" : 1
+      },
+      {
+        "col" : 2,
+        "module" : "balcony",
+        "room" : "balcony",
+        "row" : 1
+      }
+    ],
+    "classic" : false,
+    "excluded" : [
+      {
+        "count" : 1,
+        "key" : "study",
+        "module" : "study",
+        "reason" : "notInLayout"
+      },
+      {
+        "count" : 1,
+        "key" : "generic",
+        "module" : "generic",
+        "reason" : "notInLayout"
+      }
+    ],
+    "rooms" : [
+      {
+        "devices" : [
+          "demo-living"
+        ],
+        "key" : "living",
+        "module" : "living",
+        "title" : "客厅"
+      },
+      {
+        "devices" : [
+          "demo-bedroom"
+        ],
+        "key" : "bedroom",
+        "module" : "bedroom",
+        "title" : "卧室"
+      },
+      {
+        "devices" : [
+          "demo-fridge",
+          "demo-pendant"
+        ],
+        "key" : "kitchen",
+        "module" : "kitchen",
+        "title" : "厨房"
+      },
+      {
+        "devices" : [
+          "demo-ceiling",
+          "demo-heater"
+        ],
+        "key" : "bathroom",
+        "module" : "bathroom",
+        "title" : "卫生间"
+      },
+      {
+        "devices" : [
+          "demo-wall",
+          "demo-washer"
+        ],
+        "key" : "balcony",
+        "module" : "balcony",
+        "title" : "阳台"
+      }
+    ],
+    "source" : "auto",
+    "style" : "cozy-wood"
+  },
+  "auto-rooms-after-japanese-day" : {
+    "cells" : [
+      {
+        "col" : 0,
+        "module" : "living",
+        "room" : "living",
+        "row" : 0
+      },
+      {
+        "col" : 2,
+        "module" : "bedroom",
+        "room" : "bedroom",
+        "row" : 0
+      },
+      {
+        "col" : 0,
+        "module" : "kitchen",
+        "room" : "kitchen",
+        "row" : 1
+      },
+      {
+        "col" : 1,
+        "module" : "bathroom",
+        "room" : "bathroom",
+        "row" : 1
+      },
+      {
+        "col" : 2,
+        "module" : "balcony",
+        "room" : "balcony",
+        "row" : 1
+      }
+    ],
+    "classic" : false,
+    "excluded" : [
+      {
+        "count" : 1,
+        "key" : "study",
+        "module" : "study",
+        "reason" : "notInLayout"
+      },
+      {
+        "count" : 1,
+        "key" : "generic",
+        "module" : "generic",
+        "reason" : "notInLayout"
+      }
+    ],
+    "rooms" : [
+      {
+        "devices" : [
+          "demo-living"
+        ],
+        "key" : "living",
+        "module" : "living",
+        "title" : "客厅"
+      },
+      {
+        "devices" : [
+          "demo-bedroom"
+        ],
+        "key" : "bedroom",
+        "module" : "bedroom",
+        "title" : "卧室"
+      },
+      {
+        "devices" : [
+          "demo-fridge",
+          "demo-pendant"
+        ],
+        "key" : "kitchen",
+        "module" : "kitchen",
+        "title" : "厨房"
+      },
+      {
+        "devices" : [
+          "demo-ceiling",
+          "demo-heater"
+        ],
+        "key" : "bathroom",
+        "module" : "bathroom",
+        "title" : "卫生间"
+      },
+      {
+        "devices" : [
+          "demo-wall",
+          "demo-washer"
+        ],
+        "key" : "balcony",
+        "module" : "balcony",
+        "title" : "阳台"
+      }
+    ],
+    "source" : "auto",
+    "style" : "japanese"
+  },
+  "auto-rooms-after-modern-day" : {
+    "cells" : [
+      {
+        "col" : 0,
+        "module" : "living",
+        "room" : "living",
+        "row" : 0
+      },
+      {
+        "col" : 2,
+        "module" : "bedroom",
+        "room" : "bedroom",
+        "row" : 0
+      },
+      {
+        "col" : 0,
+        "module" : "kitchen",
+        "room" : "kitchen",
+        "row" : 1
+      },
+      {
+        "col" : 1,
+        "module" : "bathroom",
+        "room" : "bathroom",
+        "row" : 1
+      },
+      {
+        "col" : 2,
+        "module" : "balcony",
+        "room" : "balcony",
+        "row" : 1
+      }
+    ],
+    "classic" : false,
+    "excluded" : [
+      {
+        "count" : 1,
+        "key" : "study",
+        "module" : "study",
+        "reason" : "notInLayout"
+      },
+      {
+        "count" : 1,
+        "key" : "generic",
+        "module" : "generic",
+        "reason" : "notInLayout"
+      }
+    ],
+    "rooms" : [
+      {
+        "devices" : [
+          "demo-living"
+        ],
+        "key" : "living",
+        "module" : "living",
+        "title" : "客厅"
+      },
+      {
+        "devices" : [
+          "demo-bedroom"
+        ],
+        "key" : "bedroom",
+        "module" : "bedroom",
+        "title" : "卧室"
+      },
+      {
+        "devices" : [
+          "demo-fridge",
+          "demo-pendant"
+        ],
+        "key" : "kitchen",
+        "module" : "kitchen",
+        "title" : "厨房"
+      },
+      {
+        "devices" : [
+          "demo-ceiling",
+          "demo-heater"
+        ],
+        "key" : "bathroom",
+        "module" : "bathroom",
+        "title" : "卫生间"
+      },
+      {
+        "devices" : [
+          "demo-wall",
+          "demo-washer"
+        ],
+        "key" : "balcony",
+        "module" : "balcony",
+        "title" : "阳台"
+      }
+    ],
+    "source" : "auto",
+    "style" : "modern"
+  },
+  "auto-rooms-after-night" : {
+    "cells" : [
+      {
+        "col" : 0,
+        "module" : "living",
+        "room" : "living",
+        "row" : 0
+      },
+      {
+        "col" : 2,
+        "module" : "bedroom",
+        "room" : "bedroom",
+        "row" : 0
+      },
+      {
+        "col" : 0,
+        "module" : "kitchen",
+        "room" : "kitchen",
+        "row" : 1
+      },
+      {
+        "col" : 1,
+        "module" : "bathroom",
+        "room" : "bathroom",
+        "row" : 1
+      },
+      {
+        "col" : 2,
+        "module" : "balcony",
+        "room" : "balcony",
+        "row" : 1
+      }
+    ],
+    "classic" : false,
+    "excluded" : [
+      {
+        "count" : 1,
+        "key" : "study",
+        "module" : "study",
+        "reason" : "notInLayout"
+      },
+      {
+        "count" : 1,
+        "key" : "generic",
+        "module" : "generic",
+        "reason" : "notInLayout"
+      }
+    ],
+    "rooms" : [
+      {
+        "devices" : [
+          "demo-living"
+        ],
+        "key" : "living",
+        "module" : "living",
+        "title" : "客厅"
+      },
+      {
+        "devices" : [
+          "demo-bedroom"
+        ],
+        "key" : "bedroom",
+        "module" : "bedroom",
+        "title" : "卧室"
+      },
+      {
+        "devices" : [
+          "demo-fridge",
+          "demo-pendant"
+        ],
+        "key" : "kitchen",
+        "module" : "kitchen",
+        "title" : "厨房"
+      },
+      {
+        "devices" : [
+          "demo-ceiling",
+          "demo-heater"
+        ],
+        "key" : "bathroom",
+        "module" : "bathroom",
+        "title" : "卫生间"
+      },
+      {
+        "devices" : [
+          "demo-wall",
+          "demo-washer"
+        ],
+        "key" : "balcony",
+        "module" : "balcony",
+        "title" : "阳台"
+      }
+    ],
+    "source" : "auto",
+    "style" : "cozy-wood"
+  },
+  "auto-rooms-arrange" : {
+    "cells" : [
+      {
+        "col" : 0,
+        "module" : "living",
+        "room" : "living",
+        "row" : 0
+      },
+      {
+        "col" : 2,
+        "module" : "bedroom",
+        "room" : "bedroom",
+        "row" : 0
+      },
+      {
+        "col" : 0,
+        "module" : "kitchen",
+        "room" : "kitchen",
+        "row" : 1
+      },
+      {
+        "col" : 1,
+        "module" : "bathroom",
+        "room" : "bathroom",
+        "row" : 1
+      },
+      {
+        "col" : 2,
+        "module" : "balcony",
+        "room" : "balcony",
+        "row" : 1
+      }
+    ],
+    "classic" : false,
+    "excluded" : [
+      {
+        "count" : 1,
+        "key" : "study",
+        "module" : "study",
+        "reason" : "notInLayout"
+      },
+      {
+        "count" : 1,
+        "key" : "generic",
+        "module" : "generic",
+        "reason" : "notInLayout"
+      }
+    ],
+    "rooms" : [
+      {
+        "devices" : [
+          "demo-living"
+        ],
+        "key" : "living",
+        "module" : "living",
+        "title" : "客厅"
+      },
+      {
+        "devices" : [
+          "demo-bedroom"
+        ],
+        "key" : "bedroom",
+        "module" : "bedroom",
+        "title" : "卧室"
+      },
+      {
+        "devices" : [
+          "demo-fridge",
+          "demo-pendant"
+        ],
+        "key" : "kitchen",
+        "module" : "kitchen",
+        "title" : "厨房"
+      },
+      {
+        "devices" : [
+          "demo-ceiling",
+          "demo-heater"
+        ],
+        "key" : "bathroom",
+        "module" : "bathroom",
+        "title" : "卫生间"
+      },
+      {
+        "devices" : [
+          "demo-wall",
+          "demo-washer"
+        ],
+        "key" : "balcony",
+        "module" : "balcony",
+        "title" : "阳台"
+      }
+    ],
+    "source" : "auto",
+    "style" : "cozy-wood"
+  },
+  "auto-rooms-before-day" : {
+    "cells" : [
+      {
+        "col" : 0,
+        "module" : "bedroom",
+        "room" : "bedroom",
+        "row" : 0
+      },
+      {
+        "col" : 1,
+        "module" : "study",
+        "room" : "study",
+        "row" : 0
+      },
+      {
+        "col" : 0,
+        "module" : "living",
+        "room" : "living",
+        "row" : 1
+      },
+      {
+        "col" : 2,
+        "module" : "generic",
+        "room" : "generic",
+        "row" : 1
+      }
+    ],
+    "classic" : true,
+    "excluded" : [
+      {
+        "count" : 2,
+        "key" : "bathroom",
+        "module" : "bathroom",
+        "reason" : "notInLayout"
+      },
+      {
+        "count" : 2,
+        "key" : "kitchen",
+        "module" : "kitchen",
+        "reason" : "notInLayout"
+      },
+      {
+        "count" : 2,
+        "key" : "balcony",
+        "module" : "balcony",
+        "reason" : "notInLayout"
+      }
+    ],
+    "rooms" : [
+      {
+        "devices" : [
+          "demo-living"
+        ],
+        "key" : "living",
+        "module" : "living",
+        "title" : "客厅"
+      },
+      {
+        "devices" : [
+          "demo-bedroom"
+        ],
+        "key" : "bedroom",
+        "module" : "bedroom",
+        "title" : "卧室"
+      },
+      {
+        "devices" : [
+          "demo-study"
+        ],
+        "key" : "study",
+        "module" : "study",
+        "title" : "书房"
+      },
+      {
+        "devices" : [
+          "demo-entry"
+        ],
+        "key" : "generic",
+        "module" : "generic",
+        "title" : "玄关"
+      }
+    ],
+    "source" : "saved",
+    "style" : "cozy-wood"
+  },
+  "auto-rooms-classic-day" : {
+    "cells" : [
+      {
+        "col" : 0,
+        "module" : "bedroom",
+        "room" : "bedroom",
+        "row" : 0
+      },
+      {
+        "col" : 1,
+        "module" : "study",
+        "room" : "study",
+        "row" : 0
+      },
+      {
+        "col" : 0,
+        "module" : "living",
+        "room" : "living",
+        "row" : 1
+      },
+      {
+        "col" : 2,
+        "module" : "generic",
+        "room" : "generic",
+        "row" : 1
+      }
+    ],
+    "classic" : true,
+    "excluded" : [
+
+    ],
+    "rooms" : [
+      {
+        "devices" : [
+          "demo-living"
+        ],
+        "key" : "living",
+        "module" : "living",
+        "title" : "客厅"
+      },
+      {
+        "devices" : [
+          "demo-bedroom"
+        ],
+        "key" : "bedroom",
+        "module" : "bedroom",
+        "title" : "卧室"
+      },
+      {
+        "devices" : [
+          "demo-study"
+        ],
+        "key" : "study",
+        "module" : "study",
+        "title" : "书房"
+      },
+      {
+        "devices" : [
+          "demo-entry"
+        ],
+        "key" : "generic",
+        "module" : "generic",
+        "title" : "玄关"
+      }
+    ],
+    "source" : "classic",
+    "style" : "cozy-wood"
+  },
+  "auto-rooms-menubar-day" : {
+    "cells" : [
+      {
+        "col" : 0,
+        "module" : "living",
+        "room" : "living",
+        "row" : 0
+      },
+      {
+        "col" : 2,
+        "module" : "bedroom",
+        "room" : "bedroom",
+        "row" : 0
+      },
+      {
+        "col" : 0,
+        "module" : "kitchen",
+        "room" : "kitchen",
+        "row" : 1
+      },
+      {
+        "col" : 1,
+        "module" : "bathroom",
+        "room" : "bathroom",
+        "row" : 1
+      },
+      {
+        "col" : 2,
+        "module" : "balcony",
+        "room" : "balcony",
+        "row" : 1
+      }
+    ],
+    "classic" : false,
+    "excluded" : [
+      {
+        "count" : 1,
+        "key" : "study",
+        "module" : "study",
+        "reason" : "notInLayout"
+      },
+      {
+        "count" : 1,
+        "key" : "generic",
+        "module" : "generic",
+        "reason" : "notInLayout"
+      }
+    ],
+    "rooms" : [
+      {
+        "devices" : [
+          "demo-living"
+        ],
+        "key" : "living",
+        "module" : "living",
+        "title" : "客厅"
+      },
+      {
+        "devices" : [
+          "demo-bedroom"
+        ],
+        "key" : "bedroom",
+        "module" : "bedroom",
+        "title" : "卧室"
+      },
+      {
+        "devices" : [
+          "demo-fridge",
+          "demo-pendant"
+        ],
+        "key" : "kitchen",
+        "module" : "kitchen",
+        "title" : "厨房"
+      },
+      {
+        "devices" : [
+          "demo-ceiling",
+          "demo-heater"
+        ],
+        "key" : "bathroom",
+        "module" : "bathroom",
+        "title" : "卫生间"
+      },
+      {
+        "devices" : [
+          "demo-wall",
+          "demo-washer"
+        ],
+        "key" : "balcony",
+        "module" : "balcony",
+        "title" : "阳台"
+      }
+    ],
+    "source" : "auto",
+    "style" : "cozy-wood"
+  }
+}
