@@ -42,6 +42,12 @@ enum HouseFixtureNames {
         case "fridge": return L("冰箱位", "Fridge")
         case "washer": return L("洗衣机位", "Washer")
         case "water_heater": return L("热水器位", "Water heater")
+        case "fan": return L("风扇位", "Fan")
+        case "air_purifier": return L("空气净化器位", "Air purifier")
+        case "dehumidifier": return L("除湿机位", "Dehumidifier")
+        case "humidifier": return L("加湿器位", "Humidifier")
+        case "vacuum": return L("扫地机位", "Vacuum")
+        case "heater": return L("取暖器位", "Heater")
         default: return id
         }
     }
@@ -781,6 +787,23 @@ extension AppModel {
         let washer = DeviceSpec(type: "", description: "", services: [S(2, "washer", [P(2, 1, "on", "bool"),
             P(2, 2, "status", "uint8", ["read"], opts: [ValueOption(value: 1, description: "Idle"), ValueOption(value: 2, description: "Busy")])])])
         states["f6"] = DeviceState(values: ["2.1": .bool(true), "2.2": .int(2)], spec: washer, legacy: false, source: "cloud")
+        let appliances: [(String, String, String)] = [
+            ("fan", L("风扇", "Fan"), "zhimi.fan.demo"),
+            ("air-purifier", L("空气净化器", "Air purifier"), "zhimi.airpurifier.demo"),
+            ("dehumidifier", L("除湿机", "Dehumidifier"), "mijia.dehumidifier.demo"),
+            ("heater", L("取暖器", "Heater"), "zhimi.heater.demo"),
+            ("humidifier", L("加湿器", "Humidifier"), "deerma.humidifier.demo"),
+            ("vacuum", L("扫地机", "Vacuum"), "roborock.vacuum.demo"),
+        ]
+        for (roomID, room) in [("living", L("客厅", "Living room")), ("bedroom", L("主卧", "Bedroom"))] {
+            for (kind, title, model) in appliances {
+                if devices.contains(where: { $0.roomName == room && $0.category == DeviceCategory.guess(model) }) { continue }
+                let id = "fixture-\(roomID)-\(kind)"
+                devices.append(dev(id, title, model, room))
+                let spec = DeviceSpec(type: "", description: "", services: [S(2, kind, [P(2, 1, "on", "bool")])])
+                states[id] = DeviceState(values: ["2.1": .bool(true)], spec: spec, legacy: false, source: "cloud")
+            }
+        }
     }
 }
 
@@ -861,7 +884,7 @@ extension Snapshot {
             set(rooms) { if $0.category == .curtain { $0.level = open; $0.on = open > 0.02 } }
         }
         func appliances(_ rooms: [HouseRoom], on: Bool) -> [HouseRoom] {
-            set(rooms) { if [.fridge, .washer, .waterHeater].contains($0.category) { $0.on = on; $0.busy = on } }
+            set(rooms) { if [.fridge, .washer, .waterHeater, .fan, .airPurifier, .dehumidifier, .heater, .humidifier, .vacuum].contains($0.category) { $0.on = on; $0.busy = on } }
         }
         func scene(_ name: String, _ rooms: [HouseRoom], _ phase: HousePhase, layout: [HouseLayoutCell]?) {
             let size = HouseSceneSource.make(layout: layout, phase: phase)?.artSize ?? CGSize(width: 960, height: 540)

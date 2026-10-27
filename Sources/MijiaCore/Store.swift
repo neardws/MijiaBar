@@ -75,7 +75,7 @@ public struct Home: Codable, Hashable, Identifiable, Sendable {
 }
 
 public enum DeviceCategory: String, Codable, CaseIterable, Sendable {
-    case ac, plug, light, fan, heater, dehumidifier, sensor, tv, camera, speaker, kitchen, printer, purifier, other
+    case ac, plug, light, fan, heater, dehumidifier, humidifier, vacuum, sensor, tv, camera, speaker, kitchen, printer, purifier, other
     /// 空气净化器 / 新风机（purifier 是净水器）
     case airPurifier = "air-purifier"
     /// 小屋里画在房间美术里的家电：窗帘、冰箱、洗衣机 / 干衣机、热水器
@@ -93,6 +93,8 @@ public enum DeviceCategory: String, Codable, CaseIterable, Sendable {
         if has("airpurifier", ".airp.", "air_purifier", "airfresh") { return .airPurifier }
         if has(".ysj.", "waterpuri", "water_purifier", ".wp.") { return .purifier }
         if has("acpartner", "aircondition", ".ac.", "airc") { return .ac }
+        if has("vacuum", "roborock", "sweeper", ".robot.") { return .vacuum }
+        if has("humidifier", "jsq") && !has("dehumid", "derh") { return .humidifier }
         if has("heater") { return .heater }
         if has("derh", "dehumid") { return .dehumidifier }
         if has(".fan.") { return .fan }
