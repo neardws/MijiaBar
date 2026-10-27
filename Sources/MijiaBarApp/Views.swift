@@ -37,7 +37,7 @@ struct RootView: View {
                     if t.isError { Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange).accessibilityHidden(true) }
                     Text(t.text)
                 }
-                .font(.system(size: 12, weight: .medium)).padding(.horizontal, 14).padding(.vertical, 8)
+                .font(.system(size: Theme.TypeSize.body, weight: .medium)).padding(.horizontal, 14).padding(.vertical, 8)
                     .background(.regularMaterial, in: Capsule()).overlay(Capsule().stroke(Theme.stroke))
                     .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
                     .padding(.bottom, 14)
@@ -63,10 +63,10 @@ struct LoginView: View {
             Spacer(minLength: 8)
             BrandMark(size: 56).accessibilityHidden(true).staggerIn(0)
             Text(L("登录小米账号", "Sign in to Xiaomi")).font(.system(size: 20, weight: .semibold)).padding(.top, 14).staggerIn(1)
-            Text(L("用米家 App 扫码，无需输入密码", "Scan with the Mi Home app — no password needed")).font(.system(size: 12)).foregroundStyle(.secondary)
+            Text(L("用米家 App 扫码，无需输入密码", "Scan with the Mi Home app — no password needed")).font(.system(size: Theme.TypeSize.body)).foregroundStyle(.secondary)
                 .padding(.top, 4).staggerIn(2)
             qrCard.padding(.top, 18).staggerIn(3)
-            Text(m.loginStatus).font(.system(size: 12)).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            Text(m.loginStatus).font(.system(size: Theme.TypeSize.body)).foregroundStyle(.secondary).multilineTextAlignment(.center)
                 .frame(height: 32).padding(.top, 10)
                 .contentTransition(.opacity).animation(Motion.snappy, value: m.loginStatus)
             Spacer(minLength: 8)
@@ -78,9 +78,9 @@ struct LoginView: View {
                     ForEach(xiaomiRegions, id: \.id) { Text($0.name).tag($0.id) }
                 }.labelsHidden().fixedSize()
             }
-            .font(.system(size: 12))
+            .font(.system(size: Theme.TypeSize.body))
             .padding(.horizontal, 12).padding(.vertical, 8)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.card))
+            .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).fill(Theme.card))
             HStack {
                 footerButton(L("刷新二维码", "Refresh"), icon: "arrow.clockwise") { m.startLogin() }
                 Spacer()
@@ -117,7 +117,7 @@ struct LoginView: View {
 
     func footerButton(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Label(title, systemImage: icon).font(.system(size: 12)).foregroundStyle(.secondary)
+            Label(title, systemImage: icon).font(.system(size: Theme.TypeSize.body)).foregroundStyle(.secondary)
                 .padding(.horizontal, 8).padding(.vertical, 5).contentShape(Rectangle())
         }
         .buttonStyle(.pressable).hoverHighlight()
@@ -172,9 +172,9 @@ struct DeviceListView: View {
                         .transition(.pop(0.9))
                 }
             }
-            .font(.system(size: 12)).padding(.horizontal, 9).padding(.vertical, 6)
-            .background(RoundedRectangle(cornerRadius: 8).fill(Theme.card))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(searchFocused ? Theme.cool.opacity(0.55) : Theme.stroke))
+            .font(.system(size: Theme.TypeSize.body)).padding(.horizontal, 9).padding(.vertical, 6)
+            .background(RoundedRectangle(cornerRadius: Theme.Radius.sm).fill(Theme.card))
+            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.sm).stroke(searchFocused ? Theme.cool.opacity(0.55) : Theme.stroke))
             .animation(Motion.snappy, value: searchFocused)
             .padding(.horizontal, 14)
 
@@ -263,7 +263,7 @@ struct DeviceListView: View {
             Button { m.toggleShowHidden() } label: {
                 Text(m.showHidden ? L("收起已隐藏的设备", "Collapse hidden devices")
                                   : LF("已隐藏 %@ 台离线或久未使用的设备 · 显示", "%@ offline/unused hidden · Show", "\(m.hiddenCount)"))
-                    .font(.system(size: 11)).foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.vertical, 10)
+                    .font(.system(size: Theme.TypeSize.caption)).foregroundStyle(.secondary).frame(maxWidth: .infinity).padding(.vertical, 10)
                     .contentTransition(.numericText())
             }.buttonStyle(.plain).hoverHighlight()
         }
@@ -293,7 +293,7 @@ struct SummaryBar: View {
         var body: some View {
             HStack(spacing: 4) {
                 Image(systemName: icon).font(.system(size: 9, weight: .bold)).foregroundStyle(color)
-                Text(text).font(.system(size: 11, weight: .medium)).foregroundStyle(.primary.opacity(0.85)).lineLimit(1).contentTransition(.numericText())
+                Text(text).font(.system(size: Theme.TypeSize.caption, weight: .medium)).foregroundStyle(.primary.opacity(0.85)).lineLimit(1).contentTransition(.numericText())
             }
             .fixedSize()
             .padding(.horizontal, 8).padding(.vertical, 4)
@@ -309,7 +309,7 @@ struct SectionTitle: View {
     let text: String
     init(_ t: String) { text = t }
     var body: some View {
-        Text(text).font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
+        Text(text).font(.system(size: Theme.TypeSize.caption, weight: .semibold)).foregroundStyle(.secondary)
             .padding(.top, 10).padding(.bottom, 3).padding(.leading, 6)
     }
 }
@@ -322,12 +322,12 @@ struct IconButton: View {
     @State private var hover = false
     var body: some View {
         Button(action: action) {
-            Image(systemName: icon).font(.system(size: 12, weight: .medium))
+            Image(systemName: icon).font(.system(size: Theme.TypeSize.body, weight: .medium))
                 .foregroundStyle(tint.map { AnyShapeStyle($0) } ?? AnyShapeStyle(.secondary))
                 .contentTransition(.symbolEffect(.replace))
                 .modifier(Spin(active: spinning))
                 .frame(width: 26, height: 26)
-                .background(RoundedRectangle(cornerRadius: 7).fill(hover ? Theme.hover : .clear))
+                .background(RoundedRectangle(cornerRadius: Theme.Radius.xs).fill(hover ? Theme.hover : .clear))
                 .animation(Motion.snappy, value: icon)
         }.buttonStyle(.pressable(0.95)).help(help).accessibilityLabel(help).onHover { h in withAnimation(Motion.snappy) { hover = h } }
     }
@@ -376,7 +376,7 @@ struct MiniSwitch: View {
 struct StatusChip: View {
     let text: String; let color: Color
     var body: some View {
-        Text(text).font(.system(size: 10, weight: .medium)).foregroundStyle(color)
+        Text(text).font(.system(size: Theme.TypeSize.micro, weight: .medium)).foregroundStyle(color)
             .padding(.horizontal, 6).padding(.vertical, 2)
             .background(Capsule().fill(color.opacity(0.14)))
     }
@@ -393,18 +393,18 @@ struct DeviceRow: View {
         let on = power?.isOn ?? false
         let c = device.category.color
         HStack(spacing: 10) {
-            Image(systemName: device.icon).font(.system(size: 13, weight: .medium)).accessibilityHidden(true)
+            Image(systemName: device.icon).font(.system(size: Theme.TypeSize.callout, weight: .medium)).accessibilityHidden(true)
                 .foregroundStyle(on ? c : Color.secondary)
                 .frame(width: 26, height: 26)
-                .background(RoundedRectangle(cornerRadius: 7).fill(on ? c.opacity(0.16) : Theme.card))
+                .background(RoundedRectangle(cornerRadius: Theme.Radius.xs).fill(on ? c.opacity(0.16) : Theme.card))
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 4) {
-                    Text(m.displayName(device)).font(.system(size: 13)).foregroundStyle(.primary).lineLimit(1)
+                    Text(m.displayName(device)).font(.system(size: Theme.TypeSize.callout)).foregroundStyle(.primary).lineLimit(1)
                     if m.isFavorite(device) { Image(systemName: "star.fill").font(.system(size: 8)).foregroundStyle(.yellow).transition(.pop(0.9)) }
                     if let t = m.transports[device.did], device.isOnline { TransportBadge(t: t, compact: true) }
                 }
                 let sub = m.subtitle(device)
-                if !sub.isEmpty { Text(sub).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).contentTransition(.numericText()) }
+                if !sub.isEmpty { Text(sub).font(.system(size: Theme.TypeSize.caption)).foregroundStyle(.secondary).lineLimit(1).contentTransition(.numericText()) }
             }
             Spacer(minLength: 4)
             if m.busy.contains(device.did) { ProgressView().controlSize(.mini).transition(.opacity) }
@@ -413,11 +413,11 @@ struct DeviceRow: View {
             if let power, device.isOnline {
                 MiniSwitch(isOn: power.isOn, tint: c, label: m.displayName(device)) { m.toggle(device) }
             } else if device.isOnline {
-                Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary)
+                Image(systemName: "chevron.right").font(.system(size: Theme.TypeSize.micro, weight: .semibold)).foregroundStyle(.tertiary)
             }
         }
         .padding(.horizontal, 8).frame(height: 44)
-        .background(RoundedRectangle(cornerRadius: 9).fill(focused ? Theme.hover : hover ? Theme.card : .clear))
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.sm).fill(focused ? Theme.hover : hover ? Theme.card : .clear))
         .opacity(device.isOnline ? 1 : 0.55)
         .contentShape(Rectangle())
         .onHover { h in withAnimation(Motion.snappy) { hover = h } }
@@ -441,11 +441,11 @@ struct ACMiniCard: View {
         let tint = on ? (ac!.isHeating ? Theme.heat : Theme.cool) : Color.secondary
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Image(systemName: ac?.isHeating == true ? "sun.max.fill" : "snowflake").font(.system(size: 12, weight: .semibold)).foregroundStyle(tint)
+                Image(systemName: ac?.isHeating == true ? "sun.max.fill" : "snowflake").font(.system(size: Theme.TypeSize.body, weight: .semibold)).foregroundStyle(tint)
                 Spacer()
                 if let ac {
                     Button { m.write(device, ac.powerKey, on ? ac.offValue : ac.onValue) } label: {
-                        Image(systemName: "power").font(.system(size: 10, weight: .bold))
+                        Image(systemName: "power").font(.system(size: Theme.TypeSize.micro, weight: .bold))
                             .foregroundStyle(on ? Color.white : Color.secondary)
                             .frame(width: 22, height: 22).background(Circle().fill(on ? tint : Theme.tile))
                             .ripple(on, color: on ? tint : .secondary)
@@ -455,16 +455,16 @@ struct ACMiniCard: View {
             HStack(alignment: .firstTextBaseline, spacing: 1) {
                 Text(ac?.target.map { "\(Int($0))" } ?? "--").font(.system(size: 26, weight: .light, design: .rounded)).monospacedDigit()
                     .contentTransition(.numericText(value: ac?.target ?? 0))
-                Text("°C").font(.system(size: 11)).foregroundStyle(.secondary)
+                Text("°C").font(.system(size: Theme.TypeSize.caption)).foregroundStyle(.secondary)
             }.foregroundStyle(on ? Color.primary : Color.secondary)
-            Text(m.displayName(device)).font(.system(size: 12, weight: .medium)).lineLimit(1)
+            Text(m.displayName(device)).font(.system(size: Theme.TypeSize.body, weight: .medium)).lineLimit(1)
             Text(ac.map { on ? "\($0.modeLabel) · \(L("风速", "Fan")) \($0.fanLabel)" : L("已关机", "Off") } ?? (device.roomName ?? ""))
-                .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
+                .font(.system(size: Theme.TypeSize.micro)).foregroundStyle(.secondary).lineLimit(1)
         }
         .padding(10)
-        .background(RoundedRectangle(cornerRadius: 12).fill(LinearGradient(colors: [tint.opacity(on ? 0.18 : 0.05), tint.opacity(on ? 0.06 : 0.02)], startPoint: .topLeading, endPoint: .bottomTrailing)))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(hover ? tint.opacity(0.5) : Theme.stroke))
-        .contentShape(RoundedRectangle(cornerRadius: 12))
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.md).fill(LinearGradient(colors: [tint.opacity(on ? 0.18 : 0.05), tint.opacity(on ? 0.06 : 0.02)], startPoint: .topLeading, endPoint: .bottomTrailing)))
+        .overlay(RoundedRectangle(cornerRadius: Theme.Radius.md).stroke(hover ? tint.opacity(0.5) : Theme.stroke))
+        .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
         .onHover { h in withAnimation(Motion.snappy) { hover = h } }
         .animation(Motion.smooth, value: on)
         .animation(Motion.snappy, value: ac?.target)
@@ -535,10 +535,10 @@ struct DetailView: View {
             HStack(spacing: 8) {
                 IconButton(icon: "chevron.left", help: L("返回", "Back")) { m.back() }
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(m.displayName(device)).font(.system(size: 15, weight: .semibold)).lineLimit(1)
+                    Text(m.displayName(device)).font(.system(size: Theme.TypeSize.title, weight: .semibold)).lineLimit(1)
                     HStack(spacing: 4) {
                         if let t = m.transports[device.did] { TransportBadge(t: t) }
-                        Text([device.roomName, device.model].compactMap { $0 }.joined(separator: " · ")).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
+                        Text([device.roomName, device.model].compactMap { $0 }.joined(separator: " · ")).font(.system(size: Theme.TypeSize.micro)).foregroundStyle(.secondary).lineLimit(1)
                     }
                 }
                 Spacer()

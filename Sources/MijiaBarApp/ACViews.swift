@@ -127,8 +127,10 @@ struct PowerButton: View {
                 }
                 .shadow(color: on ? tint.opacity(0.6) : .clear, radius: 10)
                 .ripple(on, color: on ? tint : .secondary)
+                .keyboardFocusChrome(Circle())
         }
         .buttonStyle(.pressable(0.95)).hoverHighlight()
+        .detailKeyboardAction(action)
         .powerAccessibility(on)
     }
 }
@@ -347,12 +349,12 @@ struct TileFace: View {
     let active: Bool, tint: Color
     @State private var hovering = false
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
         VStack(spacing: 4) {
-            Image(systemName: icon).font(.system(size: 15, weight: .medium)).frame(height: 18)
+            Image(systemName: icon).font(.system(size: Theme.TypeSize.title, weight: .medium)).frame(height: 18)
                 .contentTransition(.symbolEffect(.replace))
-            Text(title).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
-            Text(value).font(.system(size: 11, weight: .semibold)).lineLimit(1).contentTransition(.numericText())
+            Text(title).font(.system(size: Theme.TypeSize.micro)).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
+            Text(value).font(.system(size: Theme.TypeSize.caption, weight: .semibold)).lineLimit(1).contentTransition(.numericText())
         }
         .frame(maxWidth: .infinity).padding(.vertical, 10)
         .background {
@@ -367,6 +369,7 @@ struct TileFace: View {
         .onHover { h in withAnimation(Motion.snappy) { hovering = h } }
         .animation(Motion.snappy, value: value)
         .animation(Motion.smooth, value: active)
+        .keyboardFocusChrome(shape)
     }
 }
 
@@ -377,6 +380,7 @@ struct MenuTile<Content: View>: View {
     var body: some View {
         Menu { content() } label: { TileFace(title: title, value: value, icon: icon, active: active, tint: tint) }
             .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden)
+            .focusable().focusEffectDisabled()
             .accessibilityLabel(title).accessibilityValue(value)
     }
 }
@@ -391,7 +395,8 @@ struct ToggleTile: View {
             TileFace(title: title, value: isOn == nil ? L("不支持", "N/A") : (isOn! ? L("开", "On") : L("关", "Off")),
                      icon: icon, active: isOn == true, tint: tint)
         }
-        .buttonStyle(.pressable).disabled(isOn == nil).opacity(isOn == nil ? 0.45 : 1)
+        .buttonStyle(.pressable).detailKeyboardAction(action)
+        .disabled(isOn == nil).opacity(isOn == nil ? 0.45 : 1)
         .accessibilityLabel(title)
         .accessibilityValue(isOn == nil ? L("不支持", "Not supported") : (isOn! ? L("开", "On") : L("关", "Off")))
     }

@@ -24,7 +24,7 @@ struct GenericDetailView: View {
                         }
                         .padding(16)
                         .background {
-                            let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            let shape = RoundedRectangle(cornerRadius: Theme.Radius.xl, style: .continuous)
                             shape.fill(LinearGradient(colors: [c.opacity(p.isOn ? 0.22 : 0.06), c.opacity(0.02)], startPoint: .topLeading, endPoint: .bottomTrailing))
                                 .overlay(alignment: .topLeading) {
                                     Circle().fill(RadialGradient(colors: [c.opacity(0.4), c.opacity(0)], center: .center, startRadius: 0, endRadius: 100))
@@ -33,7 +33,7 @@ struct GenericDetailView: View {
                                 .clipShape(shape)
                                 .overlay(shape.stroke(p.isOn ? c.opacity(0.35) : Theme.stroke))
                         }
-                        .contentShape(RoundedRectangle(cornerRadius: 20))
+                        .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.xl))
                         .animation(Motion.smooth, value: p.isOn)
                     }.buttonStyle(.pressable)
                 }
@@ -51,7 +51,7 @@ struct GenericDetailView: View {
                             }
                         }
                         .padding(12).frame(maxWidth: .infinity, alignment: .leading)
-                        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.card))
+                        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).fill(Theme.card))
                     }
                 } else {
                     Text(L("这个型号在 miot-spec.org 上没有公开规格，暂时只能查看。", "No public MIoT spec for this model."))
@@ -223,12 +223,12 @@ struct SettingsGroup<Content: View>: View {
     @ViewBuilder let content: () -> Content
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if let title { Text(title).font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary) }
+            if let title { Text(title).font(.system(size: Theme.TypeSize.caption, weight: .semibold)).foregroundStyle(.secondary) }
             content()
         }
-        .font(.system(size: 12))
+        .font(.system(size: Theme.TypeSize.body))
         .padding(12).frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.card))
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).fill(Theme.card))
     }
 }
 

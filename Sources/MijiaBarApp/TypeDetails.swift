@@ -52,12 +52,16 @@ struct DeviceStatusCard: View {
                     .font(.system(size: 11)).foregroundStyle(.secondary).multilineTextAlignment(.center)
             case .failed(let e):
                 Text(e).font(.system(size: 11)).foregroundStyle(.secondary).multilineTextAlignment(.center).lineLimit(4).textSelection(.enabled)
-                Button { m.stateErrors[device.did] = nil; Task { await m.loadState(device) } } label: {
+                Button(action: retry) {
                     WideButtonFace(title: L("重试", "Retry"), icon: "arrow.clockwise", tint: tint)
                 }
-                .buttonStyle(.pressable).hoverHighlight()
+                .buttonStyle(.pressable).hoverHighlight().detailKeyboardAction(retry)
             }
         }
+    }
+    private func retry() {
+        m.stateErrors[device.did] = nil
+        Task { await m.loadState(device) }
     }
 }
 

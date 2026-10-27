@@ -6,7 +6,9 @@ import MijiaCore
 enum Entry {
     static func main() {
         let a = CommandLine.arguments
-        if let i = a.firstIndex(of: "--snapshot"), i + 1 < a.count {
+        if let i = a.firstIndex(of: "--ui-polish-snapshot"), i + 1 < a.count {
+            MainActor.assumeIsolated { Snapshot.uiPolish(dir: a[i + 1]) }
+        } else if let i = a.firstIndex(of: "--snapshot"), i + 1 < a.count {
             MainActor.assumeIsolated { Snapshot.run(dir: a[i + 1], liveQR: a.contains("--live-qr")) }
         } else if let i = a.firstIndex(of: "--art"), i + 1 < a.count {
             MainActor.assumeIsolated { Snapshot.art(dir: a[i + 1]) }
