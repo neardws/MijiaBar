@@ -893,14 +893,12 @@ extension Snapshot {
         let key = { (mod: HouseModule, room: String) in m.houseResolved.rooms.first { $0.module == mod }?.key ?? "name:" + room }
         let bed = key(.bedroom, L("主卧", "Bedroom")), liv = key(.living, L("客厅", "Living room"))
         let bath = "name:" + L("卫生间", "Bathroom"), balc = "name:" + L("阳台", "Balcony"), kit = "name:" + L("厨房", "Kitchen")
-        let layouts: [(String, [HouseLayoutCell])] = [
-            ("composed", [.init(room: bed, module: "bedroom", col: 0, row: 0), .init(room: bath, module: "bathroom", col: 1, row: 0),
-                          .init(room: balc, module: "balcony", col: 2, row: 0), .init(room: liv, module: "living", col: 0, row: 1),
-                          .init(room: kit, module: "kitchen", col: 2, row: 1)]),
-            ("composed2", [.init(room: kit, module: "kitchen", col: 0, row: 0), .init(room: liv, module: "living", col: 1, row: 0),
-                           .init(room: bath, module: "bathroom", col: 0, row: 1), .init(room: bed, module: "bedroom", col: 1, row: 1),
-                           .init(room: balc, module: "balcony", col: 2, row: 1)]),
-        ]
+        let roomKeys = ["bedroom": bed, "living": liv, "bathroom": bath, "balcony": balc, "kitchen": kit]
+        let layouts = HouseSnapshotLayouts.fixtures.map { name, cells in
+            (name, cells.map { cell in
+                HouseLayoutCell(room: roomKeys[cell.module]!, module: cell.module, col: cell.col, row: cell.row, level: cell.level)
+            })
+        }
         for (name, lay) in layouts {
             m.houseEdit("layout") { $0.setLayout(home: home, layout: lay) }
             let composed = m.houseRooms

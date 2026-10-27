@@ -14,6 +14,7 @@ from geom import *
 import pipeline as pl
 from fixtures import spec, MODULES
 from shell import render_shell
+from doorways import doorway_ranges, stair_ranges
 
 TINTS = dict(living=(204, 170, 122), bedroom=(196, 172, 140), study=(186, 166, 128), generic=(196, 164, 118),
              kitchen=(214, 196, 150), bathroom=(170, 186, 190), balcony=(190, 180, 150))
@@ -80,7 +81,7 @@ def main():
                     name = f'module-{mid}-{phase}-{kind}{"-cut" if cut else ""}.png'
                     from_np(arr, alpha).save(out / name, optimize=True)
                     variants[f'{phase}-{kind}{"-cut" if cut else ""}'] = name
-        catalog['modules'][mid] = dict(footprint=[fw, 1], size=list(g['size']), tip=list(g['T']),
+        catalog['modules'][mid] = dict(footprint=[fw, 1], doorwayRanges=doorway_ranges(mid, [fw, 1]), stairRanges=stair_ranges(mid, [fw, 1]), size=list(g['size']), tip=list(g['T']),
                                        region=mod['region'], label=sp['label'], badges=sp['badges'],
                                        lights=sp['lights'], variants=variants,
                                        **({'floorLabel': sp['floorLabel']} if 'floorLabel' in sp else {}))

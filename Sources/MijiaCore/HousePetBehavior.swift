@@ -274,7 +274,7 @@ public final class HousePetBehavior: @unchecked Sendable {
         return selected
     }
 
-    private static func travel(path: [Int], from start: HousePetPoint, target: HousePetWorld.Spot, world: HousePetWorld,
+    static func travel(path: [Int], from start: HousePetPoint, target: HousePetWorld.Spot, world: HousePetWorld,
                                append: (HousePetPoint, HousePetPoint, Int, String, String, Double) -> Void) {
         guard let first = path.first else { return }
         var current = start

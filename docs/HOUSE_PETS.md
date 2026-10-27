@@ -124,7 +124,26 @@ to share its canvas coordinates, or pass exact per-room top-left `offsets`
 
 Four-neighbor walk edges stay inside modules. Shared layout borders connect
 facing walkable cells across the cut wall (allowing the one-cell blocked wall
-rim); differences ≤48px are jumps, 96px differences are blocked. A* caches paths;
+rim). `HouseDoorwayPlanner` supplies the same preferred 0.3-unit openings used by the composer (widest clear
+span ≥ 0.2 next, then a forced shared-midpoint opening nudged around shared-wall fixtures when possible):
+aligned cell centers get `jump=false`, with `stairs=true` for a 48 px difference.
+The lower room's nodes within the selected 0.3 / 0.25 / 0.125-unit stair approach interpolate their elevation
+up to the higher floor, so ordinary walking interpolates continuously onto and across
+the steps. Other crossings remain cat jumps; 96 px differences are blocked.
+Furniture clearance is a preference, not a veto: every eligible pair has a doorway and `coverage.uncovered` is empty.
+For each doorway-aligned boundary cell, a deterministic breadth-first search adds the shortest connector to an
+existing walkable cell in that room. These runtime-only passages may cross blocked furniture cells; original
+`blocks.json`, authored pet walk grids and art stay unchanged. Other blocked cells remain blocked.
+Every placed snapshot doorway is tested for a walking crossing and access to existing floor on both sides.
+Exact widths, stairs and fallback pairs are listed in
+[HOUSE.md, Issue #58 acceptance status](HOUSE.md#issue-58-acceptance-status-2026-10-27).
+The shared pet snapshot layout also has a regression test for a bedroom-to-study route containing only non-jump
+edges. Its rooms are all level 0, so stairs are expected only in the auto-level fixture/classic layouts.
+The classic hand-drawn `house-cutaway.json` and PNGs from `scripts/gen-house-cutaway-art.py` remain unchanged
+and need new source art later; pets continue to force the composer for classic geometry.
+A* adds **six walk-cell lengths** to every jump's geometric distance, preferring nearby
+doorways without forbidding a substantially shorter cat hop. The Euclidean heuristic
+remains admissible. A* caches paths;
 `path(from:to:room:allowedRooms:)` optionally confines the whole route to a room
 or a set of existing rooms. Decor with
 `petSpot=true` supplies preferred sleep spots by its resolved slot, projected to
@@ -135,7 +154,8 @@ Keep one `HousePetBehavior(rig:)` instance. `pose(_:world:context:at:)` is a pur
 function of these inputs despite internal plan/path memoization. Stable FNV/LCG
 seeding uses the local calendar day and pet ID, never Swift randomized hashes.
 The cached day plan alternates 8–60s rest activities and A* movement at 36px/s.
-Cross-module/perch jumps last .5s; `jumpLift` is a positive parabolic displacement
+Doorway and stair travel reuse `walk` at 36px/s with zero `jumpLift`, not a new animation.
+Remaining cross-module/perch jumps last .5s; `jumpLift` is a positive parabolic displacement
 to subtract from screen y. +u faces SE, -u NW, +v SW, -v NE.
 
 Supply `HousePetContext` with existing room keys, active pet IDs, per-room lights,
@@ -228,7 +248,9 @@ the thumbnail; only the chosen palette, pattern and pet fields enter `house.json
 No photo path, thumbnail or Vision mask is persisted or uploaded.
 
 The shared `HousePetPainter` draws anchor-relative, mirrored, nearest-neighbor
-frames sorted by foot y, clipped to each composed module's `visible` polygons.
+frames sorted by foot y, clipped to each composed module's `petVisible` polygons
+(falling back to `visible` for older scenes). Doorway regions are shared by both
+rooms so crossing pets stay visible, independently of the light-occlusion mask.
 Before that clipped pass, the shared window/menu painter draws an unclipped
 x-ray silhouette at 30% opacity in the pet's base color darkened to 65%.
 Only opaque sprite pixels enter this alpha mask: ground shadows are excluded.

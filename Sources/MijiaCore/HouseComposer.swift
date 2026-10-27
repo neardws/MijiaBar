@@ -96,8 +96,18 @@ public enum HouseComposer {
         width += width % 2; height += height % 2
 
         let pal = Palette(night: input.night, wallCaps: input.wallCaps)
-        let unlit = render(items, occ: occ, elev: elev, images: input.images, decor: input.decor, lit: false, pal: pal, originX: originX, originY: originY, width: width, height: height)
-        let lit = render(items, occ: occ, elev: elev, images: input.images, decor: input.decor, lit: true, pal: pal, originX: originX, originY: originY, width: width, height: height)
+        let doorways = HouseDoorwayPlanner.plan(layout: input.layout, catalog: input.catalog)
+        let unlit = render(items, occ: occ, elev: elev, images: input.images, decor: input.decor, doorways: doorways, lit: false, pal: pal, originX: originX, originY: originY, width: width, height: height)
+        let lit = render(items, occ: occ, elev: elev, images: input.images, decor: input.decor, doorways: doorways, lit: true, pal: pal, originX: originX, originY: originY, width: width, height: height)
+
+        func visibleShape(_ item: Item) -> CGPath {
+            var shape = path(silhouette(item.placed, ext: item.ext), dx: item.ox - originX, dy: item.oy - originY)
+            for doorway in doorways where doorway.front == item.placed.cell {
+                shape = shape.subtracting(doorwayOpening(doorway, originX: originX, originY: originY))
+            }
+            return shape
+        }
+        let shapes = items.map(visibleShape)
 
         // 场景：锚点转画布坐标；visible = 本模块剪影减去后画模块的剪影（灯光蒙版用，避免透过前屋墙体）
         var sceneMods: [String: Any] = [:]
@@ -107,7 +117,11 @@ public enum HouseComposer {
             func tx(_ p: [Double]) -> [Double] { [p[0] + dx, p[1] + dy] }
             // 地面上的点（徽章、alt 替代位）如果落在前面（右前 / 左前）邻格的切墙后面——错层时那堵墙更高——
             // 就沿地面挪进房间（floorPointLift），徽章脚不会被墙压住
-            let badgePts = floorBadges(it.art.badges, placed: it.placed, elev: elev)
+            let passagePoints = doorways.filter { $0.back == it.placed.cell || $0.front == it.placed.cell }.map { doorway -> [Double] in
+                let point = doorwayPoint(doorway, along: doorway.center, elevation: Double(HouseLevels.elevation(it.placed.cell)), originX: originX, originY: originY)
+                return [Double(point.x) - dx, Double(point.y) - dy]
+            }
+            let badgePts = floorBadges(it.art.badges, placed: it.placed, elev: elev).map { clearOfBadges($0, passagePoints, minD: 42) }
             var lights: [[String: Any]] = []
             var altPts: [[Double]] = []
             for L in it.art.lights {
@@ -134,6 +148,7 @@ public enum HouseComposer {
                     // 只在合成后徽章位挪得太近时小幅让开（最多 12px），不会被推到床 / 桌子上
                     if L.kind == "ceiling" { q = clearOfBadges(q, badgePts); altPts.append(q) }
                     else if hidden { q = clearOfBadges(q, badgePts, minD: 30, maxUp: 12); altPts.append(q) }
+                    q = clearOfBadges(q, passagePoints, minD: 42)
                     d["alt"] = tx(q)
                 }
                 switch L.reveal {
@@ -159,10 +174,16 @@ public enum HouseComposer {
                 }
                 lights.append(d)
             }
-            let mine = path(silhouette(it.placed, ext: it.ext), dx: it.ox - originX, dy: it.oy - originY)
+            let mine = shapes[i]
             var visible = mine
-            for later in items[(i + 1)...] {
-                visible = visible.subtracting(path(silhouette(later.placed, ext: later.ext), dx: later.ox - originX, dy: later.oy - originY))
+            var petVisible = mine
+            let passages = doorways.filter { $0.back == it.placed.cell || $0.front == it.placed.cell }
+            for doorway in passages {
+                petVisible = petVisible.union(doorwayOpening(doorway, originX: originX, originY: originY))
+            }
+            for later in shapes[(i + 1)...] {
+                visible = visible.subtracting(later)
+                if !passages.isEmpty { petVisible = petVisible.subtracting(later) }
             }
             let key = it.placed.cell.room.isEmpty ? it.placed.cell.module : it.placed.cell.room
             for slot in it.art.decor ?? [] where slot.at.count == 2 {
@@ -179,7 +200,7 @@ public enum HouseComposer {
                 } else { record["rect"] = [slot.at[0] + dx - 12, slot.at[1] + dy - 12, 24, 24] }
                 decorSlots.append(record)
             }
-            sceneMods[key] = [
+            var record: [String: Any] = [
                 "module": it.placed.cell.module,
                 "label": tx(clearLabel(floorPointLift(labelPoint(it.art, segments: it.placed.segments), placed: it.placed, elev: elev), badgePts, alts: altPts)),
                 "region": silhouette(it.placed, ext: it.ext).map { [Double($0.x) + dx, Double($0.y) + dy] },
@@ -190,6 +211,8 @@ public enum HouseComposer {
                 "col": it.placed.cell.col, "row": it.placed.cell.row,
                 "walls": it.placed.segments.map { ["side": $0.side.rawValue, "height": $0.height] },
             ]
+            if !passages.isEmpty { record["petVisible"] = polygons(petVisible) }
+            sceneMods[key] = record
         }
         let scene: [String: Any] = ["size": [width, height], "origin": [originX, originY], "modules": sceneMods, "decorSlots": decorSlots]
         let data = (try? JSONSerialization.data(withJSONObject: scene, options: [.sortedKeys])) ?? Data()
@@ -354,6 +377,7 @@ public enum HouseComposer {
                            blue: min(255, base.2 * (1 + jitter)) * k.2 / 255, alpha: 1)
         }
         let capTop, capEdge, endFace, pilaster, outline, slabSW, slabSE, slabLine: CGColor
+        let tread, riser, jamb, doorwayEdge: CGColor
         /// 石砌基座：两种朝向的石块底色 / 灰缝 / 压顶木条下的阴影；石块按位置做 ±明暗抖动
         let stoneSW: (Double, Double, Double), stoneSE: (Double, Double, Double), mortarSW, mortarSE, plinthShadow, ground: CGColor
         let night: Bool
@@ -370,6 +394,10 @@ public enum HouseComposer {
             capEdge = custom(wallCaps?.side) ?? c(38, 20, 11)
             endFace = custom(wallCaps?.side) ?? c(72, 42, 24)
             pilaster = custom(wallCaps?.side) ?? c(62, 36, 20)
+            tread = c(191, 132, 72)
+            riser = c(120, 72, 36)
+            jamb = c(53, 29, 16)
+            doorwayEdge = c(25, 14, 8)
             // 错层加厚的地台：和模块自带前沿地台同色系（取自模块图地台中段），SW 面亮一点、SE 面暗一点
             slabSW = c(46, 25, 10); slabSE = c(33, 18, 7); slabLine = c(66, 38, 18)
             stoneSW = (104, 90, 76); stoneSE = (72, 62, 53)
@@ -545,17 +573,79 @@ public enum HouseComposer {
         band(x0, x1, y1 - 2, y1, pal.ground)           // 地线
     }
 
-    static func render(_ items: [Item], occ: Set<[Int]>, elev: [[Int]: Int] = [:], images: [String: HouseModuleImages], decor: [HouseDecorImage] = [], lit: Bool, pal: Palette,
+    static func doorwayPoint(_ doorway: HouseDoorway, along: Double, across: Double = 0, elevation: Double,
+                             originX: Int, originY: Int) -> (x: Int, y: Int) {
+        let u = doorway.axis == .u ? doorway.boundary + across : along
+        let v = doorway.axis == .v ? doorway.boundary + across : along
+        return (Int((160 * (u - v)).rounded()) - originX, Int((66 * (u + v) - elevation).rounded()) - originY)
+    }
+
+    static func doorwayOpening(_ doorway: HouseDoorway, originX: Int, originY: Int) -> CGPath {
+        let elevation = Double(min(HouseLevels.elevation(doorway.front), HouseLevels.elevation(doorway.back)))
+        let topElevation = Double(max(HouseLevels.elevation(doorway.front), HouseLevels.elevation(doorway.back)))
+        let start = doorwayPoint(doorway, along: doorway.lower, elevation: elevation - 2, originX: originX, originY: originY)
+        let end = doorwayPoint(doorway, along: doorway.upper, elevation: elevation - 2, originX: originX, originY: originY)
+        let offset = doorway.axis == .u ? HouseGrid.capNW : HouseGrid.capNE
+        let topStart = (x: start.x, y: start.y - HouseGrid.cutH - 4 - Int(topElevation - elevation))
+        let topEnd = (x: end.x, y: end.y - HouseGrid.cutH - 4 - Int(topElevation - elevation))
+        let face = path([start, end, topEnd, topStart], dx: 0, dy: 0)
+        let cap = path([(topStart.x, topStart.y + 4), (topEnd.x, topEnd.y + 4), (topEnd.x + offset.x, topEnd.y + offset.y),
+                        (topStart.x + offset.x, topStart.y + offset.y)], dx: 0, dy: 0)
+        return face.union(cap)
+    }
+
+    static func drawDoorway(_ doorway: HouseDoorway, on canvas: Canvas, pal: Palette, originX: Int, originY: Int) {
+        let frontElevation = Double(HouseLevels.elevation(doorway.front))
+        let backElevation = Double(HouseLevels.elevation(doorway.back))
+        func point(_ along: Double, _ across: Double, _ elevation: Double) -> (x: Int, y: Int) {
+            doorwayPoint(doorway, along: along, across: across, elevation: elevation, originX: originX, originY: originY)
+        }
+        let sillElevation = max(frontElevation, backElevation) + 1
+        canvas.poly([point(doorway.lower, -0.035, sillElevation), point(doorway.upper, -0.035, sillElevation),
+                     point(doorway.upper, 0.035, sillElevation), point(doorway.lower, 0.035, sillElevation)], fill: pal.tread, stroke: pal.doorwayEdge, lineWidth: 1)
+        if doorway.stairs {
+            let low = min(frontElevation, backElevation), direction = frontElevation < backElevation ? 1.0 : -1.0
+            for along in [doorway.lower, doorway.upper] {
+                canvas.poly([point(along, direction * doorway.approachDepth, low), point(along, direction * doorway.approachDepth, low + 16),
+                             point(along, 0, low + 48), point(along, 0, low)], fill: pal.riser, stroke: pal.doorwayEdge, lineWidth: 1)
+            }
+            for step in 0..<3 {
+                let outer = direction * Double(3 - step) * doorway.approachDepth / 3
+                let inner = direction * Double(2 - step) * doorway.approachDepth / 3
+                let bottom = low + Double(step) * 16, top = bottom + 16
+                let start = point(doorway.lower, outer, top), end = point(doorway.upper, outer, top)
+                canvas.poly([point(doorway.lower, outer, bottom), point(doorway.upper, outer, bottom), end, start], fill: pal.riser, stroke: pal.doorwayEdge)
+                canvas.poly([start, end, point(doorway.upper, inner, top), point(doorway.lower, inner, top)], fill: pal.tread, stroke: pal.doorwayEdge)
+            }
+        }
+        for along in [doorway.lower, doorway.upper] {
+            let bottom = point(along, 0, min(frontElevation, backElevation)), top = point(along, 0, max(frontElevation, backElevation) + Double(HouseGrid.cutH))
+            canvas.poly([(bottom.x - 1, bottom.y), (top.x - 1, top.y), (top.x + 2, top.y), (bottom.x + 2, bottom.y)], fill: pal.jamb, stroke: pal.doorwayEdge, lineWidth: 1)
+        }
+    }
+
+    static func render(_ items: [Item], occ: Set<[Int]>, elev: [[Int]: Int] = [:], images: [String: HouseModuleImages], decor: [HouseDecorImage] = [], doorways: [HouseDoorway] = [], lit: Bool, pal: Palette,
                        originX: Int, originY: Int, width: Int, height: Int) -> CGImage? {
         guard let c = Canvas(width: width, height: height) else { return nil }
         func add(_ p: (x: Int, y: Int), _ q: (x: Int, y: Int)) -> (x: Int, y: Int) { (p.x + q.x, p.y + q.y) }
+        func clipDoorways(_ item: Item) {
+            let openings = doorways.filter { $0.front == item.placed.cell }
+            guard !openings.isEmpty else { return }
+            var keep: CGPath = CGPath(rect: CGRect(x: 0, y: 0, width: width, height: height), transform: nil)
+            for doorway in openings { keep = keep.subtracting(doorwayOpening(doorway, originX: originX, originY: originY)) }
+            var flip = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: CGFloat(height))
+            if let clipped = keep.copy(using: &flip) { c.ctx.addPath(clipped); c.ctx.clip() }
+        }
 
         // 外轮廓（所有剪影外扩描边）
         for it in items {
+            c.ctx.saveGState(); clipDoorways(it)
             let pts = silhouette(it.placed, ext: it.ext).map { (x: $0.x + it.ox - originX, y: $0.y + it.oy - originY) }
             c.poly(pts, fill: pal.outline, stroke: pal.outline, lineWidth: 5)
+            c.ctx.restoreGState()
         }
         for it in items {
+            c.ctx.saveGState(); clipDoorways(it)
             let ox = it.ox - originX, oy = it.oy - originY
             func o(_ p: (x: Int, y: Int)) -> (x: Int, y: Int) { (p.x + ox, p.y + oy) }
             let p = it.placed, T = p.tip
@@ -630,6 +720,10 @@ public enum HouseComposer {
                     let image = lit ? HouseDecorPixels.brightened(decoration, module: imgs) : decoration.image
                     c.image(image, x: ox + decoration.x, y: oy + decoration.y)
                 }
+            }
+            c.ctx.restoreGState()
+            for doorway in doorways where doorway.front == it.placed.cell {
+                drawDoorway(doorway, on: c, pal: pal, originX: originX, originY: originY)
             }
         }
         return c.ctx.makeImage()

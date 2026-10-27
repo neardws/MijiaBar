@@ -241,3 +241,86 @@ Composed layouts are drawn with rooms at clearly different floor heights, like t
 - Shared and cut walls, end faces, the outline and the silhouette are computed from absolute heights. At the back corner the silhouette follows each wall's own height, so no outline-coloured triangle shows above a lower neighbour.
 - **Badges and floor spots:** a badge, floor `alt` spot or floor room label that would sit behind a front neighbour's cut wall (taller when that room is higher) moves along the floor into the room until it clears the wall top. Badges in a room are then kept ≥ 54 px apart. Ceiling and hidden-fixture spots move up to clear the badges, and a floor room label moves sideways (or above the badges) so it covers neither a badge nor a ceiling spot.
 - `house layout --json` reports `level` (or `"auto"`), `effective_level` and `level_step_px`. Out-of-range levels are rejected by validation (`levelOutOfRange`).
+
+### Composed doorways and stairs
+
+`HouseDoorwayPlanner.plan(layout:catalog:)` is the shared, deterministic source for the composer and pet world.
+For each adjoining pair it intersects both walls' allowed intervals with their actual shared span (including partial
+overlaps of the two-cell living room). It prefers one **0.3 floor-grid-unit** opening, falling back to the widest
+clear interval of at least **0.2 units**. If neither exists, it still places a **min(0.3, shared-span length)**
+opening at the shared midpoint, clamped into the span. Equal-width preferred candidates choose the deepest safe
+approach, then the shared span's midpoint, then the smaller coordinate. Input ordering does not matter.
+Same-height rooms get a floor-level passage. A 48 px difference gets **three 16 px wooden steps**, extending 0.3 units
+into the lower room, shortened to 0.25 or 0.125 units when necessary. Only the lower side needs approach clearance.
+A 96 px difference never gets a doorway or stairs and is not reported as an eligible uncovered pair.
+
+Module catalogs may contain `doorwayRanges`, mapping `nw`, `ne`, `sw`, `se` to arrays of `[start,end]` intervals in
+local floor units, **not normalized fractions**. NW/SE run along +v (0…fh); NE/SW along +u (0…fw).
+For example, `"doorwayRanges":{"nw":[[0.25,0.95]],"ne":[],"sw":[[0.3,1.0]],"se":[[0.25,0.95]]}`
+prefers a NW passage and supplies no preferred NE range; an empty range is **not a veto**. An absent wall entry,
+or an old catalog with no field, uses `[0.12, wallLength-0.12]`. Only curtain/window/AC/water-heater bodies on the
+shared wall exclude preferred positions (body/quad/shade/core or anchor, with a 0.08-unit margin).
+Fallback ignores floor furniture, badges and deep approach strips; it nudges to the nearest fixture-clear position
+if possible. If the entire span is obstructed by wall fixtures, coverage takes precedence: the midpoint opening
+is still placed and `overlapsWallFixture` records that unavoidable overlap. `usedFallback` distinguishes these
+placements from preferred intersections. Badge overlays use the composer's passage-clearing helper.
+Every eligible adjoining pair gets an opening; `coverage.uncovered` is empty, not a waived test condition.
+
+`python3 scripts/house_modules/doorways.py` updates the module catalog, all style catalogs and available Resources
+mirrors without rendering any art. It derives flat-door intervals from only the one walk-cell strip touching each
+wall in `scripts/house_pets/blocks.json`. If a wall lacks a 0.3-unit clear interval, the script splits/shrinks
+temporary occupancy rectangles around a mid-wall 0.3-unit gap **for doorwayRanges only**. It never writes the
+source blocks, pet walk grids or PNG art. Every authored wall consequently has at least one 0.3-unit interval.
+Optional `stairRanges` entries `"2"` and `"3"` retain the original occupancy and describe deeper strips;
+the planner tries them only on the lower side, then the one-cell strip. Module/style generators emit both fields.
+For new art, author/review those furniture bounds (and any style-specific overrides) before regenerating the intervals.
+Old external catalogs still render using the fallback, but cannot protect furniture whose bounds were never supplied.
+
+The composer clips the wall face and cap before drawing, revealing the room behind instead of painting a flat-colored
+patch. Openings extend down to the lower floor, including the raised plinth face. Dark jamb posts with 1 px outlines,
+a wooden threshold, three wooden treads/risers and side stringers use the day/night palette identically in lit and
+unlit images. They render after the adjoining room's plinth and wall cap, before unrelated foreground rooms. Visibility
+polygons also subtract the openings for light occlusion. Separate `petVisible` polygons share the passage between both
+rooms, so a walking cat is not clipped away when its destination changes rooms (old scenes fall back to `visible`). This is baked into the composed
+image; the menu-bar embed requires no extra animation or rendering path.
+
+All current styles use these procedural doorways; no new PNGs are required for an eligible wall. Forced passages
+may overlap existing furniture artwork; art cleanup is separate from the full-coverage contract. Pet navigation
+adds deterministic, shortest grid connectors from each opening to existing walkable floor at runtime, without
+changing the authored walkability assets.
+**Classic follow-up:** the hand-drawn four-room cutaway and `house-cutaway.json` are unchanged; add matching doors to
+new source art later via `scripts/gen-house-cutaway-art.py`, not by patching its generated PNGs or JSON here.
+Configured pets already force a composed module scene, including classic four-room layouts,
+so eligible doorways appear there now. Small-scale visual acceptance remains a manual check outside the sandbox.
+
+#### Issue #58 acceptance status (2026-10-27)
+
+`HouseSnapshotLayouts` shares the exact fixture and pet geometry with the app and tests; classic geometry references
+`HouseLayoutSolver.classicFour`. Coverage is complete via preferred ranges plus midpoint fallback. The strict
+`snapshotCoverage` test passes without exemptions. Widths and lower-side approach depths below are floor-grid units;
+all stairs span 48 px. The 96 px composed balcony–kitchen difference remains intentionally excluded.
+
+| Layout | Covered / eligible pairs | Door widths | Stairs (lower-side depth) | Fallback count |
+| --- | --- | --- | --- | --- |
+| composed | 5 / 5 | 0.3 × 3; 0.2125; 0.25 | bedroom–bathroom (0.125), bedroom–living (0.3), bathroom–balcony (0.3), living–kitchen (0.3) | 2 |
+| composed2 | 6 / 6 | 0.3 × 6 | kitchen–living (0.3), kitchen–bathroom (0.125), living–balcony (0.125), bedroom–balcony (0.125) | 3 |
+| pets | 7 / 7 | 0.3 × 5; 0.2125; 0.275 | none; all rooms explicitly level 0 | 2 |
+| classic via composer | 4 / 4 | 0.3 × 3; 0.2125 | bedroom–study (0.3), bedroom–living (0.3), living–generic (0.3) | 1 |
+
+Fallback pairs (all 0.3 wide, no unavoidable wall-fixture overlaps in these fixtures):
+- **composed:** bathroom–living, living–kitchen.
+- **composed2:** kitchen–living, living–bedroom, bathroom–bedroom.
+- **pets:** study–living, living–kitchen.
+- **classic via composer:** study–living.
+
+Narrow preferred widths are bedroom–living (0.2125 in composed/pets/classic), bathroom–balcony (0.25 in composed),
+and bathroom–kitchen (0.275 in pets). All other openings are 0.3 wide.
+Regression checks cover every placed doorway's walking access, the pets bedroom–study no-jump route,
+fixture-only nudging/forced overlap, and day/night lit/unlit compositing. No app or GUI/snapshot command was run.
+Actual 1× screenshot inspection remains unchecked. Classic hand-drawn cutaway art/JSON remains a follow-up, unchanged.
+
+Round 3 validation: native SwiftPM build succeeded; 248 of 249 tests passed, with only the known sandbox
+`storeMergesConflictCopies` Cocoa 512 write failure. All 15 doorway tests passed. Sequential and concurrent schedule
+fingerprints agree after updating goldens for the changed passage graph; calendar/reaction fingerprint is unchanged.
+Both performance budgets remain unchanged and pass: 1000 cold pet poses took 73.61 ms (300 ms budget), and the
+slowest measured composer fixture took 12.47 ms (30 ms budget). These are test results, not GUI screenshot acceptance.

@@ -12,11 +12,10 @@ enum HousePetDemo {
     }
 
     static func layout(model: AppModel) -> [HouseLayoutCell] {
-        let modules: [HouseModule] = [.bedroom, .study, .bathroom, .living, .kitchen, .balcony]
-        let positions = [(0, 0), (1, 0), (2, 0), (0, 1), (2, 1), (2, 2)]
-        return zip(modules, positions).map { module, position in
+        return HouseSnapshotLayouts.pets.map { cell in
+            let module = HouseModule(rawValue: cell.module)!
             let key = model.devices.first { HouseModule.from(roomName: $0.roomName) == module }.map(HouseResolver.roomKey) ?? "style-\(module.rawValue)"
-            return HouseLayoutCell(room: key, module: module.rawValue, col: position.0, row: position.1, level: 0)
+            return HouseLayoutCell(room: key, module: module.rawValue, col: cell.col, row: cell.row, level: cell.level)
         }
     }
 
