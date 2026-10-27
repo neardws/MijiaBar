@@ -49,8 +49,8 @@ struct TypeShell<Art: View, Content: View>: View {
             VStack(spacing: 14) {
                 HStack(alignment: .top, spacing: 8) {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(title).font(.system(size: 13, weight: .semibold)).lineLimit(1).contentTransition(.numericText())
-                        Text(subtitle).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).contentTransition(.numericText())
+                        Text(title).font(.system(size: Theme.TypeSize.callout, weight: .semibold)).lineLimit(1).contentTransition(.numericText())
+                        Text(subtitle).font(.system(size: Theme.TypeSize.caption)).foregroundStyle(.secondary).lineLimit(1).contentTransition(.numericText())
                     }
                     Spacer(minLength: 4)
                     if let onPower {
@@ -65,7 +65,7 @@ struct TypeShell<Art: View, Content: View>: View {
             .frame(width: cardWidth)
             .background {
                 // 与空调卡片一致：开启时顶部柔光 + 色调描边
-                let shape = RoundedRectangle(cornerRadius: 26, style: .continuous)
+                let shape = RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
                 shape.fill(LinearGradient(colors: [tint.opacity(isOn ? 0.24 : 0.06), tint.opacity(0.02)], startPoint: .top, endPoint: .bottom))
                     .overlay(alignment: .top) {
                         Rectangle().fill(EllipticalGradient(colors: [tint.opacity(0.4), tint.opacity(0)])).frame(width: cardWidth, height: 220).offset(y: -80)
@@ -112,7 +112,7 @@ struct BigValue: View {
             } else {
                 Text(L("暂无读数", "No reading")).font(.system(size: 20, weight: .light)).foregroundStyle(.tertiary).frame(height: 60)
             }
-            Text(caption).font(.system(size: 11)).foregroundStyle(.secondary)
+            Text(caption).font(.system(size: Theme.TypeSize.caption)).foregroundStyle(.secondary)
         }
         .opacity(dim ? 0.45 : 1)
         .accessibilityElement(children: .combine)   // 读作「目标温度，24°」而不是两段
@@ -126,8 +126,8 @@ struct Readout: View {
     let icon: String, text: String, tint: Color
     var body: some View {
         HStack(spacing: 5) {
-            Image(systemName: icon).font(.system(size: 11)).foregroundStyle(tint)
-            Text(text).font(.system(size: 12, weight: .medium)).monospacedDigit().lineLimit(1)
+            Image(systemName: icon).font(.system(size: Theme.TypeSize.caption)).foregroundStyle(tint)
+            Text(text).font(.system(size: Theme.TypeSize.body, weight: .medium)).monospacedDigit().lineLimit(1)
         }
         .padding(.horizontal, 10).padding(.vertical, 6)
         .background(Capsule().fill(Theme.tile))
@@ -158,10 +158,10 @@ struct VolumeControl: View {
         let cur = drag ?? value ?? range.lowerBound
         VStack(spacing: 6) {
             HStack {
-                Text(L("音量", "Volume")).font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
+                Text(L("音量", "Volume")).font(.system(size: Theme.TypeSize.caption, weight: .semibold)).foregroundStyle(.secondary)
                 Spacer()
                 Text(value == nil && drag == nil ? L("未读取到", "Unknown") : "\(Int(cur))")
-                    .font(.system(size: 12, weight: .medium)).monospacedDigit().foregroundStyle(value == nil ? .tertiary : .primary)
+                    .font(.system(size: Theme.TypeSize.body, weight: .medium)).monospacedDigit().foregroundStyle(value == nil ? .tertiary : .primary)
             }
             HStack(spacing: 10) {
                 stepButton("speaker.minus.fill", -5)
@@ -172,11 +172,11 @@ struct VolumeControl: View {
             }
         }
         .padding(12)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Theme.tile))
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(Theme.tile))
     }
     func stepButton(_ icon: String, _ d: Double) -> some View {
         Button { if let v = value { onSet(min(range.upperBound, max(range.lowerBound, v + d))) } } label: {
-            Image(systemName: icon).font(.system(size: 13, weight: .semibold)).frame(width: 30, height: 30)
+            Image(systemName: icon).font(.system(size: Theme.TypeSize.callout, weight: .semibold)).frame(width: 30, height: 30)
                 .background(Circle().fill(Theme.tile))
         }.buttonStyle(.pressable(0.92)).hoverHighlight().disabled(!enabled || value == nil)
     }
@@ -187,15 +187,16 @@ struct WideButtonFace: View {
     let title: String, icon: String, tint: Color
     var enabled = true
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous)
         Label(title, systemImage: icon)
-            .font(.system(size: 13, weight: enabled ? .semibold : .medium))
+            .font(.system(size: Theme.TypeSize.callout, weight: enabled ? .semibold : .medium))
             .contentTransition(.symbolEffect(.replace))
             .foregroundStyle(enabled ? AnyShapeStyle(tint) : AnyShapeStyle(.secondary))
             .frame(maxWidth: .infinity).padding(.vertical, 10)
             .background(shape.fill(enabled ? tint.opacity(0.16) : Theme.tile))
             .overlay(shape.stroke(enabled ? tint.opacity(0.3) : Theme.stroke))
             .contentShape(shape)
+            .keyboardFocusChrome(shape, enabled: enabled)
     }
 }
 
@@ -206,7 +207,7 @@ struct ActionTile: View {
     var body: some View {
         Button(action: action) {
             TileFace(title: title, value: "", icon: icon, active: active, tint: tint)
-        }.buttonStyle(.pressable).accessibilityLabel(title)
+        }.buttonStyle(.pressable).detailKeyboardAction(action).accessibilityLabel(title)
     }
 }
 

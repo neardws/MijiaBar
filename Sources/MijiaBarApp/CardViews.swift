@@ -190,7 +190,7 @@ struct DeviceCardView: View {
                     }
                 }
                 .padding(12).frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.tile))
+                .background(RoundedRectangle(cornerRadius: Theme.Radius.lg, style: .continuous).fill(Theme.tile))
             }
             if state.spec == nil {
                 Text(L("这个型号在 miot-spec.org 上没有公开规格，暂时只能查看在线状态。", "No public MIoT spec for this model."))

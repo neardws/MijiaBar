@@ -3,6 +3,23 @@ import AppKit
 import MijiaCore
 
 enum Theme {
+    enum Radius {
+        static let xs: CGFloat = 7
+        static let sm: CGFloat = 9
+        static let md: CGFloat = 12
+        static let lg: CGFloat = 14
+        static let xl: CGFloat = 20
+        static let card: CGFloat = 26
+        /// 同心嵌套圆角：外圆角减去内边距，最小为零。
+        static func inset(_ outer: CGFloat, by padding: CGFloat) -> CGFloat { max(0, outer - padding) }
+    }
+    enum TypeSize {
+        static let micro: CGFloat = 10
+        static let caption: CGFloat = 11
+        static let body: CGFloat = 12
+        static let callout: CGFloat = 13
+        static let title: CGFloat = 15
+    }
     // 全部使用系统语义色，自动适配浅色/深色外观
     static let bg = Color(nsColor: .windowBackgroundColor)
     static let bg2 = Color(nsColor: .controlBackgroundColor)

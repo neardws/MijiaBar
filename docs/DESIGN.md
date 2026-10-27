@@ -49,6 +49,31 @@ MijiaBar 一天会被打开几十次。用得越频繁，动画就越要少、�
 
 ## 4. 颜色与布局
 
+### Chrome 令牌
+
+圆角和常用字号统一由 `Theme.swift` 提供（单位 pt）；只用于界面 chrome，不替换产品插画的几何尺寸。
+
+| Radius | 数值 | 用途 |
+| --- | --- | --- |
+| `xs` | 7 | 列表悬停块、设备图标底板 |
+| `sm` | 9 | 设备行、搜索框（原 8，归并为 9） |
+| `md` | 12 | 收藏空调小卡片 |
+| `lg` | 14 | 磁贴、整行按钮、音量区域、通用读数区域、设置分组、直播画面 |
+| `xl` | 20 | 现有较大的通用详情 chrome |
+| `card` | 26 | `TypeShell` 详情卡片 |
+
+| TypeSize | 数值 | 用途 |
+| --- | --- | --- |
+| `micro` | 10 | 磁贴说明、小号辅助文字 |
+| `caption` | 11 | 次要文字、设置分组标题 |
+| `body` | 12 | 设置正文、读数 |
+| `callout` | 13 | 卡片标题、设备名称、整行按钮 |
+| `title` | 15 | 磁贴图标、章节标题 |
+
+同心嵌套使用 `Theme.Radius.inset(outer, by: padding)`，即 `max(0, outer − padding)`；例如 26 − 18 = 8。只有共用同一边界的嵌套形状才需要同心，独立磁贴不由卡片圆角推导。`Readout` 胶囊保留 `Capsule`；`BigValue` 的 40/60pt 是展示数值，不属于 chrome 字号。重命名弹窗 16pt、插画和比例缩放图标保留原尺寸，不为这些特例扩充令牌。
+
+### 颜色与组件
+
 - **只用语义色**：背景、卡片、描边、磁贴都用 `Theme`（`bg`、`card`、`tile`、`hover`、`stroke`），它们基于 `Color.primary` 透明度和系统色，浅色/深色自动适配。不要写死 `Color.white.opacity(…)` 或 `Color.black`（拟物插画里的金属、玻璃材质除外）。
 - **设备色**：`DeviceCategory.color`；空调按冷暖用 `Theme.warm(_:)`（沿温度色带取色，制冷固定偏蓝、制热固定偏橙，不会出现灰色中间色）；灯按色温用 `kelvinColor(_:)`。关闭时用 `.secondary`，关机时彩色滑条也要褪色。
 - **详情页**：所有设备（包括空调）都用 `TypeShell`（头部状态 + 电源 → 插画 → 内容），宽度固定 `cardWidth`（336），插画高 136。标题说设备在做什么（「制冷中」「已开启」），副标题放读数，不要重复下方按钮里已有的信息。底部按钮用 `PropTile` / `ToggleTile` / `MenuTile` / `ActionTile`，一行最多 4 个；设备不支持的功能直接不显示，不要占一个「不支持」的磁贴。常驻的操作提示（如「← → 微调」）放进 `.help` 提示里。
@@ -84,6 +109,7 @@ MijiaBar 一天会被打开几十次。用得越频繁，动画就越要少、�
 
 ## 6. 无障碍
 
+- 详情页的电源、开关/操作磁贴、菜单磁贴及直播/重试整行按钮保留原生 Button/Menu 语义，并在控件本身加入键盘焦点（不在 label 内再造一个 Tab 停靠点）。label 的 `keyboardFocusChrome` 读取 `isFocused`，在轮廓外偏移 3pt 画 2pt 系统强调色环；关闭系统重复焦点效果。焦点环不动画、不响应点击、不加入 VoiceOver，悬停或 Reduce Motion 不影响可见性，禁用态不画环。按钮的 Space/Return 优先执行本控件操作并禁用事务动画，避免冒泡成页面电源快捷键；页面自身聚焦时原有 Space 电源行为不变。菜单保留原生键盘打开/选择行为。
 - 只有图标的按钮必须有 `.accessibilityLabel`（`IconButton` 已自动用 `help` 文案）。电源按钮用 `.powerAccessibility(on)`。
 - 可点击但不是 `Button` 的视图（设备行、收藏空调卡片）要加 `.accessibilityAddTraits(.isButton)` 和 `.accessibilityAction`。
 - 有状态的控件要给 `.accessibilityValue`（开/关、当前模式、温度）。`MiniSwitch` 传入设备名作为 `label`。
@@ -92,18 +118,22 @@ MijiaBar 一天会被打开几十次。用得越频繁，动画就越要少、�
 - 错误提示（`showToast(_:error: true)`）带橙色警示图标、停留 5 秒（成功提示 3 秒），并且只有它会通过 `AccessibilityNotification.Announcement` 播报；「已复制」「已执行」这类成功提示只显示，不打断 VoiceOver。
 - 纯装饰的图形（插画、列表图标）加 `.accessibilityHidden(true)`。插画区里有可操作内容时（直播画面），给 `TypeShell` 传 `artInteractive: true`，由插画自己隐藏装饰部分，否则画面上的按钮 VoiceOver 读不到。
 
-## 7. 待改进（欢迎 PR）
+## 7. UI polish 进度与边界
 
-- **圆角和字号做成 token**：现在圆角有 7/9/12/14/20/26 等多种、字号约 10 种散落各处。嵌套圆角应同心：内圆角 = 外圆角 − 内边距。
-- **键盘可达**：详情页的磁贴和电源按钮需要可见的焦点样式。
+- **已实现：圆角和字号 token**。§4 的令牌覆盖详情外壳、磁贴、整行按钮、设置分组、直播画面、列表与收藏空调卡片；常用 chrome 字号迁移到 `TypeSize`，同心计算与常量有单元测试。
+- **已实现：详情控件焦点样式**。电源、ToggleTile、ActionTile、MenuTile、直播/重试按钮共享静态焦点环。快照入口与测试已加入；真实 Tab 顺序、菜单激活及浅/深色视觉验收仍需执行器检查，编译与强制焦点图不等于真实键盘验收。
+- **明确延期**：`Art.swift` 圆角属于产品几何；House 编辑器、宠物与像素排列界面不做字号/圆角扫荡；Motion/Theme 色彩重设计、网站 CSS 令牌、详情磁贴与电源范围之外的全应用焦点审计另开任务，避免混入不同设计范围。
 
 ## 8. 改完怎么检查
 
 ```bash
 swift build
+.build/debug/MijiaBarApp --ui-polish-snapshot /tmp/ui-polish -AppleLanguages "(zh-Hans)" # 演示灯详情 + 焦点环；只由执行器运行
 .build/debug/MijiaBarApp --snapshot /tmp/shots -AppleLanguages "(zh-Hans)"   # 每个页面的浅色/深色截图（*-light.png / *-dark.png）
 .build/debug/MijiaBarApp --gif /tmp/demo.gif -AppleLanguages "(zh-Hans)"     # 录一段空调卡片动效
 ```
+
+`--ui-polish-snapshot` 只使用 `AppModel(mock: true)`，即使附带 `--real` 也不读取真实家庭。输出 `ui-polish-detail-light.png` / `ui-polish-detail-dark.png`、`ui-polish-focus-power.png` / `ui-polish-focus-tile.png` 及两张对应的 `-dark.png`。内部 `forceFocusChrome` 环境值默认 false，只在这组焦点快照设置 true；不改变真实焦点或正常 UI。焦点样张同时展示多个焦点仅用于对照，包含禁用对照。快照不能证明 Tab 可达：执行器另验 Tab/Shift-Tab、Space/Return、菜单打开/关闭、禁用控件跳过以及页面 Space 快捷键；有焦点的非电源控件不能误触电源。在系统开启/关闭 Reduce Motion 后分别检查焦点环，它本身始终没有动画。
 
 逐帧看 GIF（例如 `ffmpeg -i demo.gif -vf fps=4,tile=6x3 sheet.png`）：颜色过渡是否干净、有没有突然停住、多个属性是否同步。浅色和深色都要看。隔天再看一遍，常能发现当时没注意到的问题。
 

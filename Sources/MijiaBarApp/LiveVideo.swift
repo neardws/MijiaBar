@@ -291,7 +291,7 @@ struct WindowVisibility: NSViewRepresentable {
 struct LivePlayerView: View {
     @EnvironmentObject var m: AppModel
     let device: Device
-    var cornerRadius: CGFloat = 14
+    var cornerRadius: CGFloat = Theme.Radius.lg
     @State private var port: Int?
     @State private var phase: LivePhase = .starting
     @State private var visible = false
@@ -493,14 +493,11 @@ struct LiveControls: View {
                     .help(L("不在家庭网络，无法看直播（直播只能在同一局域网内连接摄像头）", "Not on your home network, live view isn't available (it only works on the same local network as the camera)"))
                     .accessibilityElement(children: .combine)
             } else {
-                Button {
-                    if watching { withAnimation(Motion.smooth) { watching = false }; return }
-                    if !m.mock, m.session?.canLiveStream != true { m.showToast(LiveError.noAuth.localizedDescription, error: true); m.openSettings(); return }
-                    withAnimation(Motion.smooth) { watching = true }
-                } label: {
+                Button(action: toggleWatching) {
                     face(watching ? L("停止直播", "Stop live view") : L("看直播", "Watch live"), icon: watching ? "stop.fill" : "play.fill", enabled: device.isOnline)
                 }
-                .buttonStyle(.pressable).hoverHighlight().disabled(!device.isOnline)
+                .buttonStyle(.pressable).hoverHighlight().detailKeyboardAction(toggleWatching)
+                .disabled(!device.isOnline)
             }
             if isDoorbell {
                 // 提醒而非警告：正文用次要色，只有图标带橙色
@@ -514,6 +511,11 @@ struct LiveControls: View {
         }
     }
     func face(_ title: String, icon: String, enabled: Bool) -> some View { WideButtonFace(title: title, icon: icon, tint: tint, enabled: enabled) }
+    private func toggleWatching() {
+        if watching { withAnimation(Motion.smooth) { watching = false }; return }
+        if !m.mock, m.session?.canLiveStream != true { m.showToast(LiveError.noAuth.localizedDescription, error: true); m.openSettings(); return }
+        withAnimation(Motion.smooth) { watching = true }
+    }
 }
 
 /// 可调整大小的独立直播窗口
