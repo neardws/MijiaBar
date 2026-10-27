@@ -2,6 +2,7 @@
 from pathlib import Path
 import json, numpy as np
 from walkgrid import DIRS, N, R
+from occluders import populate
 blocks = json.load(open(str(Path(__file__).with_name('blocks.json'))))
 spots = json.load(open(str(Path(__file__).with_name('spots_src.json'))))
 out = dict(schema=1, cellsPerGrid=N, artSets={'cozy-wood': 'cozy', 'light-wood': 'cozy', 'walnut': 'cozy', 'japanese': 'japanese', 'modern': 'modern'},
@@ -20,5 +21,6 @@ for st in ('cozy', 'japanese', 'modern'):
         sp = spots.get(st, {}).get(mid) or spots.get('cozy', {}).get(mid, [])
         S[mid] = dict(grid=[W, H], walk=[''.join('.' if open_[i, j] else '#' for j in range(W)) for i in range(H)], spots=sp)
     out['sets'][st] = S
+populate(out)
 json.dump(out, open(R / 'Sources/MijiaBarApp/Resources/House/pets/pet-spots.json', 'w'), indent=1)
 print('ok')

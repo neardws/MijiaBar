@@ -39,6 +39,56 @@ import MijiaCore
         #expect(bytes[0] == 137 && bytes[1] == 91 && bytes[2] == 42)
     }
 
+    @Test func furnitureClipsOpaqueAndWallXRayInBothSceneLookups() throws {
+        let layout = [HouseLayoutCell(room: "room", module: "living", col: 0, row: 0, level: 0)]
+        let source = try #require(HouseModuleAssets.composedScene(layout: layout, phase: .day, style: "cozy-wood"))
+        let session = try #require(HousePetSceneSession(source: source, layout: layout, style: "cozy-wood", config: HomeHouse(), rooms: []))
+        let rig = try rig(), pet = HousePet(id: "p_1234")
+        let pose = try #require(HousePetDemo.furniturePose(world: session.world, rig: rig, id: "coffee-table"))
+        let holes = HousePetOcclusion.holes(for: pose, in: session.world)
+        #expect(!holes.isEmpty)
+        let paths = holes.map { polygon in
+            let path = CGMutablePath(); path.addLines(between: polygon.map { CGPoint(x: $0[0], y: $0[1]) }); path.closeSubpath()
+            return path
+        }
+        for byRoom in [true, false] {
+            for wallHidden in [true, false] {
+                var module = try #require(source.scene.modules[pose.room])
+                module.visible = wallHidden ? [] : [[[0, 0], [Double(source.artSize.width), 0],
+                                                     [Double(source.artSize.width), Double(source.artSize.height)], [0, Double(source.artSize.height)]]]
+                let scene = HouseCutawaySceneFile(size: source.scene.size, modules: [byRoom ? pose.room : pose.module: module])
+                let context = try bitmap(Int(source.artSize.width), Int(source.artSize.height))
+                HousePetPainter.shared.draw(in: context, pets: [pet], world: session.world, scene: scene, byRoom: byRoom,
+                                            context: HousePetContext(), date: .distantPast, unlit: nil, lit: nil, poses: [pet.id: pose])
+                let image = try #require(context.makeImage()), bytes = try #require(HousePetPainter.pixels(image))
+                let frame = try #require(HousePetPainter.shared.frame(pet: pet, pose: pose, night: false, lit: false, unlitImage: nil, litImage: nil))
+                let reference = try bitmap(image.width, image.height)
+                HousePetPainter.drawFrame(frame, in: reference, rig: rig, pose: pose,
+                                          polygons: [[[0, 0], [Double(image.width), 0], [Double(image.width), Double(image.height)], [0, Double(image.height)]]])
+                let referenceImage = try #require(reference.makeImage()), referenceBytes = try #require(HousePetPainter.pixels(referenceImage))
+                var removed = 0, remaining = 0
+                for row in 0..<image.height {
+                    for column in 0..<image.width {
+                        let offset = (row * image.width + column) * 4 + 3
+                        let center = CGPoint(x: Double(column) + 0.5, y: Double(row) + 0.5)
+                        if paths.contains(where: { path in
+                            [CGPoint(x: -1, y: -1), CGPoint(x: 1, y: -1), CGPoint(x: 1, y: 1), CGPoint(x: -1, y: 1)].allSatisfy {
+                                path.contains(CGPoint(x: center.x + $0.x, y: center.y + $0.y))
+                            }
+                        }) {
+                            #expect(bytes[offset] == 0)
+                            if referenceBytes[offset] == 255 { removed += 1 }
+                        }
+                        if bytes[offset] > 0 { remaining += 1 }
+                    }
+                }
+                #expect(removed > 0)
+                #expect(remaining > 0)
+                if wallHidden { #expect(stride(from: 3, to: bytes.count, by: 4).allSatisfy { bytes[$0] <= 77 }) }
+            }
+        }
+    }
+
     @Test func demoUsesRugAndElevatedBed() throws {
         let model = AppModel(mock: true); model.addHouseFixtureDemo()
         let layout = HousePetDemo.layout(model: model), rig = try rig()

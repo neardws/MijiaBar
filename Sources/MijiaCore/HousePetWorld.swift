@@ -20,6 +20,7 @@ public struct HousePetSpots: Codable, Sendable {
         public var grid: [Int]
         public var walk: [String]
         public var spots: [Spot]
+        public var occluders: [HousePetOccluder]? = nil
     }
     public var cellsPerGrid: Int
     public var artSets: [String: String]
@@ -30,6 +31,7 @@ public struct HousePetSpots: Codable, Sendable {
             module.grid.count == 2 && module.grid.allSatisfy { (1...128).contains($0) } && module.walk.count == module.grid[1]
                 && module.walk.allSatisfy { $0.count == module.grid[0] && $0.allSatisfy { $0 == "." || $0 == "#" } }
                 && module.spots.allSatisfy { $0.at.count == 2 && $0.at.allSatisfy(\.isFinite) && ($0.z ?? 0).isFinite && ($0.from == nil || $0.from?.count == 2) }
+                && (module.occluders ?? []).allSatisfy(\.isValid)
         } }) else { throw HousePetError.resource }
         return spots
     }
@@ -66,6 +68,7 @@ public final class HousePetWorld: @unchecked Sendable {
     public let rooms: Set<String>
     public let cellSize: Double
     public let doorways: [HouseDoorway]
+    public let occluders: [String: [HousePetFurniture]]
     private let edgeLengths: [[Double]]
     private let lock = NSLock()
     private var paths: [String: [Int]] = [:]
@@ -80,6 +83,7 @@ public final class HousePetWorld: @unchecked Sendable {
         self.cellSize = cellSize
         let modules = source.sets[source.artSets[style] ?? "cozy"] ?? [:]
         var nodes: [Node] = [], edges: [[Edge]] = [], spots: [Spot] = []
+        var furniture: [String: [HousePetFurniture]] = [:]
         var nodeMap: [String: Int] = [:]
         func key(_ room: String, _ col: Int, _ row: Int) -> String { "\(room)/\(col)/\(row)" }
         func point(_ at: [Double], cell: HouseLayoutCell, art: HouseModuleArt, height: Double = 0) -> HousePetPoint {
@@ -119,6 +123,10 @@ public final class HousePetWorld: @unchecked Sendable {
                         }
                     }
                 }
+            }
+            furniture[room] = (module.occluders ?? []).map {
+                HousePetFurniture(definition: $0, module: cell.module,
+                                  tip: point([0, 0], cell: cell, art: art), spots: module.spots)
             }
             for (row, line) in module.walk.enumerated() {
                 for (col, token) in line.enumerated() where token == "." || passages.contains([col, row]) {
@@ -196,6 +204,7 @@ public final class HousePetWorld: @unchecked Sendable {
             }
         }
         self.nodes = nodes; self.edges = edges; self.spots = spots.sorted { $0.id < $1.id }; rooms = Set(nodes.map(\.room))
+        occluders = furniture
         edgeLengths = edges.enumerated().map { index, neighbors in
             neighbors.map { nodes[index].point.distance(to: nodes[$0.node].point) + ($0.jump ? 6 * cellSize : 0) }
         }

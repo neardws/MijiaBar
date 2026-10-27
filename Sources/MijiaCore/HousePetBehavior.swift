@@ -29,10 +29,12 @@ public struct HousePetPose: Equatable, Sendable {
     public var module: String
     public var room: String
     public var visible: Bool
+    public var spotID: String?
     public init(point: HousePetPoint, facing: String = "SE", action: String = "idle", frameIndex: Int = 0,
-                mirrored: Bool = false, jumpLift: Double = 0, module: String, room: String, visible: Bool = true) {
+                mirrored: Bool = false, jumpLift: Double = 0, module: String, room: String, visible: Bool = true, spotID: String? = nil) {
         self.point = point; self.facing = facing; self.action = action; self.frameIndex = frameIndex
         self.mirrored = mirrored; self.jumpLift = jumpLift; self.module = module; self.room = room; self.visible = visible
+        self.spotID = spotID
     }
 }
 
@@ -95,7 +97,7 @@ public final class HousePetBehavior: @unchecked Sendable {
                     }
                 for cells in [3.0, 2.0, 1.0] {
                     if let node = candidates.first(where: { node in placed.allSatisfy { $0.distance(to: node.point) >= cells * world.cellSize } }) {
-                        pose.point = node.point; pose.module = node.module; pose.room = node.room; pose.jumpLift = 0
+                        pose.point = node.point; pose.module = node.module; pose.room = node.room; pose.jumpLift = 0; pose.spotID = nil
                         break
                     }
                 }
@@ -259,7 +261,8 @@ public final class HousePetBehavior: @unchecked Sendable {
         return .init(point: .init(x: selected.from.x + (selected.to.x - selected.from.x) * progress, y: selected.from.y + (selected.to.y - selected.from.y) * progress),
                      facing: selected.facing, action: selected.action, frameIndex: frame.index, mirrored: frame.mirrored,
                      jumpLift: selected.action == "jump" ? 4 * 28 * progress * (1 - progress) : 0, module: node.module, room: node.room,
-                     visible: pet.enabled && !pet.deleted && context.enabled)
+                     visible: pet.enabled && !pet.deleted && context.enabled,
+                     spotID: selected.from == selected.to && selected.to == selected.rest.point ? selected.rest.id : nil)
     }
 
     static func separatedSpots(_ candidates: [HousePetWorld.Spot], count: Int, cellSize: Double) -> [HousePetWorld.Spot] {

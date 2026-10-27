@@ -5,6 +5,17 @@ import MijiaCore
 
 @MainActor
 enum HousePetDemo {
+    static func furniturePose(world: HousePetWorld, rig: HousePetRig, id: String, inFront: Bool = false) -> HousePetPose? {
+        guard let room = world.occluders.keys.sorted().first(where: { world.occluders[$0]?.contains { $0.definition.id == id } == true }),
+              let furniture = world.occluders[room]?.first(where: { $0.definition.id == id }) else { return nil }
+        let rect = furniture.definition.footprint
+        let u = (rect[0] + rect[2]) / 2, v = (rect[1] + rect[3]) / 2
+        let advance = min(rect[2] - u, rect[3] - v) + 0.2
+        let point = HousePetFurniture.project(u + (inFront ? advance : 0), v + (inFront ? advance : 0), tip: furniture.tip)
+        return .init(point: point, action: "sit", frameIndex: rig.frame(action: "sit", facing: "SE", elapsed: 0).index,
+                     module: furniture.module, room: room)
+    }
+
     static var pets: [HousePet] {
         [HousePet(id: "p_100001", name: "橘子", pattern: "tabbyWhite"),
          HousePet(id: "p_100002", name: "煤球", pattern: "bicolor", palette: .init(base: "#2E2B30", second: "#1C1A1E", white: "#F2F0EC", eye: "#E9C24A")),
@@ -33,7 +44,8 @@ enum HousePetDemo {
         }
         let frames = rig.actions[action]?.frames[rig.mirror[facing] ?? facing] ?? [0]
         return .init(point: point, facing: facing, action: action, frameIndex: frames[min(frame, frames.count - 1)],
-                     mirrored: rig.mirror[facing] != nil, jumpLift: action == "jump" ? Double(rig.cellPx) * 10 : 0, module: node.module, room: node.room)
+                     mirrored: rig.mirror[facing] != nil, jumpLift: action == "jump" ? Double(rig.cellPx) * 10 : 0, module: node.module, room: node.room,
+                     spotID: action == "walk" || action == "jump" ? nil : spot?.id)
     }
 }
 
@@ -114,6 +126,14 @@ extension Snapshot {
                 if phase == .day { try worldOverlay(source: source, session: session, style: style, canvas: canvas, write: write) }
             }
             let (source, session) = try composed(style: style, phase: .day, cells: [.init(room: "actions", module: "living", col: 0, row: 0, level: 0)])
+            for id in ["sofa", "coffee-table"] {
+                for inFront in [false, true] {
+                    guard let pose = HousePetDemo.furniturePose(world: session.world, rig: rig, id: id, inFront: inFront) else { throw HousePetError.resource }
+                    let image = try render(source: source, session: session, night: false, lights: false,
+                                           roster: [pets[0]], poses: [pets[0].id: pose])
+                    try write(image, "pets-furniture-\(style)-\(id)-\(inFront ? "front" : "behind")")
+                }
+            }
             let actions = [("idle", "SE"), ("walk", "SE"), ("walk", "NE"), ("sit", "SE"), ("groom", "SE"), ("lookup", "NE"), ("sleep", "SE"), ("stretch", "SE"), ("jump", "SE")]
             let width = Int(source.artSize.width), height = Int(source.artSize.height) + 28
             let sheet = try canvas(width * 3, height * 3)
