@@ -25,6 +25,7 @@ enum HouseReveal: Decodable, Equatable {
 }
 
 struct HouseLightSpec: Decodable, Identifiable {
+    var absentVariant: HouseAbsentVariant? = nil
     let id: String
     let kind: String          // lamp | sconce | ceiling | screen | ac
     let role: String          // light（按 slot）| tv | ac
@@ -76,6 +77,10 @@ struct HouseLightSpec: Decodable, Identifiable {
 
     /// 放在这个灯具位上的设备（id 与 HouseCatalog / house.json 的 fixture id 一致）
     func matchedDevice(in devices: [HouseDevice]) -> HouseDevice? { devices.first { $0.spot == .fixture(id) } }
+
+    func shouldShowAbsentVariant(in devices: [HouseDevice]) -> Bool {
+        absentVariant != nil && hidden != true && matchedDevice(in: devices) == nil
+    }
 }
 
 struct HouseCutawayModule: Decodable {
@@ -213,6 +218,10 @@ enum HouseAssets {
         guard let url, let img = NSImage(contentsOf: url) else { return nil }
         images[key] = img
         return img
+    }
+
+    static func absentPatch(_ name: String, phase: HousePhase, lit: Bool, style: String? = nil) -> NSImage? {
+        curtainPatch(name, phase: phase, lit: lit, style: style)
     }
 
     static func cutawayScene() -> HouseCutawaySceneFile? {
@@ -600,6 +609,26 @@ private struct HouseRoomLightLayer: View {
                         .animation(Motion.smooth, value: k)
                 }
             }
+            ForEach(module.lights.filter { $0.shouldShowAbsentVariant(in: devices) }) { light in
+                if let variant = light.absentVariant, variant.rect.count == 4,
+                   let patch = HouseAssets.absentPatch(variant.patch, phase: phase, lit: false, style: style) {
+                    ZStack(alignment: .topLeading) {
+                        absentPatch(patch, rect: variant.rect)
+                        if let litPatch = HouseAssets.absentPatch(variant.patch, phase: phase, lit: true, style: style) {
+                            ForEach(module.lights.filter { $0.bakesLight && $0.id != light.id }) { source in
+                                let strength = source.strength(lighting)
+                                if strength > 0, let reveal = source.reveal {
+                                    absentPatch(litPatch, rect: variant.rect)
+                                        .mask(revealMask(reveal))
+                                        .opacity(strength)
+                                }
+                            }
+                        }
+                    }
+                    .mask(HouseMultiPolygon(polygons: module.visible ?? [module.region]).fill(Color.white, style: FillStyle(eoFill: true)))
+                    .allowsHitTesting(false)
+                }
+            }
             // 空调送风：动态像素粒子（不烘焙进 lit——同屋的灯开着时 lit 会把烘焙的送风也露出来）
             ForEach(module.lights) { light in
                 if light.kind == "ac", light.hidden != true, let v = light.vent, v.count == 2 {
@@ -676,6 +705,13 @@ private struct HouseRoomLightLayer: View {
 
     private func image(_ img: NSImage) -> some View {
         Image(nsImage: img).interpolation(.none).resizable().frame(width: artSize.width, height: artSize.height)
+    }
+
+    private func absentPatch(_ image: NSImage, rect: [Double]) -> some View {
+        Image(nsImage: image).resizable().interpolation(.none)
+            .frame(width: rect[2], height: rect[3])
+            .offset(x: rect[0], y: rect[1])
+            .frame(width: artSize.width, height: artSize.height, alignment: .topLeading)
     }
 
     /// 不用 .blur：--house-snapshot 走 cacheDisplay，图层滤镜不会被渲染；羽化用渐变代替。

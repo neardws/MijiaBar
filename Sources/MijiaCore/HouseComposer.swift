@@ -163,6 +163,11 @@ public enum HouseComposer {
                 }
                 if !hidden {
                     if let anchor = L.anchor, anchor.count >= 2 { d["anchor"] = tx(anchor) }
+                    if let variant = L.absentVariant, variant.rect.count == 4 {
+                        let rect = variant.rect
+                        d["absentVariant"] = ["patch": variant.patch,
+                                              "rect": [rect[0] + dx, rect[1] + dy, rect[2], rect[3]]]
+                    }
                     // 窗帘贴片 / 家电指示灯：跟着模块平移（墙被切掉时和本体一起不画）
                     if let p = L.patch { d["patch"] = p }
                     if let r = L.rect, r.count == 4 { d["rect"] = [r[0] + dx, r[1] + dy, r[2], r[3]] }

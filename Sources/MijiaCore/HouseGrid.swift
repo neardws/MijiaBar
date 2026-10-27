@@ -97,7 +97,13 @@ public struct HouseModuleArt: Codable, Equatable, Sendable {
     public var fh: Int { footprint.count > 1 ? footprint[1] : 1 }
 }
 
+public struct HouseAbsentVariant: Codable, Equatable, Sendable {
+    public var patch: String
+    public var rect: [Double]
+}
+
 public struct HouseModuleLight: Codable, Equatable, Sendable {
+    public var absentVariant: HouseAbsentVariant? = nil
     public var pool: [Double]? = nil
     public var id: String
     public var kind: String?
