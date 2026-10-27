@@ -63,7 +63,7 @@ private final class StylePackProtocol: URLProtocol, @unchecked Sendable {
                          error: URLError.Code? = nil, check: (URL, HouseStylePackInstaller) async throws -> Void = { _, _ in }) async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
-        let base = URL(string: "https://style-pack.invalid/\(UUID().uuidString)/")!
+        let base = try HouseStylePackLocations.validateBaseURL("https://style-pack.invalid/\(UUID().uuidString)")
         let selected = selected ?? pack(data)
         let url = base.appendingPathComponent(selected.url)
         StylePackProtocol.register(.init(data: data, status: status, error: error), for: url)
@@ -140,7 +140,16 @@ private final class StylePackProtocol: URLProtocol, @unchecked Sendable {
     }
 
     @Test func baseURLValidation() throws {
-        #expect(try HouseStylePackLocations.validateBaseURL("https://example.invalid/styles").absoluteString == "https://example.invalid/styles/")
+        for value in ["https://example.invalid/styles", "https://example.invalid/styles/"] {
+            let base = try HouseStylePackLocations.validateBaseURL(value)
+            #expect(base.scheme == "https")
+            #expect(base.host == "example.invalid")
+            #expect(base.lastPathComponent == "styles")
+            #expect(base.hasDirectoryPath)
+            #expect(!base.isFileURL)
+            #expect(URL(string: "modern/1.zip", relativeTo: base)?.path == "/styles/modern/1.zip")
+            #expect(try HouseStylePackLocations.validateBaseURL(base.absoluteString) == base)
+        }
         for value in ["http://example.invalid/", "http://localhost/", "file:///tmp/", "https://user:pass@example.invalid/", "https://example.invalid/?query=1"] {
             #expect(throws: HouseStylePackError.invalidBaseURL) { try HouseStylePackLocations.validateBaseURL(value) }
         }
@@ -165,7 +174,7 @@ private final class StylePackProtocol: URLProtocol, @unchecked Sendable {
         let data = try fixture(), selected = pack(data)
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
-        let base = URL(string: "https://style-pack.invalid/\(UUID().uuidString)/")!
+        let base = try HouseStylePackLocations.validateBaseURL("https://style-pack.invalid/\(UUID().uuidString)")
         let url = base.appendingPathComponent(selected.url)
         StylePackProtocol.register(.init(data: data, status: 200, error: nil, delay: 0.15), for: url)
         defer { StylePackProtocol.unregister(url) }

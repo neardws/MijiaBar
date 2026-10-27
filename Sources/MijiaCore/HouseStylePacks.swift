@@ -70,7 +70,10 @@ public enum HouseStylePackLocations {
               url.user == nil, url.password == nil, url.query == nil, url.fragment == nil,
               url.scheme == "https" || (allowLocalHTTP && url.scheme == "http" && ["localhost", "127.0.0.1"].contains(host))
         else { throw HouseStylePackError.invalidBaseURL }
-        return url.appendingPathComponent("", isDirectory: true)
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: true) else { throw HouseStylePackError.invalidBaseURL }
+        if !components.percentEncodedPath.hasSuffix("/") { components.percentEncodedPath += "/" }
+        guard let base = components.url else { throw HouseStylePackError.invalidBaseURL }
+        return base
     }
 
     public static func installedVersion(_ id: String, root: URL = installRoot) -> Int? {
@@ -102,22 +105,7 @@ private struct HousePackManifest: Decodable {
     let minAppVersion: String?
 }
 
-private final class HousePackDownloadDelegate: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
-    let size: Int64
-    let progress: @Sendable (Double) -> Void
-    private let lock = NSLock()
-    private var exceeded = false
-    var exceededSize: Bool { lock.lock(); defer { lock.unlock() }; return exceeded }
-    init(size: Int64, progress: @escaping @Sendable (Double) -> Void) { self.size = size; self.progress = progress }
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {}
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64,
-                    totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
-        if totalBytesWritten > size {
-            lock.lock(); exceeded = true; lock.unlock()
-            downloadTask.cancel()
-        }
-        progress(min(1, Double(totalBytesWritten) / Double(max(1, size))))
-    }
+private final class HousePackDownloadDelegate: NSObject, URLSessionTaskDelegate, Sendable {
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
                     newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
         completionHandler(nil)
@@ -149,17 +137,37 @@ public actor HouseStylePackInstaller {
         let fm = FileManager.default
         let staging = root.appendingPathComponent(".install-\(UUID().uuidString)", isDirectory: true)
         defer { try? fm.removeItem(at: staging) }
-        let delegate = HousePackDownloadDelegate(size: pack.size, progress: progress)
+        let delegate = HousePackDownloadDelegate()
         do {
             try fm.createDirectory(at: staging, withIntermediateDirectories: true)
             var request = URLRequest(url: base.appendingPathComponent(pack.url))
             request.timeoutInterval = 60
-            let (temporary, response) = try await session.download(for: request, delegate: delegate)
-            defer { try? fm.removeItem(at: temporary) }
+            let (bytes, response) = try await session.bytes(for: request, delegate: delegate)
+            defer { bytes.task.cancel() }
             guard let http = response as? HTTPURLResponse else { throw HouseStylePackError.badArchive }
             guard http.statusCode == 200 else { throw HouseStylePackError.httpStatus(http.statusCode) }
             let archive = staging.appendingPathComponent("pack.zip")
-            try fm.moveItem(at: temporary, to: archive)
+            try Data().write(to: archive)
+            let file = try FileHandle(forWritingTo: archive)
+            defer { try? file.close() }
+            try await withTaskCancellationHandler {
+                var buffer = Data(), received: Int64 = 0
+                for try await byte in bytes {
+                    received += 1
+                    guard received <= pack.size else { throw HouseStylePackError.sizeMismatch }
+                    buffer.append(byte)
+                    if buffer.count == 65_536 {
+                        try Task.checkCancellation()
+                        try file.write(contentsOf: buffer)
+                        buffer.removeAll(keepingCapacity: true)
+                        progress(Double(received) / Double(pack.size))
+                    }
+                }
+                try Task.checkCancellation()
+                try file.write(contentsOf: buffer)
+                progress(Double(received) / Double(pack.size))
+            } onCancel: { bytes.task.cancel() }
+            try file.close()
             let data = try Data(contentsOf: archive, options: .mappedIfSafe)
             guard data.count == pack.size else { throw HouseStylePackError.sizeMismatch }
             guard Self.sha256(data) == pack.sha256.lowercased() else { throw HouseStylePackError.hashMismatch }
@@ -192,7 +200,6 @@ public actor HouseStylePackInstaller {
             progress(1)
         } catch let error as HouseStylePackError { throw error }
         catch let error as URLError {
-            if delegate.exceededSize { throw HouseStylePackError.sizeMismatch }
             if [.notConnectedToInternet, .networkConnectionLost, .cannotFindHost, .cannotConnectToHost, .timedOut].contains(error.code) {
                 throw HouseStylePackError.offline
             }
