@@ -725,4 +725,8 @@ public let hantTable: [String: String] = [
     "（可用 mijiabar house slots 查看）": "（可使用 mijiabar house slots 查看）",
     "（暂无素材）": "（暫無素材）",
     "；也可以用 mijiabar house 命令或 MCP 修改。": "；也可以使用 mijiabar house 指令或 MCP 修改。",
+    "吊灯": "吊燈",
+    "吸顶灯": "吸頂燈",
+    "壁灯": "壁燈",
+    "床头灯": "床頭燈",
 ]

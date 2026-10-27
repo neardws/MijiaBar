@@ -532,7 +532,7 @@ struct HouseEditPanel: View {
 
     private func reason(_ e: ExcludedHouseRoom) -> String {
         switch e.reason {
-        case .noArt: return e.module == .generic ? L("没有对应模块", "No matching room") : e.module.title + L(" · 暂无素材", " · no art yet")
+        case .noArt: return L("没有对应模块", "No matching room")
         case .spotTaken: return e.module.title + L(" · 已被占用", " · taken")
         case .excluded: return L("不放进小屋", "Not in house")
         case .unassigned: return L("未分配房间", "No room")
@@ -728,7 +728,7 @@ extension Snapshot {
         }
         // Devices 标签的房间菜单在自定义布局下直接改布局：厨房移出，门口（自动 = 门厅模块）加进空出来的格子
         let entry = m.houseResolved.excluded.first { $0.reason == .notInLayout && HouseModule.isEntryFoyer(roomName: $0.title) }
-        if var lay = m.house.homes[home]?.layout {
+        if var lay = m.houseEffectiveLayout {
             lay = HouseLayoutSolver.setModule(lay, room: "name:" + L("厨房", "Kitchen"), module: nil) ?? lay
             if let entry { lay = HouseLayoutSolver.setModule(lay, room: entry.key, module: "generic") ?? lay }
             m.houseEdit("menu") { $0.setLayout(home: home, layout: lay) }
@@ -903,6 +903,8 @@ extension Snapshot {
             }
         }
         // 经典整图：客厅 / 卧室 / 书房窗帘 全关 / 半开 / 全开
+        let classicLayout = m.houseClassicLayout
+        m.houseEdit("classic") { $0.setLayout(home: home, layout: classicLayout) }
         let classic = m.houseRooms
         record("classic", layout: nil, rooms: classic)
         for phase in [HousePhase.day, .night] {

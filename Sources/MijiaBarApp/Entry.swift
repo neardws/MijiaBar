@@ -21,6 +21,8 @@ enum Entry {
             MainActor.assumeIsolated { HitTest.run() }
         } else if let i = a.firstIndex(of: "--icon"), i + 1 < a.count {
             MainActor.assumeIsolated { Snapshot.icon(to: a[i + 1]) }
+        } else if let i = a.firstIndex(of: "--house-auto-rooms-snapshot"), i + 1 < a.count {
+            MainActor.assumeIsolated { Snapshot.houseAutoRooms(dir: a[i + 1]) }
         } else if let i = a.firstIndex(of: "--house-snapshot"), i + 1 < a.count {
             MainActor.assumeIsolated { Snapshot.house(dir: a[i + 1]) }
         } else if let i = a.firstIndex(of: "--house-window-snapshot"), i + 1 < a.count {

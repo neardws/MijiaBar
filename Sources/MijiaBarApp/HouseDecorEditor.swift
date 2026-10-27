@@ -78,7 +78,7 @@ struct HouseDecorEditor: View {
     @State private var selected: String?
     private var config: HomeHouse { m.house.homes[m.houseHomeKey] ?? .init() }
     private var layout: [HouseLayoutCell] {
-        config.layout ?? HouseLayoutSolver.classicFour.map { cell in
+        m.houseLayoutCells ?? HouseLayoutSolver.classicFour.map { cell in
             HouseLayoutCell(room: m.houseRooms.first { $0.module.rawValue == cell.module }?.key ?? cell.module,
                             module: cell.module, col: cell.col, row: cell.row)
         }

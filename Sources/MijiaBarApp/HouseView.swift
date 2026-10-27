@@ -327,14 +327,24 @@ extension AppModel {
     var houseResolved: ResolvedHouse {
         let inHome = devices.filter { currentHomeId == nil || $0.homeId == currentHomeId }
         return HouseResolver.resolve(devices: inHome, config: house.homes[houseHomeKey], isHidden: { self.isHidden($0) }, name: { self.displayName($0) },
-                                     layout: house.homes[houseHomeKey]?.layout)
+                                     layout: houseEffectiveLayout)
     }
 
     var houseRooms: [HouseRoom] { houseResolved.rooms.map(houseRoom) }
 
-    /// 用户自定义布局（非经典四室）时用模块合成图
+    var houseEffectiveLayout: [HouseLayoutCell]? {
+        HouseAutoLayout.effective(devices: devices.filter { currentHomeId == nil || $0.homeId == currentHomeId },
+                                  config: house.homes[houseHomeKey], isHidden: { self.isHidden($0) })
+    }
+
+    var houseClassicLayout: [HouseLayoutCell] {
+        HouseAutoLayout.classic(devices: devices.filter { currentHomeId == nil || $0.homeId == currentHomeId },
+                                config: house.homes[houseHomeKey], isHidden: { self.isHidden($0) })
+    }
+
+    /// 有效布局非经典四室时用模块合成图
     var houseLayoutCells: [HouseLayoutCell]? {
-        let L = house.homes[houseHomeKey]?.layout
+        let L = houseEffectiveLayout
         return HouseLayoutSolver.isClassicGeometry(L) ? nil : L
     }
 

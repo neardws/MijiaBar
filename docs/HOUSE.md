@@ -95,7 +95,7 @@ pruned after 30 days. The app watches the folder and refreshes the house within 
 
 | Field | Values | Meaning |
 |---|---|---|
-| `rooms.*.module` | `living` `bedroom` `study` `generic` (`kitchen` `bathroom` `balcony` have no art yet) · `none` · `null` | Which room module shows this Mi Home room; `none` = not in the house; `null` = automatic |
+| `rooms.*.module` | `living` `bedroom` `study` `generic` `kitchen` `bathroom` `balcony` · `none` · `null` | All seven modules have composed art. Which room module shows this Mi Home room; `none` = not in the house; `null` = automatic |
 | `devices.*.visible` | `true` · `false` · `null` | `false` hides the device in the house only; `true` shows it even if hidden in the list; `null` follows the list |
 | `devices.*.place` | `fixture:<id>` · `badge` · `badge:<id>` · `none` · `null` | A fixture slot of the device's room module, any badge spot, a specific badge spot (`b1`, `b2`, …; falls back to any free badge), chip only, or automatic |
 | `*.updatedAt` | ISO 8601 date-time | Required; used for merging |
@@ -246,15 +246,40 @@ The current six-room demo composes at 848×568 pixels; exporting 1696×1136 woul
 
 ## Automatic layout
 
-1. **Room → module** by name (Simplified/Traditional Chinese and English): 客厅/living → `living`; 卧/儿童房/客房/bedroom → `bedroom`;
-   书房/办公/study/office → `study`; 玄关/门口/走廊/entry/hall → `generic`. Kitchen, bathroom, balcony and other rooms are recognised but have no
-   art yet, so they stay out unless you map them to a module.
-2. **One Mi Home room per module.** The house currently has one living room, bedroom, study and entry. If two rooms match the same module,
-   a room you pinned wins, then the one with more devices that fit a fixture, then the room key. The others are listed as `spotTaken`.
-3. **Device → spot**, inside its own Mi Home room only, independent of list order (ties broken by did):
+1. **Saved layout wins.** A non-null `homes.<id>.layout` is used unchanged, including an empty layout or an explicit classic-four marker.
+   With no saved layout, a kitchen, bathroom or balcony with at least one **online, visible, showable** device switches the home to automatic
+   composed modules. Otherwise the original classic cutaway and its room-selection rules are unchanged. Offline-only rooms do not trigger
+   the switch, even with `visible: true`; offline devices can still appear in an already selected room under the usual visibility rules.
+2. **Room → module** by name (Simplified/Traditional Chinese and English): 客厅/living → `living`; 卧/儿童房/客房/bedroom → `bedroom`;
+   书房/办公/study/office → `study`; 玄关/门口/走廊/entry/hall → `generic`; 厨房/kitchen → `kitchen`;
+   卫生间/bathroom → `bathroom`; 阳台/balcony → `balcony`. `rooms.<key>.module` overrides the match, including legacy `name:<room>` keys;
+   `none` excludes it. Unrecognised rooms remain excluded unless explicitly mapped. All seven modules have art in cozy-wood, light-wood,
+   walnut, japanese and modern; palette styles use baked variants and the existing cozy-wood fallback.
+3. **Automatic composed selection (v1): one room per module.** Every mapped room is a candidate, including rooms with no currently shown devices.
+   Within each module, pinned rooms win, then score (`fixture-fitting device count × 100 + shown device count`, counting online, visible,
+   showable devices), then ascending room key.
+   Living and bedroom take priority; remaining modules compete by score, then fixed order kitchen, bathroom, balcony, study, entry, then key.
+   The grid has **six occupied cells (3×2)**; living occupies **two (2×1)**, so with living there are at most five rooms.
+   Selected rooms are placed by fixed module order (living, bedroom, kitchen, bathroom, balcony, study, entry), using the existing first-free
+   autolayout. Thus adding a device does not rearrange cells while the selected room set stays the same. Selection can change at a score boundary.
+   Results are independent of input order and are **never persisted**: `layout` remains null/absent and devices/visibility changes recompute it.
+4. **Exclusions.** Rooms outside a composed layout (duplicates or capacity overflow) use `notInLayout` (“不在布局里 / Not in layout”).
+   Explicit classic also uses this reason for kitchen/bathroom/balcony, not a missing-art claim. Classic duplicate rooms retain `spotTaken`.
+   The legacy JSON value `noArt` is retained for unrecognised rooms (“没有对应模块 / No matching room”); `none` uses `excluded`.
+5. **Device → spot**, inside its own Mi Home room only, independent of list order (ties broken by did):
    your `place` → a fixture whose name hints match (床头灯 → `bedside`, 显示器挂灯 → `monitor`, 壁灯 → `sconce`…) → any free fixture that
    accepts the device type → a badge → chip only.
-4. Devices hidden in the device list (manually, or automatically because they are offline/stale) are not shown unless `visible: true`.
+6. Devices hidden in the device list (manually, or automatically because they are offline/stale) are not shown unless `visible: true`.
+
+The Room layout tab displays **自动 / Auto** while no layout is saved. Editing its effective cells saves a real custom layout.
+Use `house layout classic` (or **Classic four**) to persist classic geometry and force the classic selection even when extra room types exist.
+Use `house layout auto`, `house reset --layout`, or the editor's **Auto** button to clear that override and resume dynamic selection.
+For art-only styles and homes with pets, existing module-rendering fallbacks still apply to classic geometry.
+
+Executor-only visual check: `MijiaBarApp --house-auto-rooms-snapshot <dir>` uses mock devices and in-memory configuration, never the real home
+or `house.json`. It writes classic/before/after day and night scenes, Japanese/Modern after scenes, a menu-bar-sized scene, the arrange tab,
+and `auto-rooms.json` with source, effective cells, rooms and exclusion reasons. The before scene explicitly forces classic; after scenes leave
+the saved layout nil. These images are not generated by unit tests.
 
 Fixture slots (`mijiabar house slots --json`):
 
@@ -374,7 +399,8 @@ Screenshots with demo data: `MijiaBar --house-window-snapshot <dir>` (set `MIJIA
 
 `homes.<id>.layout` is an optional array of `{room, module, col, row, level?}`. Max grid 3×2; living footprint is 2×1.
 
-- `null` / absent → classic four-room cutaway (Phase 1 single PNGs).
+- `null` / absent → dynamic automatic selection described above: classic four or composed extra rooms.
+- Saved classic-four geometry (without non-zero levels) → explicit classic selection, even with kitchen/bathroom/balcony devices.
 - Non-classic geometry → modules are stitched by `HouseComposer` (see `docs/HOUSE_MODULES.md`).
 
 ```
@@ -389,13 +415,19 @@ mijiabar house reset --layout
 
 MCP: `get_house_layout`, `set_house_layout` (`mode`: classic / auto / flat / stagger, cells may carry `level`), `set_house_room_level` (`room`, `level`). Undo covers layout changes (same `updatedAt` merge via `layoutUpdatedAt`).
 
+`house layout --json` and MCP `get_house_layout` report `source: "saved" | "auto" | "classic"` and an effective `layout` cell array
+(including bound classic cells when automatic selection stays classic), rather than returning null for an unsaved layout.
+`classic` indicates geometry/render selection independently: an explicit classic marker has `source: "saved", classic: true`.
+`house layout auto` and MCP `mode=auto` or `cells=null` clear the saved layout; they do not freeze an auto-fill result.
+`house layout classic` / MCP `mode=classic` save the classic marker. `set`, per-room levels, flat and stagger edits save a real layout.
+
 ### Split levels (staggered heights)
 
 Composed layouts are drawn with rooms at clearly different floor heights, like the original concept art. Each cell has an optional `level` of -1, 0 or +1. Each step moves the room's floor, walls and furniture up by `HouseGrid.levelStep` (48 px at 1×).
 
 - `level` absent → automatic pattern: back row `+1 0 +1`, front row `0 0 -1` (so the back corners are high and the front-right cell is low). `house layout stagger` clears all explicit levels back to this.
 - `house layout flat` sets every cell to 0. The House window → Room layout has a "Split levels" checkbox and ▼/▲ on each card. A "·" after the number means the level is automatic.
-- Classic four (layout `null`, or classic geometry with no explicit non-zero level) stays the single hand-drawn cutaway. An explicit non-zero level on classic geometry switches it to the composed renderer.
+- Classic four (effective layout nil, or classic geometry with no explicit non-zero level) stays the single hand-drawn cutaway for builtin/palette styles without pets. An explicit non-zero level on classic geometry switches it to the composed renderer.
 - **Step faces:** one step (48 px) is taller than a cut wall (40 px), so a raised room's base shows above the cut wall of the lower room in front of it. The composer extends every room's base down to the lowest floor in the house and draws it as a stone plinth (`HouseComposer.plinth`). The plinth has 10 px courses of staggered 26 px blocks with a jittered tone per block, 1 px mortar, a shadow under the wooden slab and a ground line. The left-front (SW) face is lighter than the right-front (SE) face, and the night palette darkens it like the walls. Both lit and unlit renders draw the plinth identically, so light masks never reveal light on step faces. Two steps (96 px) stay below a full wall (104 px).
 - Shared and cut walls, end faces, the outline and the silhouette are computed from absolute heights. At the back corner the silhouette follows each wall's own height, so no outline-coloured triangle shows above a lower neighbour.
 - **Badges and floor spots:** a badge, floor `alt` spot or floor room label that would sit behind a front neighbour's cut wall (taller when that room is higher) moves along the floor into the room until it clears the wall top. Badges in a room are then kept ≥ 54 px apart. Ceiling and hidden-fixture spots move up to clear the badges, and a floor room label moves sideways (or above the badges) so it covers neither a badge nor a ceiling spot.

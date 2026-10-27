@@ -1,6 +1,6 @@
 # House modules (Phase 2)
 
-Custom layouts are stitched at runtime from per-room **modules**. For builtin/palette styles, the classic four-room preset keeps
+Custom and automatic composed layouts are stitched at runtime from per-room **modules** (see `HOUSE.md` for automatic room selection). For builtin/palette styles, the classic four-room preset keeps
 using the single hand-tuned cutaway (`house-cutaway-*`), so it is pixel-identical to Phase 1.
 
 ## Grid geometry (v2)

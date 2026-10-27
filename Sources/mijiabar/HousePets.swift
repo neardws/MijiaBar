@@ -146,10 +146,15 @@ func housePetPreview(pet: HousePet, rig: HousePetRig, directory: URL, output: UR
     }
     if let room = opt(rest, "--room") {
         if ["auto", "null", ""].contains(room) { pet.homeRoom = nil }
-        else if config.layout?.contains(where: { HouseDecor.roomKey($0) == room }) == true || config.rooms[room] != nil { pet.homeRoom = room }
         else {
-            let rooms = try await houseResolved(home: home).rooms
-            guard let match = rooms.first(where: { $0.key == room || $0.title == room }) else { throw HousePetError.invalid }; pet.homeRoom = match.key
+            let homeDevices = config.layout == nil ? try await devices().filter { $0.homeId == home } : []
+            let effective = HouseAutoLayout.effective(devices: homeDevices, config: config, isHidden: prefs.isHidden)
+            if effective?.contains(where: { HouseDecor.roomKey($0) == room }) == true { pet.homeRoom = room }
+            else {
+                let rooms = try await houseResolved(home: home).rooms
+                guard let match = rooms.first(where: { $0.key == room || $0.title == room }) else { throw HousePetError.invalid }
+                pet.homeRoom = match.key
+            }
         }
     }
     if let enabled = opt(rest, "--enabled") {

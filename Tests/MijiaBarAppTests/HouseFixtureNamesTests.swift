@@ -4,6 +4,20 @@ import MijiaCore
 @testable import MijiaBarApp
 
 @Suite struct HouseFixtureNamesTests {
+    @Test func everyStyleResolvesAdditionalRoomArt() throws {
+        for style in HouseStyles.all {
+            for module in ["kitchen", "bathroom", "balcony"] {
+                for phase in ["day", "night"] {
+                    for state in ["lit", "unlit"] {
+                        let name = "module-\(module)-\(phase)-\(state)"
+                        let url = try #require(HouseModuleAssets.resourceURL(name, "png", style: style.id), "\(style.id)/\(name)")
+                        #expect(try Data(contentsOf: url).starts(with: [137, 80, 78, 71]))
+                    }
+                }
+            }
+        }
+    }
+
     @Test func everyFixtureHasLocalizedTitle() throws {
         var ids = Set(HouseModule.allCases.flatMap { HouseCatalog.fixtures($0).map(\.id) })
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
