@@ -40,11 +40,12 @@ import Testing
     }
 
     @Test func bundleContainsPetResources() throws {
-        for name in ["cat-short", "pet-spots"] {
+        for name in ["cat-short", "dog-short", "pet-spots"] {
             #expect(AppResources.url(name, "json", subdirectory: "House/pets") ?? AppResources.url(name, "json") != nil)
         }
         for pattern in ["solid", "tabby", "tabbyWhite", "bicolor", "calico", "colorpoint"] {
             #expect(AppResources.url("cat-short-" + pattern, "png", subdirectory: "House/pets") ?? AppResources.url("cat-short-" + pattern, "png") != nil)
+            #expect(AppResources.url("dog-short-" + pattern, "png", subdirectory: "House/pets") ?? AppResources.url("dog-short-" + pattern, "png") != nil)
         }
     }
 

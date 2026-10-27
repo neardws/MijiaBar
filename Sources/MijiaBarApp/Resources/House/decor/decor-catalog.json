@@ -242,7 +242,8 @@
     20,
     16
    ],
-   "petSpot": true
+   "petSpot": true,
+   "species": ["cat"]
   },
   {
    "id": "cat_tree",
@@ -261,7 +262,8 @@
     24,
     64
    ],
-   "petSpot": true
+   "petSpot": true,
+   "species": ["cat"]
   },
   {
    "id": "food_bowl",
@@ -299,7 +301,8 @@
     28,
     18
    ],
-   "petSpot": true
+   "petSpot": true,
+   "species": ["dog"]
   },
   {
    "id": "lantern",

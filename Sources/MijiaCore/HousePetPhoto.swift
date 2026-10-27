@@ -23,6 +23,10 @@ public enum HousePetPhoto {
         public var diagnostics: Diagnostics
         public var usedVisionMask: Bool = false
         public var usedEyePose: Bool = false
+        public func pet(name: String = "") -> HousePet {
+            let selected = species.lowercased() == "dog" ? "dog" : "cat"
+            return HousePet(name: name, species: selected, rig: selected + "-short", pattern: pattern, palette: palette)
+        }
     }
     public struct Analysis {
         public var image: CGImage

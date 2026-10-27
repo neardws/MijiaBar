@@ -13,8 +13,8 @@ def worldize(cat, yaw):
     feat = {k: R @ v for k, v in cat.feat.items()}
     return parts, feat
 
-def render_frame(pose, facing='SE', bbox=(-36, -64, 36, 12), ss=6):
-    cat = build(pose)
+def render_frame(pose, facing='SE', bbox=(-36, -64, 36, 12), ss=6, builder=build):
+    cat = builder(pose)
     parts, feat = worldize(cat, HEAD[facing])
     R = render(parts, bbox, ss=ss)
     W, H = R['W'], R['H']
@@ -32,12 +32,12 @@ def render_frame(pose, facing='SE', bbox=(-36, -64, 36, 12), ss=6):
                gsh=R['gsh'], feat=feat, eyes=cat.eyes, bbox=bbox, facing=facing)
     return out
 
-def cells(F, pattern):
+def cells(F, pattern, region_painter=PT.regions):
     W, H, ss = F['W'], F['H'], F['ss']
     hit = F['hit']
     reg = np.zeros(hit.shape, int)
     hm = hit
-    reg[hm] = PT.regions(F['names'][hm], F['loc'][hm], pattern)
+    reg[hm] = region_painter(F['names'][hm], F['loc'][hm], pattern)
     blk = lambda a: a.reshape(H, ss, W, ss).swapaxes(1, 2).reshape(H, W, ss * ss)
     hb = blk(hit.astype(float)); cov = hb.mean(-1)
     obj = cov >= 0.45

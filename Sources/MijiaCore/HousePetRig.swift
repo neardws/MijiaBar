@@ -14,6 +14,18 @@ public struct HousePetRig: Codable, Sendable {
         public init(mul: [Double] = [1, 1, 1], add: [Double] = [0, 0, 0]) { self.mul = mul; self.add = add }
     }
     public static let patterns = ["solid", "tabby", "tabbyWhite", "bicolor", "calico", "colorpoint"]
+    public struct Template: Sendable {
+        public let species: String
+        public let patterns: [String]
+    }
+    public static let supported: [String: Template] = [
+        "cat-short": .init(species: "cat", patterns: patterns),
+        "dog-short": .init(species: "dog", patterns: patterns)
+    ]
+    public static var allPatterns: [String] { Array(Set(supported.values.flatMap(\.patterns))).sorted() }
+    public static func accepts(species: String, rig: String, pattern: String) -> Bool {
+        supported[rig]?.species == species && supported[rig]?.patterns.contains(pattern) == true
+    }
     public var id: String
     public var species: String
     public var cellPx: Int

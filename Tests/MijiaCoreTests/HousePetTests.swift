@@ -6,7 +6,7 @@ import Testing
 @Suite struct HousePetTests {
     static let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
     static let directory = root.appendingPathComponent("Sources/MijiaBarApp/Resources/House/pets")
-    static func rig() throws -> HousePetRig { try .load(from: directory.appendingPathComponent("cat-short.json")) }
+    static func rig(_ id: String = "cat-short") throws -> HousePetRig { try .load(from: directory.appendingPathComponent(id + ".json")) }
     static func spots() throws -> HousePetSpots { try .load(from: directory.appendingPathComponent("pet-spots.json")) }
     static func catalog() throws -> HouseModuleCatalog { try HouseComposer.loadCatalog(from: root.appendingPathComponent("assets/house/modules/catalog.json")) }
     static func world(level: Int = 0) throws -> HousePetWorld {
@@ -118,8 +118,8 @@ import Testing
         #expect(result.rooms.contains { $0.devices.contains { $0.did == device.did } })
     }
 
-    @Test func sleepingOpaqueBoundsMatchSittingVisualWeight() throws {
-        let rig = try Self.rig(), width = rig.frameSize[0], height = rig.frameSize[1]
+        @Test(arguments: ["cat-short", "dog-short"]) func sleepingOpaqueBoundsMatchSittingVisualWeight(_ rigID: String) throws {
+        let rig = try Self.rig(rigID), width = rig.frameSize[0], height = rig.frameSize[1]
         for pattern in rig.patterns {
             let sheet = try HousePetSheet.load(from: Self.directory.appendingPathComponent(try #require(rig.sheets[pattern])))
             func bounds(_ index: Int) throws -> (width: Int, height: Int) {
@@ -151,13 +151,13 @@ import Testing
         }
     }
 
-    @Test func goldenRecolorAndEncodedPixels() throws {
+    @Test(arguments: ["cat-short", "dog-short"]) func goldenRecolorAndEncodedPixels(_ rigID: String) throws {
         struct Golden: Decodable {
             struct Sample: Decodable { var pattern: String; var x: Int; var y: Int; var encoded: [UInt8]; var rgba: [UInt8]; var palette: HousePetPalette; var lighting: String }
             var samples: [Sample]
         }
-        let golden = try JSONDecoder().decode(Golden.self, from: Data(contentsOf: Self.root.appendingPathComponent("Tests/Fixtures/pets/cat-short-golden.json")))
-        let rig = try Self.rig()
+        let golden = try JSONDecoder().decode(Golden.self, from: Data(contentsOf: Self.root.appendingPathComponent("Tests/Fixtures/pets/" + rigID + "-golden.json")))
+        let rig = try Self.rig(rigID)
         var sheets: [String: HousePetSheet] = [:]
         for pattern in rig.patterns { sheets[pattern] = try .load(from: Self.directory.appendingPathComponent(rig.sheets[pattern]!)) }
         #expect(golden.samples.count > 10)

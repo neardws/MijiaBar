@@ -5,11 +5,12 @@ import UniformTypeIdentifiers
 import MijiaCore
 
 enum HousePetFiles {
-    static func rig() throws -> (HousePetRig, URL) {
+    static func rig(_ id: String = "cat-short") throws -> (HousePetRig, URL) {
+        guard HousePetRig.supported[id] != nil else { throw HousePetError.invalid }
         for root in HouseDecorFiles.roots {
             for path in ["pets", ""] {
                 let directory = root.appendingPathComponent(path)
-                if let rig = try? HousePetRig.load(from: directory.appendingPathComponent("cat-short.json")) { return (rig, directory) }
+                if let rig = try? HousePetRig.load(from: directory.appendingPathComponent(id + ".json")), rig.id == id { return (rig, directory) }
             }
         }
         throw HousePetError.resource
@@ -17,7 +18,7 @@ enum HousePetFiles {
 }
 
 func housePetArguments(_ args: [String]) throws -> [String] {
-    let flags = ["--home", "--photo", "--name", "--pattern", "--palette", "--room", "--enabled", "--out", "--action", "--phase"]
+    let flags = ["--home", "--photo", "--name", "--species", "--rig", "--pattern", "--palette", "--room", "--enabled", "--out", "--action", "--phase"]
     var positionals: [String] = [], seen = Set<String>(), index = 0
     while index < args.count {
         let argument = args[index]
@@ -34,8 +35,8 @@ func housePetArguments(_ args: [String]) throws -> [String] {
     let allowed: Set<String>
     switch operation {
     case "list", "on", "off": allowed = ["--home"]
-    case "add": allowed = ["--home", "--photo", "--name", "--pattern", "--palette", "--room", "--enabled"]
-    case "set": allowed = ["--home", "--photo", "--name", "--pattern", "--palette", "--room", "--enabled"]
+    case "add": allowed = ["--home", "--photo", "--name", "--species", "--rig", "--pattern", "--palette", "--room", "--enabled"]
+    case "set": allowed = ["--home", "--photo", "--name", "--species", "--rig", "--pattern", "--palette", "--room", "--enabled"]
     case "remove": allowed = ["--home"]
     case "preview": allowed = ["--home", "--out", "--action", "--phase"]
     case "analyze": allowed = []
@@ -102,7 +103,8 @@ func housePetPreview(pet: HousePet, rig: HousePetRig, directory: URL, output: UR
     if operation == "list" {
         let rig = try HousePetFiles.rig().0
         return ["ok": true, "home": home, "pets": try housePetJSON(pets), "prefs": try housePetJSON(config.petPrefs ?? .init()),
-                "patterns": rig.patterns, "actions": rig.actions.keys.sorted(), "limit": HouseFile.petLimit]
+                "patterns": HousePetRig.allPatterns, "rigs": HousePetRig.supported.keys.sorted(), "species": ["cat", "dog"],
+                "actions": rig.actions.keys.sorted(), "limit": HouseFile.petLimit]
     }
     if operation == "on" || operation == "off" {
         try HouseStore.update { $0.setPetPrefs(home: home, enabled: operation == "on") }
@@ -110,7 +112,7 @@ func housePetPreview(pet: HousePet, rig: HousePetRig, directory: URL, output: UR
     }
     if operation == "preview" {
         guard let output = opt(rest, "--out"), !output.isEmpty else { throw HousePetError.invalid }
-        let pet = try resolve(config, query: pos[1]), (rig, directory) = try HousePetFiles.rig()
+        let pet = try resolve(config, query: pos[1]), (rig, directory) = try HousePetFiles.rig(pet.rig)
         let phase = opt(rest, "--phase") ?? "day", action = opt(rest, "--action")
         let count = try housePetPreview(pet: pet, rig: rig, directory: directory, output: URL(fileURLWithPath: output), action: action, phase: phase)
         return ["ok": true, "out": output, "frames": count]
@@ -120,7 +122,12 @@ func housePetPreview(pet: HousePet, rig: HousePetRig, directory: URL, output: UR
     if let photo = opt(rest, "--photo") {
         detected = try HousePetPhoto.load(from: URL(fileURLWithPath: photo))
         pet.palette = detected!.palette; pet.pattern = detected!.pattern
+        if operation == "add" {
+            let appearance = detected!.pet(); pet.species = appearance.species; pet.rig = appearance.rig
+        }
     }
+    if let species = opt(rest, "--species") { pet.species = species; pet.rig = species + "-short" }
+    if let rig = opt(rest, "--rig") { pet.rig = rig }
     if let name = opt(rest, "--name") { pet.name = name }
     if let pattern = opt(rest, "--pattern") { pet.pattern = pattern }
     if let palette = opt(rest, "--palette") {

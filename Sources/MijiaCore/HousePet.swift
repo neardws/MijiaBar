@@ -77,8 +77,7 @@ extension HouseFile {
     public static let petLimit = 3
     public mutating func setPet(home: String, pet: HousePet) throws {
         guard pet.id.range(of: "^p_[0-9a-fA-F]{4,6}$", options: .regularExpression) != nil,
-              pet.species == "cat", pet.rig == "cat-short", pet.palette.isValid,
-              HousePetRig.patterns.contains(pet.pattern) else { throw HousePetError.invalid }
+              pet.palette.isValid, HousePetRig.accepts(species: pet.species, rig: pet.rig, pattern: pet.pattern) else { throw HousePetError.invalid }
         var config = homes[home] ?? HomeHouse()
         let count = (config.pets ?? [:]).values.filter { !$0.deleted && $0.id != pet.id }.count
         guard pet.deleted || config.pets?[pet.id]?.deleted == false || count < Self.petLimit else { throw HousePetError.limit }

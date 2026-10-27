@@ -34,7 +34,8 @@ def recolor_px(rgba, pal, light=None):
     col = np.where((A == 0)[..., None], 0, col)
     return np.concatenate([col, a[..., None]], -1)
 if __name__ == '__main__':
-    d = Path(sys.argv[1]); rig = json.loads((d / 'cat-short.json').read_text())
+    d = Path(sys.argv[1]); rig_id = sys.argv[2] if len(sys.argv) > 2 else 'cat-short'
+    rig = json.loads((d / f'{rig_id}.json').read_text())
     pals = [dict(base='#E8973F', second='#B3561C', white='#F4EEE4', eye='#9CC43E'), dict(base='#2E2B30', second='#1C1A1E', white='#F2F0EC', eye='#E9C24A')]
     rng = np.random.default_rng(7); out = []
     for pat in ('tabby', 'calico'):
@@ -47,5 +48,5 @@ if __name__ == '__main__':
                     L = rig['lighting'][ln]
                     v = recolor_px(S[y, x], pal, L)
                     out.append(dict(pattern=pat, x=x, y=y, palette=pal, lighting=ln, encoded=S[y, x].tolist(), rgba=[int(round(c * 255)) for c in v]))
-    (d / 'cat-short-golden.json').write_text(json.dumps(dict(note='expected straight-alpha RGBA 0..255; tolerance ±2', samples=out), indent=0))
+    (d / f'{rig_id}-golden.json').write_text(json.dumps(dict(note='expected straight-alpha RGBA 0..255; tolerance ±2', samples=out), indent=0))
     print(len(out))

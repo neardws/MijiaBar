@@ -158,6 +158,29 @@ extension Snapshot {
                 label(action.0 + " " + action.1, at: CGPoint(x: rect.minX + 12, y: rect.maxY + 4), in: sheet)
             }
             if let image = sheet.makeImage() { try write(image, "pets-actions-\(style)") }
+            let dog = HousePet(species: "dog", rig: "dog-short", pattern: "bicolor")
+            guard let dogRig = HousePetPainter.shared.rig(for: dog) else { throw HousePetError.resource }
+            let patterns = try canvas(width * 3, height * 2)
+            for (index, pattern) in dogRig.patterns.enumerated() {
+                var pet = dog; pet.pattern = pattern
+                guard let pose = HousePetDemo.pose(world: session.world, rig: dogRig, module: "living", action: "sit") else { throw HousePetError.resource }
+                let image = try render(source: source, session: session, night: false, lights: false, roster: [pet], poses: [pet.id: pose])
+                let rect = CGRect(x: index % 3 * width, y: index / 3 * height, width: width, height: height - 28)
+                HousePetPainter.drawImage(image, in: patterns, rect: rect)
+                label(pattern, at: CGPoint(x: rect.minX + 12, y: rect.maxY + 4), in: patterns)
+            }
+            if let image = patterns.makeImage() { try write(image, "pets-dog-patterns-\(style)") }
+            let dogActions = ["idle", "walk", "sit", "groom", "lookup", "sleep", "stretch", "jump"]
+                .flatMap { action in ["SE", "NE"].map { (action, $0) } }
+            let posesSheet = try canvas(width * 4, height * 4)
+            for (index, action) in dogActions.enumerated() {
+                guard let pose = HousePetDemo.pose(world: session.world, rig: dogRig, module: "living", action: action.0, facing: action.1, frame: 2) else { throw HousePetError.resource }
+                let image = try render(source: source, session: session, night: false, lights: false, roster: [dog], poses: [dog.id: pose])
+                let rect = CGRect(x: index % 4 * width, y: index / 4 * height, width: width, height: height - 28)
+                HousePetPainter.drawImage(image, in: posesSheet, rect: rect)
+                label(action.0 + " " + action.1, at: CGPoint(x: rect.minX + 12, y: rect.maxY + 4), in: posesSheet)
+            }
+            if let image = posesSheet.makeImage() { try write(image, "pets-dog-actions-\(style)") }
         }
         model.houseEdit("snapshot") { $0.setStyle(home: home, style: "cozy-wood") }
         let previousAppearance = appearance
@@ -175,7 +198,8 @@ extension Snapshot {
         }
         for (index, file) in photos.enumerated() {
             let draft = try HousePetPhotoDraft.load(URL(fileURLWithPath: file))
-            let pet = HousePet(pattern: draft.result.pattern, palette: draft.result.palette)
+            let pet = draft.result.pet()
+            guard let rig = HousePetPainter.shared.rig(for: pet) else { throw HousePetError.resource }
             let frameScale = 9, petWidth = rig.frameSize[0] * frameScale, petHeight = rig.frameSize[1] * frameScale
             let photoWidth = Int((320 * Double(draft.image.width) / Double(draft.image.height)).rounded())
             let height = max(480, petHeight + 70), width = photoWidth + 270 + petWidth * 3

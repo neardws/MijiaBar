@@ -61,6 +61,8 @@ public final class HousePetWorld: @unchecked Sendable {
         public let point: HousePetPoint
         public let facing: String
         public let priority: Int
+        public var species: [String]? = nil
+        public func accepts(_ pet: HousePet) -> Bool { species == nil || species!.contains(pet.species) }
     }
     public let nodes: [Node]
     public let edges: [[Edge]]
@@ -185,10 +187,11 @@ public final class HousePetWorld: @unchecked Sendable {
                 }
             }
             for placement in decor where placement.room == room && placement.at.count == 2 && items?.items.first(where: { $0.id == placement.item })?.petSpot == true {
+                let species = items?.items.first(where: { $0.id == placement.item })?.species
                 let floor = HousePetPoint(x: placement.at[0] - Double(art.tip[0]), y: placement.at[1] - Double(art.tip[1]))
                 let uv = [(floor.x / 160 + floor.y / 66) / 2, (floor.y / 66 - floor.x / 160) / 2]
                 if let node = nearest(point(uv, cell: cell, art: art), room: room) {
-                    spots.append(.init(id: room + "/decor/" + placement.slot, kind: "sleep", node: node, point: nodes[node].point, facing: "SE", priority: 0))
+                    spots.append(.init(id: room + "/decor/" + placement.slot, kind: "sleep", node: node, point: nodes[node].point, facing: "SE", priority: 0, species: species))
                 }
             }
             let authoredAC = spots.contains { $0.kind == "ac" && nodes[$0.node].room == room }
@@ -218,7 +221,7 @@ public final class HousePetWorld: @unchecked Sendable {
                let node = nearest(point([Double(art.fw) / 2, Double(art.fh) / 2], cell: cell, art: art), room: room) {
                 spots.append(.init(id: room + "/entry", kind: "entry", node: node, point: nodes[node].point, facing: "SE", priority: 2))
             }
-            if !spots.contains(where: { nodes[$0.node].room == room && ["sleep", "perch"].contains($0.kind) }), let node = nodes.first(where: { $0.room == room }) {
+            if !spots.contains(where: { nodes[$0.node].room == room && $0.species == nil && ["sleep", "perch"].contains($0.kind) }), let node = nodes.first(where: { $0.room == room }) {
                 spots.append(.init(id: room + "/sleep", kind: "sleep", node: node.id, point: node.point, facing: "SE", priority: 3))
             }
         }

@@ -27,8 +27,8 @@ let houseUsage = """
   mijiabar house decor on|off | seasonal on|off | items | reset
   mijiabar house pets list [--json] | on | off
   mijiabar house pets analyze <photo> [--json]
-  mijiabar house pets add [--photo PATH] [--name N] [--pattern P] [--palette base=#RRGGBB,second=#RRGGBB,white=#RRGGBB,eye=#RRGGBB] [--room R]
-  mijiabar house pets set <id|name> [--photo PATH] [--name N] [--pattern P] [--palette ...] [--room R|auto] [--enabled true|false]
+  mijiabar house pets add [--photo PATH] [--species cat|dog] [--rig cat-short|dog-short] [--name N] [--pattern P] [--palette base=#RRGGBB,second=#RRGGBB,white=#RRGGBB,eye=#RRGGBB] [--room R]
+  mijiabar house pets set <id|name> [--photo PATH] [--species cat|dog] [--rig cat-short|dog-short] [--name N] [--pattern P] [--palette ...] [--room R|auto] [--enabled true|false]
   mijiabar house pets remove <id|name>
   mijiabar house pets preview <id|name> --out pet.png [--action sit|walk|sleep|idle|groom|lookup|stretch|jump] [--phase day|night]
   mijiabar house schema                             打印 house.json 的 JSON Schema
@@ -340,7 +340,7 @@ nonisolated(unsafe) let houseSchema: [String: Any] = [
             "level": ["type": "integer", "minimum": HouseGrid.levelRange.lowerBound, "maximum": HouseGrid.levelRange.upperBound,
                       "description": "split level (each step raises the room's floor 48 px); omitted = automatic pattern"],
         ]],
-        "pet": ["type": "object", "properties": ["id": ["type": "string", "pattern": "^p_[0-9a-fA-F]{4,6}$"], "name": ["type": "string"], "species": ["const": "cat"], "rig": ["const": "cat-short"], "pattern": ["enum": HousePetRig.patterns], "palette": ["$ref": "#/$defs/petPalette"], "homeRoom": ["type": ["string", "null"]], "enabled": ["type": "boolean", "default": true], "deleted": ["type": "boolean", "default": false], "updatedAt": ["type": "string", "format": "date-time"]]],
+        "pet": ["type": "object", "properties": ["id": ["type": "string", "pattern": "^p_[0-9a-fA-F]{4,6}$"], "name": ["type": "string"], "species": ["enum": ["cat", "dog"]], "rig": ["enum": HousePetRig.supported.keys.sorted()], "pattern": ["enum": HousePetRig.allPatterns], "palette": ["$ref": "#/$defs/petPalette"], "homeRoom": ["type": ["string", "null"]], "enabled": ["type": "boolean", "default": true], "deleted": ["type": "boolean", "default": false], "updatedAt": ["type": "string", "format": "date-time"]]],
         "petPalette": ["type": "object", "properties": Dictionary(uniqueKeysWithValues: ["base", "second", "white", "eye"].map { ($0, ["type": "string", "pattern": "^#[0-9a-fA-F]{6}$"]) })],
         "decor": ["type": "object", "required": ["updatedAt"], "properties": ["item": ["type": ["string", "null"], "description": "null = automatic; none = empty"], "updatedAt": ["type": "string", "format": "date-time"]]],
         "room": ["type": "object", "required": ["updatedAt"], "properties": [
@@ -361,7 +361,7 @@ nonisolated(unsafe) let houseSchema: [String: Any] = [
     let asJSON = args.contains("--json")
     let pos = { () -> [String] in
         var out: [String] = []; var i = 0
-        while i < rest.count { if ["--home", "--room", "--visible", "--place", "--photo", "--name", "--pattern", "--palette", "--enabled", "--out", "--action", "--phase"].contains(rest[i]) { i += 2; continue }; if rest[i] != "--json" { out.append(rest[i]) }; i += 1 }
+        while i < rest.count { if ["--home", "--room", "--visible", "--place", "--photo", "--name", "--species", "--rig", "--pattern", "--palette", "--enabled", "--out", "--action", "--phase"].contains(rest[i]) { i += 2; continue }; if rest[i] != "--json" { out.append(rest[i]) }; i += 1 }
         return out
     }()
     switch sub {
@@ -481,7 +481,7 @@ nonisolated(unsafe) let houseMCPTools: [[String: Any]] = [
     ["name": "get_house_pets", "description": L("仅改变外观，绝不控制设备。读取宠物、偏好、可用花纹、动作和数量限制。", "Appearance only, never controls devices. Get pets, preferences, available patterns/actions and limits."),
      "inputSchema": ["type": "object", "properties": ["home": ["type": "string"]]]],
     ["name": "set_house_pets", "description": L("仅改变外观，绝不控制设备。添加、修改、移除宠物或开关显示。photoPath 只用于添加本地照片，绝不保存或上传照片。", "Appearance only, never controls devices. Add, update, remove pets or enable/disable their display. photoPath is local and add-only; photos are never saved or uploaded."),
-     "inputSchema": ["type": "object", "required": ["op"], "properties": ["op": ["enum": ["add", "update", "remove", "enable", "disable"]], "pet": ["type": "string"], "home": ["type": "string"], "name": ["type": "string"], "pattern": ["enum": HousePetRig.patterns], "palette": ["$ref": "#/$defs/petPalette"], "room": ["type": ["string", "null"]], "enabled": ["type": "boolean"], "photoPath": ["type": "string"]], "$defs": ["petPalette": houseSchema["$defs"].flatMap { ($0 as? [String: Any])?["petPalette"] } ?? [:]]]],
+     "inputSchema": ["type": "object", "required": ["op"], "properties": ["op": ["enum": ["add", "update", "remove", "enable", "disable"]], "pet": ["type": "string"], "home": ["type": "string"], "name": ["type": "string"], "species": ["enum": ["cat", "dog"]], "rig": ["enum": HousePetRig.supported.keys.sorted()], "pattern": ["enum": HousePetRig.allPatterns], "palette": ["$ref": "#/$defs/petPalette"], "room": ["type": ["string", "null"]], "enabled": ["type": "boolean"], "photoPath": ["type": "string"]], "$defs": ["petPalette": houseSchema["$defs"].flatMap { ($0 as? [String: Any])?["petPalette"] } ?? [:]]]],
     ["name": "get_house_decor", "description": "Appearance only, never controls devices. List fixed decoration slots, current items, preferences and active seasons.",
      "inputSchema": ["type": "object", "properties": ["home": ["type": "string"], "room": ["type": "string"]]]],
     ["name": "set_house_decor", "description": "Appearance only, never controls devices. Set slot room/slot and item id|none|auto, or enabled, or seasonal. One operation per call.",
@@ -496,7 +496,7 @@ nonisolated(unsafe) let houseMCPTools: [[String: Any]] = [
     switch name {
     case "get_house_pets", "set_house_pets":
         var rest: [String] = []
-        for field in ["home", "pet", "name", "pattern", "photoPath"] where a[field] != nil {
+        for field in ["home", "pet", "name", "species", "rig", "pattern", "photoPath"] where a[field] != nil {
             guard a[field] is String else { throw HousePetError.invalid }
         }
         if let enabled = a["enabled"], !(enabled is Bool) { throw HousePetError.invalid }
@@ -505,7 +505,7 @@ nonisolated(unsafe) let houseMCPTools: [[String: Any]] = [
         if name == "get_house_pets" { return try await housePets(pos: ["list"], rest: rest) }
         guard let operation = a["op"] as? String, ["add", "update", "remove", "enable", "disable"].contains(operation),
               a["photoPath"] == nil || operation == "add" else { throw HousePetError.invalid }
-        for (field, flag) in [("name", "--name"), ("pattern", "--pattern"), ("photoPath", "--photo")] {
+        for (field, flag) in [("name", "--name"), ("species", "--species"), ("rig", "--rig"), ("pattern", "--pattern"), ("photoPath", "--photo")] {
             if let value = a[field] as? String { rest += [flag, value] }
         }
         if let room = a["room"] { rest += ["--room", room is NSNull ? "auto" : anyString(room)] }
