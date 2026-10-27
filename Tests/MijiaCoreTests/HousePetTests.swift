@@ -105,13 +105,15 @@ import Testing
     @Test func vacuumModelsAndNamesRemainVisibleOnMain() {
         for model in ["roborock.vacuum.a1", "vendor.sweeper.v1", "vendor.robot.v1"] {
             #expect(HouseCatalog.isVacuum(category: .other, model: model))
+            #expect(HouseCatalog.isVacuum(category: .vacuum, model: model))
             #expect(HouseCatalog.showable(.other, model: model))
+            #expect(HouseCatalog.showable(.vacuum, model: model))
         }
         #expect(HouseCatalog.isVacuum(category: .other, name: "掃地機"))
         #expect(!HouseCatalog.isVacuum(category: .other, model: "vendor.sensor.v1"))
         let device = Device(did: "test-vacuum", name: "Cleaner", model: "roborock.vacuum.a1", isOnline: true,
                             homeId: "h", homeName: "", roomName: "Living", roomId: "a")
-        #expect(device.category == .other)
+        #expect(device.category == .vacuum)
         let result = HouseResolver.resolve(devices: [device], config: nil, isHidden: { _ in false }, name: { $0.name })
         #expect(result.rooms.contains { $0.devices.contains { $0.did == device.did } })
     }
