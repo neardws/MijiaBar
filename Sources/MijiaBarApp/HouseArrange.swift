@@ -271,7 +271,9 @@ struct HouseArrangeView: View {
 
 enum HouseModuleAssets {
     /// SPM .process may flatten House/modules/; look in style pack dirs first, then default.
-    static func resourceURL(_ name: String, _ ext: String, style: String? = nil, fallbackToDefault: Bool = true) -> URL? {
+    static func resourceURL(_ name: String, _ ext: String, style: String? = nil, fallbackToDefault: Bool = true,
+                            installedRoot: URL = HouseStylePackLocations.installRoot,
+                            developmentRoot: URL? = HouseStylePackStore.developmentRoot) -> URL? {
         let styleId = HouseStyles.resolve(style)
         if styleId != HouseStyles.defaultStyle {
             if let resources = Bundle.main.resourceURL {
@@ -286,21 +288,20 @@ enum HouseModuleAssets {
             }
             // Dev: repo assets/. Runtime: Application Support (downloaded packs; SPM cannot embed duplicate basenames).
             let fm = FileManager.default
-            if let support = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
-                .appendingPathComponent("MijiaBar/House/styles/\(styleId)", isDirectory: true) {
+            if HouseStylePackLocations.installedVersion(styleId, root: installedRoot) != nil {
+                let support = installedRoot.appendingPathComponent(styleId, isDirectory: true)
                 for sub in ["modules", "classic"] {
                     let p = support.appendingPathComponent("\(sub)/\(name).\(ext)")
                     if fm.fileExists(atPath: p.path) { return p }
                 }
             }
-            let root = URL(fileURLWithPath: #filePath)
-                .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            for rel in ["assets/house/styles/\(styleId)/modules/\(name).\(ext)",
-                        "assets/house/styles/\(styleId)/classic/\(name).\(ext)"] {
-                let p = root.appendingPathComponent(rel)
-                if fm.fileExists(atPath: p.path) { return p }
+            if let developmentRoot {
+                for sub in ["modules", "classic"] {
+                    let path = developmentRoot.appendingPathComponent("\(styleId)/\(sub)/\(name).\(ext)")
+                    if fm.fileExists(atPath: path.path) { return path }
+                }
             }
-            if HouseStyles.info(styleId).hasOwnCatalog || !fallbackToDefault { return nil }
+            if !fallbackToDefault { return nil }
         }
         if let u = AppResources.url(name, ext, subdirectory: "House/modules")
             ?? AppResources.url(name, ext, subdirectory: "modules")
@@ -338,23 +339,37 @@ enum HouseModuleAssets {
         guard let url = catalogURL ?? resourceURL("catalog", "json", style: HouseStyles.defaultStyle) else {
             fputs("HouseModuleAssets: catalog.json not found\n", stderr); return nil
         }
-        let cat: HouseModuleCatalog
+        var cat: HouseModuleCatalog
         do { cat = try HouseComposer.loadCatalog(from: url) }
         catch { fputs("HouseModuleAssets: catalog decode \(error)\n", stderr); return nil }
+        let baseline = resourceURL("catalog", "json", style: HouseStyles.defaultStyle).flatMap { try? HouseComposer.loadCatalog(from: $0) }
+        var defaultModules: Set<String> = []
+        if own, let baseline {
+            defaultModules = Set(baseline.modules.keys).subtracting(cat.modules.keys)
+            for (id, module) in baseline.modules where cat.modules[id] == nil { cat.modules[id] = module }
+        }
         var images: [String: HouseModuleImages] = [:]
         let tag = phase == .day ? "day" : "night"
-        func loadPNG(_ variants: [String: String], _ key: String) -> CGImage? {
+        func loadPNG(_ variants: [String: String], _ key: String, style: String) -> CGImage? {
             guard let name = variants[key] else { return nil }
             let base = URL(fileURLWithPath: name).deletingPathExtension().lastPathComponent
-            if let url = resourceURL(base, "png", style: styleId) { return HouseComposer.loadCGImage(from: url) }
-            if own { fputs("HouseModuleAssets: missing \(base).png style=\(styleId); using cozy-wood\n", stderr) }
-            return resourceURL(base, "png", style: HouseStyles.defaultStyle).flatMap(HouseComposer.loadCGImage(from:))
+            return resourceURL(base, "png", style: style, fallbackToDefault: false).flatMap(HouseComposer.loadCGImage(from:))
+        }
+        func moduleImages(_ art: HouseModuleArt, style: String) -> HouseModuleImages? {
+            guard let variants = art.variants,
+                  let unlit = loadPNG(variants, "\(tag)-unlit", style: style),
+                  let lit = loadPNG(variants, "\(tag)-lit", style: style) else { return nil }
+            return HouseModuleImages(unlit: unlit, lit: lit,
+                                     unlitCut: loadPNG(variants, "\(tag)-unlit-cut", style: style),
+                                     litCut: loadPNG(variants, "\(tag)-lit-cut", style: style))
         }
         for (id, art) in cat.modules {
-            guard let v = art.variants, let ui = loadPNG(v, "\(tag)-unlit"), let li = loadPNG(v, "\(tag)-lit") else {
-                fputs("HouseModuleAssets: missing png for \(id) style=\(styleId)\n", stderr); continue
+            if !defaultModules.contains(id), let loaded = moduleImages(art, style: styleId) {
+                images[id] = loaded
+            } else if let fallback = baseline?.modules[id], let loaded = moduleImages(fallback, style: HouseStyles.defaultStyle) {
+                cat.modules[id] = fallback
+                images[id] = loaded
             }
-            images[id] = HouseModuleImages(unlit: ui, lit: li, unlitCut: loadPNG(v, "\(tag)-unlit-cut"), litCut: loadPNG(v, "\(tag)-lit-cut"))
         }
         guard !images.isEmpty else { fputs("HouseModuleAssets: no images\n", stderr); return nil }
         inputs[cacheKey] = (cat, images)

@@ -106,6 +106,8 @@ struct HouseSceneSource {
     func module(for room: HouseRoom) -> HouseCutawayModule? { scene.modules[byRoom ? room.key : room.module.rawValue] }
 
     @MainActor static func make(layout: [HouseLayoutCell]?, phase: HousePhase, style: String? = nil, config: HomeHouse = HomeHouse(), roomKeys: [String: String] = [:]) -> HouseSceneSource? {
+        let requested = HouseStyles.resolve(style)
+        let style = HouseStylePackStore.hasAssets(requested) ? requested : HouseStyles.defaultStyle
         if (config.pets ?? [:]).values.contains(where: { !$0.deleted }) {
             let fallback = HouseLayoutSolver.classicFour.map { HouseLayoutCell(room: roomKeys[$0.module] ?? $0.module, module: $0.module, col: $0.col, row: $0.row) }
             let cells = HouseLayoutSolver.isClassicGeometry(layout) ? HouseLayoutSolver.setAllLevels(layout ?? fallback, flat: true) : (layout ?? fallback)
@@ -337,7 +339,8 @@ extension AppModel {
     }
 
     /// 当前家庭的小屋风格（nil / 未知 → cozy-wood）
-    var houseStyle: String { HouseStyles.resolve(house.homes[houseHomeKey]?.style) }
+    var houseSelectedStyle: String { HouseStyles.resolve(house.homes[houseHomeKey]?.style) }
+    var houseStyle: String { HouseStylePackStore.hasAssets(houseSelectedStyle) ? houseSelectedStyle : HouseStyles.defaultStyle }
 
 
     func houseRoom(_ r: ResolvedHouseRoom) -> HouseRoom {

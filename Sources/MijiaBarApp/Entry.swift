@@ -29,6 +29,8 @@ enum Entry {
             MainActor.assumeIsolated { Snapshot.houseFixtures(dir: a[i + 1]) }
         } else if let i = a.firstIndex(of: "--house-absent-variant-snapshot"), i + 1 < a.count {
             MainActor.assumeIsolated { Snapshot.houseAbsentVariant(dir: a[i + 1]) }
+        } else if let i = a.firstIndex(of: "--house-style-packs-snapshot"), i + 1 < a.count {
+            MainActor.assumeIsolated { Snapshot.houseStylePacks(dir: a[i + 1]) }
         } else if let i = a.firstIndex(of: "--house-style-snapshot"), i + 1 < a.count {
             MainActor.assumeIsolated { Snapshot.houseStyles(dir: a[i + 1]) }
         } else if let i = a.firstIndex(of: "--house-pets-snapshot"), i + 1 < a.count {

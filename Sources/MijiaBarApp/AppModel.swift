@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import MijiaCore
+import Combine
 
 enum Page: Equatable { case list, detail(String), settings }
 struct Toast: Equatable { let id = UUID(); let text: String; let isError: Bool }
@@ -39,6 +40,7 @@ final class AppModel: ObservableObject {
     let controller = Controller(cloud: nil)
     private var loginTask: Task<Void, Never>?
     private var loading: Set<String> = []
+    private var stylePackChanges: AnyCancellable?
 
     init(mock: Bool = false) {
         self.mock = mock
@@ -47,6 +49,7 @@ final class AppModel: ObservableObject {
         Notifier.shared.mock = mock
         GlanceStore.shared.mock = mock
         Recorder.shared.mock = mock
+        stylePackChanges = HouseStylePackStore.shared.$revision.dropFirst().sink { [weak self] _ in self?.objectWillChange.send() }
         if mock { loadMock(); return }
         session = Session.load()
         if let s = session { controller.cloud = XiaomiCloud(session: s) }
