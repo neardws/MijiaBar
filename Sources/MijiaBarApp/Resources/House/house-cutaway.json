@@ -24,7 +24,9 @@
         {"id": "fan", "kind": "fan", "role": "fan", "slot": 0, "anchor": [180, 470], "body": [[167, 432], [193, 432], [193, 470], [167, 470]]},
         {"id": "dehumidifier", "kind": "dehumidifier", "role": "dehumidifier", "slot": 0, "anchor": [290, 500], "body": [[279, 470], [301, 470], [301, 500], [279, 500]]},
         {"id": "heater", "kind": "heater", "role": "heater", "slot": 0, "anchor": [350, 488], "body": [[339, 456], [361, 456], [361, 488], [339, 488]]},
-        {"id": "air_purifier", "kind": "air-purifier", "role": "air-purifier", "slot": 0, "anchor": [430, 458], "body": [[422, 416], [438, 416], [438, 458], [422, 458]]}
+        {"id": "air_purifier", "kind": "air-purifier", "role": "air-purifier", "slot": 0, "anchor": [430, 458], "body": [[422, 416], [438, 416], [438, 458], [422, 458]]},
+        {"id": "humidifier", "kind": "humidifier", "role": "humidifier", "slot": 0, "anchor": [240, 495], "body": [[227, 457], [253, 457], [253, 495], [227, 495]]},
+        {"id": "vacuum", "kind": "vacuum", "role": "vacuum", "slot": 0, "anchor": [120, 505], "body": [[102, 479], [138, 479], [138, 505], [102, 505]]}
       ]
     },
     "bedroom": {
@@ -45,7 +47,9 @@
         {"id": "fan", "kind": "fan", "role": "fan", "slot": 0, "anchor": [520, 200], "body": [[507, 162], [533, 162], [533, 200], [507, 200]]},
         {"id": "dehumidifier", "kind": "dehumidifier", "role": "dehumidifier", "slot": 0, "anchor": [560, 185], "body": [[549, 155], [571, 155], [571, 185], [549, 185]]},
         {"id": "heater", "kind": "heater", "role": "heater", "slot": 0, "anchor": [590, 170], "body": [[579, 138], [601, 138], [601, 170], [579, 170]]},
-        {"id": "air_purifier", "kind": "air-purifier", "role": "air-purifier", "slot": 0, "anchor": [630, 195], "body": [[622, 153], [638, 153], [638, 195], [622, 195]]}
+        {"id": "air_purifier", "kind": "air-purifier", "role": "air-purifier", "slot": 0, "anchor": [630, 195], "body": [[622, 153], [638, 153], [638, 195], [622, 195]]},
+        {"id": "humidifier", "kind": "humidifier", "role": "humidifier", "slot": 0, "anchor": [475, 205], "body": [[462, 167], [488, 167], [488, 205], [462, 205]]},
+        {"id": "vacuum", "kind": "vacuum", "role": "vacuum", "slot": 0, "anchor": [430, 192], "body": [[412, 166], [448, 166], [448, 192], [412, 192]]}
       ]
     },
     "study": {

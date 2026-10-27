@@ -25,8 +25,8 @@ ORG = (255, 145, 50, 255)
 AMB = (255, 195, 90, 255)
 
 
-def save(im: Image.Image, name: str) -> Image.Image:
-    bbox = im.getbbox()
+def save(im: Image.Image, name: str, crop: bool = True) -> Image.Image:
+    bbox = im.getbbox() if crop else None
     im = im.crop(bbox) if bbox else im
     if im.width % 2:
         n = Image.new("RGBA", (im.width + 1, im.height), (0, 0, 0, 0)); n.paste(im, (0, 0)); im = n
@@ -108,9 +108,45 @@ def heater(on: bool) -> Image.Image:
     return save(im, f"fixture-heater-{'on' if on else 'off'}.png")
 
 
+def humidifier(on: bool) -> Image.Image:
+    im = Image.new("RGBA", (26, 38), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+    d.ellipse([3, 31, 23, 37], fill=BASE, outline=K)
+    d.rounded_rectangle([4, 13, 22, 33], radius=4, fill=W, outline=K)
+    d.rectangle([5, 17, 9, 29], fill=SD)
+    d.rounded_rectangle([10, 17, 19, 27], radius=2, fill=CYAN if on else S, outline=K)
+    d.line([(12, 19), (12, 24)], fill=WL)
+    d.ellipse([4, 10, 22, 18], fill=WL, outline=K)
+    d.ellipse([10, 12, 16, 15], fill=D, outline=K)
+    d.rectangle([13, 30, 16, 31], fill=CYAN if on else OFF)
+    if on:
+        d.arc([8, 3, 16, 9], 100, 280, fill=CYAN)
+        d.arc([13, 0, 21, 6], 260, 80, fill=CYAN)
+        d.point([(10, 1), (18, 8), (6, 5)], fill=CYAN)
+    return save(im, f"fixture-humidifier-{'on' if on else 'off'}.png", crop=False)
+
+
+def vacuum(on: bool) -> Image.Image:
+    im = Image.new("RGBA", (36, 26), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+    d.polygon([(10, 7), (22, 7), (29, 15), (5, 15)], fill=SD, outline=K)
+    d.rounded_rectangle([10, 1, 24, 11], radius=2, fill=W, outline=K)
+    d.rectangle([13, 4, 21, 9], fill=D)
+    d.point([(17, 3)], fill=GRN if on else OFF)
+    offset = 3 if on else 0
+    d.ellipse([4 + offset, 15, 29 + offset, 25], fill=BASE, outline=K)
+    d.ellipse([3 + offset, 10, 29 + offset, 23], fill=SD, outline=K)
+    d.ellipse([3 + offset, 8, 29 + offset, 20], fill=WL, outline=K)
+    d.arc([5 + offset, 10, 27 + offset, 21], 5, 175, fill=D)
+    d.ellipse([12 + offset, 10, 20 + offset, 14], fill=S, outline=K)
+    d.line([(13 + offset, 18), (19 + offset, 18)], fill=CYAN if on else OFF)
+    if on:
+        d.line([(0, 15), (3, 14)], fill=CYAN)
+        d.line([(1, 20), (4, 19)], fill=GRN)
+    return save(im, f"fixture-vacuum-{'on' if on else 'off'}.png", crop=False)
+
+
 def main() -> None:
     for on in (True, False):
-        fan(on); purifier(on); dehumidifier(on); heater(on)
+        fan(on); purifier(on); dehumidifier(on); heater(on); humidifier(on); vacuum(on)
 
 
 if __name__ == "__main__":

@@ -38,6 +38,8 @@ import MijiaCore
         #expect(HouseFixtureNames.title("air_purifier") == L("空气净化器位", "Air purifier"))
         #expect(HouseFixtureNames.title("dehumidifier") == L("除湿机位", "Dehumidifier"))
         #expect(HouseFixtureNames.title("heater") == L("取暖器位", "Heater"))
+        #expect(HouseFixtureNames.title("humidifier") == L("加湿器位", "Humidifier"))
+        #expect(HouseFixtureNames.title("vacuum") == L("扫地机位", "Vacuum"))
     }
 
     private static func fixtureIDs(in json: Any) throws -> Set<String> {

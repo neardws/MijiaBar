@@ -45,6 +45,8 @@ enum HouseFixtureNames {
         case "fan": return L("风扇位", "Fan")
         case "air_purifier": return L("空气净化器位", "Air purifier")
         case "dehumidifier": return L("除湿机位", "Dehumidifier")
+        case "humidifier": return L("加湿器位", "Humidifier")
+        case "vacuum": return L("扫地机位", "Vacuum")
         case "heater": return L("取暖器位", "Heater")
         default: return id
         }
@@ -790,6 +792,8 @@ extension AppModel {
             ("air-purifier", L("空气净化器", "Air purifier"), "zhimi.airpurifier.demo"),
             ("dehumidifier", L("除湿机", "Dehumidifier"), "mijia.dehumidifier.demo"),
             ("heater", L("取暖器", "Heater"), "zhimi.heater.demo"),
+            ("humidifier", L("加湿器", "Humidifier"), "deerma.humidifier.demo"),
+            ("vacuum", L("扫地机", "Vacuum"), "roborock.vacuum.demo"),
         ]
         for (roomID, room) in [("living", L("客厅", "Living room")), ("bedroom", L("主卧", "Bedroom"))] {
             for (kind, title, model) in appliances {
@@ -880,7 +884,7 @@ extension Snapshot {
             set(rooms) { if $0.category == .curtain { $0.level = open; $0.on = open > 0.02 } }
         }
         func appliances(_ rooms: [HouseRoom], on: Bool) -> [HouseRoom] {
-            set(rooms) { if [.fridge, .washer, .waterHeater, .fan, .airPurifier, .dehumidifier, .heater].contains($0.category) { $0.on = on; $0.busy = on } }
+            set(rooms) { if [.fridge, .washer, .waterHeater, .fan, .airPurifier, .dehumidifier, .heater, .humidifier, .vacuum].contains($0.category) { $0.on = on; $0.busy = on } }
         }
         func scene(_ name: String, _ rooms: [HouseRoom], _ phase: HousePhase, layout: [HouseLayoutCell]?) {
             let size = HouseSceneSource.make(layout: layout, phase: phase)?.artSize ?? CGSize(width: 960, height: 540)

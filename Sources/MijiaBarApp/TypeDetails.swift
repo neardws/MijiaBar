@@ -82,7 +82,7 @@ struct DeviceStatusCard: View {
         case .leak: LeakSensorArt(on: false, wet: nil, tint: tint)
         default: ThermoArt(temp: nil, tint: tint)
         }
-    case .other, .curtain, .fridge, .washer, .waterHeater: GenericArt(on: false, tint: tint)
+    case .other, .curtain, .fridge, .washer, .waterHeater, .humidifier, .vacuum: GenericArt(on: false, tint: tint)
     case .airPurifier: AirPurifierArt(on: false, level: 0.5, tint: tint)
     }
 }

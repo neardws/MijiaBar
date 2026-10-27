@@ -55,7 +55,7 @@ struct HouseLightSpec: Decodable, Identifiable {
     var body: [[Double]]? = nil
     var anchor: [Double]? = nil
 
-    var isFloorAppliance: Bool { ["fan", "air-purifier", "dehumidifier", "heater"].contains(role) }
+    var isFloorAppliance: Bool { ["fan", "air-purifier", "dehumidifier", "heater", "humidifier", "vacuum"].contains(role) }
     var floorAnchor: CGPoint? {
         if let anchor, anchor.count == 2 { return CGPoint(x: anchor[0], y: anchor[1]) }
         guard let body, !body.isEmpty, body.allSatisfy({ $0.count == 2 }),
@@ -739,7 +739,7 @@ struct HouseBadge: View {
         switch device.category {
         case .light: return Color(red: 1, green: 0.8, blue: 0.4)
         case .tv, .camera: return Color(red: 0.5, green: 0.75, blue: 1)
-        case .ac, .fan, .airPurifier, .purifier, .dehumidifier: return Color(red: 0.55, green: 0.9, blue: 1)
+        case .ac, .fan, .airPurifier, .purifier, .dehumidifier, .humidifier, .vacuum: return Color(red: 0.55, green: 0.9, blue: 1)
         case .heater, .kitchen, .waterHeater: return Color(red: 1, green: 0.6, blue: 0.3)
         default: return Color(red: 0.55, green: 1, blue: 0.6)
         }

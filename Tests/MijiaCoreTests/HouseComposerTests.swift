@@ -63,7 +63,7 @@ import CoreGraphics
             for cell in layout {
                 let lights = try #require(modules[cell.room]?["lights"] as? [[String: Any]])
                 let originals = try #require(catalog.modules[cell.module]?.lights)
-                for original in originals where ["fan", "air-purifier", "dehumidifier", "heater"].contains(original.role) {
+                for original in originals where ["fan", "air-purifier", "dehumidifier", "heater", "humidifier", "vacuum"].contains(original.role) {
                     let light = try #require(lights.first { $0["id"] as? String == original.id })
                     #expect(light["hidden"] == nil && light["wall"] == nil && light["alt"] == nil)
                     #expect(light["slot"] as? Int == 0)

@@ -160,12 +160,12 @@ def spec(module):
     else:
         raise KeyError(module)
     floor_anchors = {
-        'living': {'fan': (176, 252), 'dehumidifier': (248, 258), 'heater': (308, 288), 'air_purifier': (388, 272)},
-        'bedroom': {'fan': (96, 212), 'dehumidifier': (155, 232), 'heater': (198, 218), 'air_purifier': (236, 222)},
+        'living': {'fan': (176, 252), 'dehumidifier': (248, 258), 'heater': (308, 288), 'air_purifier': (388, 272), 'humidifier': (212, 272), 'vacuum': (132, 272)},
+        'bedroom': {'fan': (96, 212), 'dehumidifier': (155, 232), 'heater': (198, 218), 'air_purifier': (236, 222), 'humidifier': (274, 202), 'vacuum': (120, 240)},
         'study': {'fan': (118, 222), 'heater': (218, 232)},
         'bathroom': {'dehumidifier': (200, 202)},
     }
-    floor_sizes = {'fan': (26, 38), 'dehumidifier': (22, 30), 'heater': (22, 32), 'air_purifier': (16, 42)}
+    floor_sizes = {'fan': (26, 38), 'dehumidifier': (22, 30), 'heater': (22, 32), 'air_purifier': (16, 42), 'humidifier': (26, 38), 'vacuum': (36, 26)}
     for fixture_id, (anchor_x, anchor_y) in floor_anchors.get(module, {}).items():
         width, height = floor_sizes[fixture_id]
         half_width = width // 2

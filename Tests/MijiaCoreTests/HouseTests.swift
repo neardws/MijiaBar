@@ -104,7 +104,7 @@ private func resolve(_ ds: [Device], _ cfg: HomeHouse? = nil, hidden: Set<String
         #expect(k("isa.camera.hlc7") == .badge)
         #expect(k("minij.washer.v5") == .fixture(.washer))
         #expect(k("zimi.waterheater.e1") == .fixture(.waterHeater))
-        // 已有灯具位美术包含四种落地电器；加湿器和扫地机仍显示徽章
+        // 六种落地电器都有灯具位美术
         #expect(k("lumi.acpartner.mcn02").hasFixtureArt && k("zhimi.fan.za5").hasFixtureArt && !k("cuco.plug.v3").hasFixtureArt)
         for model in ["lumi.curtain.hagl05", "viomi.fridge.x3", "minij.washer.v5", "zimi.waterheater.e1"] { #expect(k(model).hasFixtureArt, "\(model)") }
         // 每个灯具位都有 kind，而且是已实现的
@@ -119,6 +119,27 @@ private func resolve(_ ds: [Device], _ cfg: HomeHouse? = nil, hidden: Set<String
         #expect(HouseCatalog.fixtureSetProblems(.study, lightIds: ids).isEmpty)
         #expect(HouseCatalog.fixtureSetProblems(.study, lightIds: ids.filter { $0 != "ac" }) == ["study: missing fixture ac"])
         #expect(HouseCatalog.fixtureSetProblems(.study, lightIds: ids + ["humidifier"]) == ["study: unknown fixture humidifier"])
+        #expect(HouseCatalog.fixtureSetProblems(.study, lightIds: ids + ["vacuum"]) == ["study: unknown fixture vacuum"])
+        for module in [HouseModule.living, .bedroom] {
+            let floorIds = HouseCatalog.fixtures(module).map(\.id)
+            for id in ["humidifier", "vacuum"] {
+                #expect(HouseCatalog.fixtureSetProblems(module, lightIds: floorIds.filter { $0 != id }) == ["\(module.rawValue): missing fixture \(id)"])
+            }
+        }
+    }
+
+    @Test func humidifierAndVacuumResolveToFixturesOrBadges() throws {
+        for (id, model) in [("humidifier", "deerma.jsq.demo"), ("vacuum", "roborock.vacuum.demo")] {
+            for roomName in ["客厅", "主卧"] {
+                let house = resolve([dev("first", "First", model, room: roomName), dev("second", "Second", model, room: roomName)])
+                let room = try #require(house.rooms.first)
+                #expect(room.devices.count == 2)
+                #expect(room.device(at: .fixture(id))?.did == "first")
+                #expect(room.device(at: .badge("b1"))?.did == "second")
+            }
+            let study = resolve([dev("study", "Study appliance", model, room: "书房")])
+            #expect(study.rooms.first?.device(at: .badge("b1"))?.did == "study")
+        }
     }
 
     @Test func floorApplianceSlots() {
@@ -127,9 +148,12 @@ private func resolve(_ ds: [Device], _ cfg: HomeHouse? = nil, hidden: Set<String
             ("air_purifier", .airPurifier, .airPurifier, [.living, .bedroom]),
             ("dehumidifier", .dehumidifier, .dehumidifier, [.living, .bedroom, .bathroom]),
             ("heater", .heater, .heater, [.living, .bedroom, .study]),
+            ("humidifier", .humidifier, .humidifier, [.living, .bedroom]),
+            ("vacuum", .vacuum, .vacuum, [.living, .bedroom]),
         ]
         for (id, category, kind, modules) in categories {
             #expect(kind.implemented)
+            #expect(HouseCatalog.showable(category))
             #expect(HouseCatalog.deviceClass(category: category).hasFixtureArt)
             for module in HouseModule.allCases {
                 let fixture = HouseCatalog.fixture(module, id)
@@ -140,7 +164,6 @@ private func resolve(_ ds: [Device], _ cfg: HomeHouse? = nil, hidden: Set<String
                 }
             }
         }
-        #expect(!HouseFixtureKind.humidifier.implemented && !HouseFixtureKind.vacuum.implemented)
     }
 
     @Test func floorApplianceCatalogGeometry() throws {
@@ -153,7 +176,7 @@ private func resolve(_ ds: [Device], _ cfg: HomeHouse? = nil, hidden: Set<String
             for module in HouseModule.allCases {
                 let lights = try #require(catalog.modules[module.rawValue]?.lights)
                 #expect(HouseCatalog.fixtureSetProblems(module, lightIds: lights.map(\.id)).isEmpty)
-                for light in lights where ["fan", "air-purifier", "dehumidifier", "heater"].contains(light.role) {
+                for light in lights where ["fan", "air-purifier", "dehumidifier", "heater", "humidifier", "vacuum"].contains(light.role) {
                     #expect(light.kind == HouseCatalog.fixtureKind(module, light.id)?.rawValue)
                     #expect(light.role == light.kind && light.slot == 0)
                     #expect(!light.bakesLight && light.wall == nil && light.alt == nil)
