@@ -323,7 +323,7 @@ import Testing
                             #expect(placed.allSatisfy { $0.distance(to: pose.point) >= 3 * world.cellSize - 0.001 })
                         }
                         var expected = original
-                        expected.point = pose.point; expected.module = pose.module; expected.room = pose.room
+                        expected.point = pose.point; expected.module = pose.module; expected.room = pose.room; expected.spotID = nil
                         #expect(pose == expected)
                     }
                     for other in pets.indices where other > index {
@@ -376,7 +376,7 @@ import Testing
                 return left == right ? $0.id < $1.id : left < right
             }.first)
         var expected = original
-        expected.point = nearest.point; expected.module = nearest.module; expected.room = nearest.room
+        expected.point = nearest.point; expected.module = nearest.module; expected.room = nearest.room; expected.spotID = nil
         #expect(moved == expected)
         var hidden = original; hidden.visible = false
         #expect(behavior.poses(pets, world: world, context: context, at: date, overrides: [pets[1].id: hidden])[pets[0].id] == original)

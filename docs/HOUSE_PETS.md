@@ -256,6 +256,52 @@ x-ray silhouette at 30% opacity in the pet's base color darkened to 65%.
 Only opaque sprite pixels enter this alpha mask: ground shadows are excluded.
 The normal opaque sprite covers the silhouette where visible; hidden parts
 remain faintly readable through the low cut-away walls and foreground modules.
+Both passes subtract active **same-room furniture** silhouettes: solid furniture
+never receives the 30% x-ray. Each hole is intersected separately with the current
+clip, so overlapping furniture cannot toggle pixels back on. Pet foot-y sorting
+is unchanged. Classic cutaway with pets still uses composed modules.
+
+### Furniture occluders
+
+Each `sets[artSet][module]` may contain `occluders`; absent or empty means the
+previous behavior. Old clients ignore this additional field. An entry is:
+
+```json
+{"id":"sofa","kind":"sofa","footprint":[0,0,0.375,1],"z":16,"perches":["sofa"]}
+```
+
+`footprint` is `[uMin,vMin,uMax,vMax]` in floor grid units (not walk cells),
+`z` is positive height in pixels. Optional `silhouette` is an array of `[x,y]`
+vertices **relative to the module tip**, not PNG top-left coordinates. Without
+it the mask is the six-point outline of a floor quad extruded upward by `z`,
+including its front faces. World construction adds the same art tip, compose
+offset/origin and level elevation used by walk nodes; polygons are cached in
+absolute scene coordinates by room instance, not just module type.
+
+Depth is tested along the camera ray through the foot: invert the floor
+projection, keep `u-v` fixed, and intersect that ray with the rectangle. Its
+near endpoint is `uFront=min(uMax,vMax+u-v)`, `vFront=uFront-(u-v)`.
+No intersection means inactive; otherwise the foot must be strictly behind
+`tip.y+66*(uFront+vFront)` and no nearer than that endpoint in floor coordinates
+(`u<=uFront`, `v<=vFront`). This includes feet inside the footprint and feet
+behind it, but excludes lateral and front feet. Equal front depth is visible.
+The test uses the logical foot, not animated `jumpLift`. A stationary pose carries
+its resolved `spotID`; at a named `perches` spot with matching `z` and projected
+position (within 0.01 px), it bypasses that furniture only. A floor foot at the
+same projected pixel is not exempt. Moving/crowd-relocated poses clear the ID;
+fixed perch overrides must supply it explicitly.
+
+`python3 scripts/house_pets/occluders.py` regenerates masks without imaging
+dependencies; `mkspots.py` also calls it. It starts with `blocks.json`, dividing
+cell bounds by `cellsPerGrid`, and authors living sofa (16 px), coffee table
+(16 px), bedroom bed (22 px), and bathroom vanity (26 px). Cozy uses explicit
+outlines tuned against the existing module PNGs (including the table legs),
+rather than masking the whole walk-clearance rectangle. There is no separate
+asset mirror of pet-spots.json. Style selection follows `artSets`: light-wood
+and walnut inherit cozy directly; Japanese/modern have separate sets whose
+generated furniture currently inherits cozy blocks/heights unless overridden
+in the generator/blocks. Those two packs need hand-tuned silhouettes and visual
+review later; their defaults are prism approximations, not traced PNG masks.
 Day-lit cats use `dayLit`. Night-unlit cats use `night`; night-lit cats multiply
 the day color by `night.mul` and a per-channel lit/unlit ratio (9×5 foot patch,
 clamped to 1…2.6), falling back to `nightLit` if sampling is unavailable.
@@ -268,6 +314,12 @@ seconds. Window occlusion pauses pet ticks. Light/TV behavior comes from the
 existing room/device state, without extra polling or device writes.
 
 ## Synthetic snapshots (manual only)
+
+The existing `--house-pets-snapshot` exporter also writes
+`pets-furniture-{style}-{sofa|coffee-table}-{behind|front}.png`. These use a
+fixed sitting pose at the footprint center or beyond its near edge, independent
+of day plans, and render one cat through the shared painter. Review the behind
+and front pairs externally; automated bitmap tests do not validate art alignment.
 
 ```bash
 .build/debug/MijiaBarApp --house-pets-snapshot /tmp/house-pets --date 2026-10-18

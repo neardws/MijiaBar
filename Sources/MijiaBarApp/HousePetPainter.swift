@@ -147,12 +147,15 @@ final class HousePetPainter {
         for (pet, pose) in ordered where pose.visible {
             guard let module = scene.modules[byRoom ? pose.room : pose.module],
                   let image = frame(pet: pet, pose: pose, night: state.night, lit: state.lights[pose.room] == true, unlitImage: unlit, litImage: lit) else { continue }
+            context.saveGState()
+            HousePetOcclusion.clipFurniture(HousePetOcclusion.holes(for: pose, in: world), in: context)
             if let silhouette = Self.silhouette(image, base: pet.palette.base) {
                 context.saveGState(); context.concatenate(Self.transform(rig: rig, pose: pose))
                 Self.drawImage(silhouette, in: context, rect: CGRect(x: 0, y: 0, width: rig.frameSize[0], height: rig.frameSize[1]))
                 context.restoreGState()
             }
             Self.drawFrame(image, in: context, rig: rig, pose: pose, polygons: module.petVisible ?? module.visible ?? [module.region])
+            context.restoreGState()
         }
     }
 
