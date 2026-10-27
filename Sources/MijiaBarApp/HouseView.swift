@@ -269,6 +269,10 @@ struct HouseDevice: Equatable {
     var level: Double? = nil
     /// 热水器正在加热、洗衣机正在洗（没有状态属性时按开着算）
     var busy: Bool = false
+    var model: String = ""
+    var contactClosed: Bool? = nil
+
+    var isVacuum: Bool { HouseCatalog.isVacuum(category: category, model: model, name: name) }
 
     /// 窗帘露出的程度：没装设备 / 离线 = 1（底图里系起来的窗帘）
     var curtainOpen: Double { online ? min(1, max(0, level ?? (on ? 1 : 0))) : 1 }
@@ -323,6 +327,9 @@ extension AppModel {
             let p = device(x.did).flatMap { powerInfo($0) }
             var d = HouseDevice(did: x.did, name: x.name, category: x.category, spot: x.spot, on: x.online && p?.isOn == true, online: x.online, toggleable: p != nil)
             let st = states[x.did]
+            d.model = device(x.did)?.model ?? ""
+            if x.online, let device = device(x.did) { d.contactClosed = Notifier.snapshot(device, st, power: p?.isOn).contactClosed }
+            if d.isVacuum { d.busy = x.online && HouseDeviceState.busy(st, otherwise: d.on) }
             switch x.category {
             case .curtain:
                 // 窗帘没有开关属性：按当前位置（0..100，100 = 全开）

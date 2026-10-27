@@ -149,6 +149,18 @@ or a set of existing rooms. Decor with
 `petSpot=true` supplies preferred sleep spots by its resolved slot, projected to
 the nearest walk node. Bed/sofa perches rank next, then sleep spots and a room
 fallback. Catalog light `pool` centers provide lookup/sit reaction destinations.
+Catalog lights whose `role` or `kind` is `ac` instead supply `ac` lounge spots
+at the `vent` midpoint (no light `pool` is required). Missing vents use the
+floor `alt` anchor, then a point below the module tip. Coordinates are projected
+relative to the art tip into floor UV and snapped to the nearest walk node;
+generated AC spots have priority 2. AC/entry spots are reaction-only and excluded
+from baseline roaming so existing schedule fingerprints remain unchanged.
+Entry title/key matching shares
+`HouseModule.isEntryFoyer` (简/繁/English entry, foyer, hall, corridor names).
+`HousePetWorld.roomTitles` allows opaque room IDs to use their display titles.
+An entry room gets a central walk-node `entry` spot (priority 2); no reliable
+door-side geometry exists in the current catalog. Authored `ac`/`entry` spots
+override generated spots of that kind in their room, without editing every style.
 
 Keep one `HousePetBehavior(rig:)` instance. `pose(_:world:context:at:)` is a pure
 function of these inputs despite internal plan/path memoization. Stable FNV/LCG
@@ -159,9 +171,23 @@ Remaining cross-module/perch jumps last .5s; `jumpLift` is a positive parabolic 
 to subtract from screen y. +u faces SE, -u NW, +v SW, -v NE.
 
 Supply `HousePetContext` with existing room keys, active pet IDs, per-room lights,
-TV room keys, night state and `changedAt`/`changedRoom`. Keep the same timestamp
-until the next context change. Reactions begin from the baseline plan at that
-timestamp: dark night with multiple pets assigns sorted IDs to reachable sleep/perch
+TV room keys, night state and `changedAt`/`changedRoom`, plus `acRooms` and
+`vacuumRooms` (default empty), `entryAt` and `entryRoom` (default nil).
+Keep the same timestamp until the next context change. All new fields participate
+in the reaction cache key. First-match priority is **vacuum → entry → nightSleep
+→ TV → AC → light**. Vacuum/TV/AC persist while active; ordinary reactions wait
+until `date >= changedAt` (or local midnight if absent). Entry uses its own
+timestamp, not a later AC/light change, and is eligible only for the half-open
+180-second interval `[entryAt, entryAt + 180s)`. Repeated reads do not restart it;
+after expiry, the next applicable reaction or baseline takes over. A vacuum can
+preempt entry during this window; entry may resume only inside the original window.
+Reactions begin from the baseline plan at their event timestamp, not from the
+previous reaction. Entry and vacuum travel at 72px/s using walk frames (jumps
+remain .5s); arrival at entry/AC sits, arrival at a safe sleep/perch sleeps.
+Vacuum prefers reachable sleep/perch spots outside all `vacuumRooms`; when none
+are reachable it uses a local sleep/perch. `homeRoom` and allowed-room routing
+still apply and are never overridden to escape. Dark night with multiple pets
+assigns sorted IDs to reachable sleep/perch
 spots ordered by dark room, priority and ID, five cells apart (three-cell fallback)
 when enough exist, otherwise keeping the first-reachable-target spread; single pets
 still seek the first reachable sleep spot; TV seeks its TV spot; a light change produces
@@ -172,6 +198,35 @@ only if there are too few spots for the roster. Pass the **same roster** to ever
 pet. `restOnly=true` chooses the current/next rest spot and restricts actions to
 idle/sit/sleep, without changing the underlying full-scene day plan. `visible`
 also reflects pet/global enablement and missing-room safety.
+
+The overlay derives AC rooms from `.ac && on`, vacuum rooms from vacuum-like
+devices with `on || busy`, and refreshes `changedAt`/`changedRoom` when these
+sets change. `HouseDevice.model` is copied from `Device.model` (default empty).
+`HouseCatalog.isVacuum` checks `deviceClass`'s vacuum fixture, then category raw
+value/model/name keywords (`vacuum`, `roborock`, `sweeper`, `.robot.`, 扫地/掃地,
+扫拖/掃拖). Thus `.other` vacuums remain visible to the resolver on main, with no
+dependency on #54; a future `vacuum` category also matches by raw value. Cached
+status goes through `HouseDeviceState.busy`, including cleaning/sweeping/mopping
+options, even if the device has no power property. Unknown status falls back to
+power. Offline devices do not contribute live power/busy/contact readings.
+
+Entry is a **contact-sensor proxy, not a doorbell detector**. `houseRoom` reads
+cached `contact-state` through the existing Notifier snapshot adapter; the overlay
+records an event only on a known closed→open transition in an entry-named room.
+First observation, unchanged open state, missing data and offline readings do not
+trigger an event. No network calls or new polling are added. Refresh cadence still
+limits detection; transitions between reads can be missed. As documented by
+Notifier, actual doorbell presses cannot yet be detected reliably.
+
+For external visual QA, `--house-pets-snapshot <dir>` additionally writes
+`pets-react-ac-{style}.png`, `pets-react-entry-{style}.png`, and
+`pets-react-vacuum-{style}.png` for cozy-wood, japanese and modern. These use a
+synthetic three-room layout and planner context injected 120 seconds before the
+snapshot date, producing an AC lounge, entry arrival and vacuum refuge on the
+bed (render time is the selected date plus 120 seconds). Use the existing `--date`
+option for a fixed date. They do not require real
+devices, device writes or fake doorbell polling. Render these panels externally
+when GUI execution is permitted; compilation alone does not verify their visuals.
 `poses(_:world:context:at:overrides:)` resolves visible rest-only crowding in sorted-ID
 order using the nearest same-room walkable node at three cells' separation, with
 two/one-cell fallbacks; explicit overrides stay fixed and reserve their positions.

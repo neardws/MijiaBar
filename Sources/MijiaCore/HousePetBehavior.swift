@@ -4,6 +4,10 @@ public struct HousePetContext: Equatable, Sendable {
     public var night: Bool
     public var lights: [String: Bool]
     public var tvRooms: Set<String>
+    public var acRooms: Set<String>
+    public var vacuumRooms: Set<String>
+    public var entryAt: Date?
+    public var entryRoom: String?
     public var rooms: Set<String>
     public var petIDs: [String]
     public var changedAt: Date?
@@ -13,8 +17,10 @@ public struct HousePetContext: Equatable, Sendable {
     public var timeZone: TimeZone
     public init(night: Bool = false, lights: [String: Bool] = [:], tvRooms: Set<String> = [], rooms: Set<String> = [],
                 petIDs: [String] = [], changedAt: Date? = nil, changedRoom: String? = nil, restOnly: Bool = false,
-                enabled: Bool = true, timeZone: TimeZone = .current) {
+                enabled: Bool = true, timeZone: TimeZone = .current, acRooms: Set<String> = [],
+                vacuumRooms: Set<String> = [], entryAt: Date? = nil, entryRoom: String? = nil) {
         self.night = night; self.lights = lights; self.tvRooms = tvRooms; self.rooms = rooms; self.petIDs = petIDs
+        self.acRooms = acRooms; self.vacuumRooms = vacuumRooms; self.entryAt = entryAt; self.entryRoom = entryRoom
         self.changedAt = changedAt; self.changedRoom = changedRoom; self.restOnly = restOnly; self.enabled = enabled; self.timeZone = timeZone
     }
 }
@@ -132,7 +138,7 @@ public final class HousePetBehavior: @unchecked Sendable {
         func reservedSpots() -> [HousePetWorld.Spot] {
             var separated: [HousePetWorld.Spot] = []
             for room in rooms.sorted() {
-                var candidates = world.spots.filter { world.nodes[$0.node].room == room && $0.kind != "light" }
+                var candidates = world.spots.filter { world.nodes[$0.node].room == room && !["light", "ac", "entry"].contains($0.kind) }
                 for node in world.nodes where node.room == room {
                     candidates.append(.init(id: "~\(node.id)", kind: "sit", node: node.id, point: node.point, facing: "SE", priority: 4))
                 }
@@ -190,21 +196,37 @@ public final class HousePetBehavior: @unchecked Sendable {
             return result
         }
         var selected = segment(base, elapsed), localTime = elapsed
-        let change = context.changedAt ?? day
+        let vacuum = !context.vacuumRooms.intersection(rooms).isEmpty
+        let entry = context.entryAt.map { date >= $0 && date.timeIntervalSince($0) < 180 } ?? false
+        let change = !vacuum && entry ? context.entryAt! : context.changedAt ?? day
         if date >= change {
             let startTime = max(0, change.timeIntervalSince(day)), start = segment(base, startTime)
             let room = world.nodes[start.node].room
             let nightSleep = context.night && context.lights[room] != true
             let tv = pet.homeRoom.map { context.tvRooms.contains($0) } ?? !context.tvRooms.intersection(rooms).isEmpty
+            let ac = pet.homeRoom.map { context.acRooms.contains($0) } ?? !context.acRooms.intersection(rooms).isEmpty
             let light = context.changedRoom == room && context.changedAt != nil
-            if nightSleep || tv || light {
-                let reactionKey = key + "|reaction|\(startTime)|\(nightSleep)|\(tv)|\(light)|" + context.tvRooms.sorted().joined(separator: ",") + "|" + context.lights.keys.sorted().map { "\($0)=\(context.lights[$0]!)" }.joined(separator: ",")
+            if vacuum || entry || nightSleep || tv || ac || light {
+                let targetKind = vacuum ? "sleep" : entry ? "entry" : nightSleep ? "sleep" : tv ? "tv" : ac ? "ac" : "light"
+                let reactionKey = key + "|reaction|\(startTime)|\(targetKind)|\(vacuum)|\(context.entryAt?.timeIntervalSince1970 ?? -1)|\(context.entryRoom ?? "")|\(context.changedRoom ?? "")|" + [context.tvRooms, context.acRooms, context.vacuumRooms].map { $0.sorted().joined(separator: ",") }.joined(separator: "|") + "|" + context.lights.keys.sorted().map { "\($0)=\(context.lights[$0]!)" }.joined(separator: ",")
                 let reaction: Plan
                 if let cached = plans[reactionKey] { reaction = cached } else {
-                    let targetKind = nightSleep ? "sleep" : tv ? "tv" : "light"
-                    let available = world.spots.filter { rooms.contains(world.nodes[$0.node].room) && (pet.homeRoom == nil || world.nodes[$0.node].room == pet.homeRoom) }
-                        .filter { targetKind == "sleep" ? ["sleep", "perch"].contains($0.kind) : $0.kind == targetKind && (targetKind == "tv" ? context.tvRooms.contains(world.nodes[$0.node].room) : world.nodes[$0.node].room == room) }
+                    var available = world.spots.filter { rooms.contains(world.nodes[$0.node].room) && (pet.homeRoom == nil || world.nodes[$0.node].room == pet.homeRoom) }
+                        .filter { spot in
+                            let destination = world.nodes[spot.node].room
+                            switch targetKind {
+                            case "sleep": return ["sleep", "perch"].contains(spot.kind)
+                            case "entry": return spot.kind == "entry" && (context.entryRoom == nil || context.entryRoom == destination)
+                            case "tv": return spot.kind == "tv" && context.tvRooms.contains(destination)
+                            case "ac": return spot.kind == "ac" && context.acRooms.contains(destination)
+                            default: return spot.kind == "light" && destination == room
+                            }
+                        }
                         .sorted { $0.priority == $1.priority ? $0.id < $1.id : $0.priority < $1.priority }
+                    if vacuum {
+                        let safe = available.filter { !context.vacuumRooms.contains(world.nodes[$0.node].room) && !world.path(from: start.node, to: $0.node, room: pet.homeRoom, allowedRooms: rooms).isEmpty }
+                        if !safe.isEmpty { available = safe }
+                    }
                     var target = available.first(where: { !world.path(from: start.node, to: $0.node, room: pet.homeRoom, allowedRooms: rooms).isEmpty }) ?? start.rest
                     var distinct: [HousePetWorld.Spot] = []
                     if targetKind == "sleep" && roster.count > 1 {
@@ -240,11 +262,11 @@ public final class HousePetBehavior: @unchecked Sendable {
                     }
                     let progress = min(1, max(0, (startTime - start.start) / start.duration))
                     let point = HousePetPoint(x: start.from.x + (start.to.x - start.from.x) * progress, y: start.from.y + (start.to.y - start.from.y) * progress)
-                    if light && !nightSleep && !tv { append(point, point, start.node, start.facing, "lookup", 2) }
+                    if targetKind == "light" { append(point, point, start.node, start.facing, "lookup", 2) }
                     if !path.isEmpty {
-                        Self.travel(path: path, from: point, target: target, world: world, append: append)
+                        Self.travel(path: path, from: point, target: target, world: world, speed: vacuum || entry ? 72 : 36, append: append)
                     } else { target = start.rest }
-                    append(target.point, target.point, target.node, target.facing, nightSleep ? "sleep" : "sit", 200000)
+                    append(target.point, target.point, target.node, target.facing, targetKind == "sleep" ? "sleep" : "sit", 200000)
                     reaction = .init(segments: segments); plans[reactionKey] = reaction
                 }
                 selected = segment(reaction, elapsed)
@@ -277,13 +299,13 @@ public final class HousePetBehavior: @unchecked Sendable {
         return selected
     }
 
-    static func travel(path: [Int], from start: HousePetPoint, target: HousePetWorld.Spot, world: HousePetWorld,
+    private static func travel(path: [Int], from start: HousePetPoint, target: HousePetWorld.Spot, world: HousePetWorld, speed: Double = 36,
                                append: (HousePetPoint, HousePetPoint, Int, String, String, Double) -> Void) {
         guard let first = path.first else { return }
         var current = start
         func move(to point: HousePetPoint, node: Int, jump: Bool, facing: String) {
             let distance = current.distance(to: point)
-            if distance > 0.01 { append(current, point, node, facing, jump ? "jump" : "walk", jump ? 0.5 : distance / 36) }; current = point
+            if distance > 0.01 { append(current, point, node, facing, jump ? "jump" : "walk", jump ? 0.5 : distance / speed) }; current = point
         }
         move(to: world.nodes[first].point, node: first, jump: abs(start.y - world.nodes[first].point.y) > 24, facing: target.facing)
         for (left, right) in zip(path, path.dropFirst()) {

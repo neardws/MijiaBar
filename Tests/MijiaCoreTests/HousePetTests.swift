@@ -18,6 +18,104 @@ import Testing
               catalog: try catalog(), spots: try spots())
     }
 
+    static func reactionWorld(style: String = "cozy-wood") throws -> HousePetWorld {
+        .init(layout: [.init(room: "a", module: "living", col: 0, row: 0, level: 0),
+                       .init(room: "b", module: "bedroom", col: 2, row: 1, level: 0),
+                       .init(room: "c", module: "generic", col: 2, row: 0, level: 0)],
+              catalog: try catalog(), spots: try spots(), style: style, roomTitles: ["c": "玄关"])
+    }
+
+    @Test func generatedACAndEntrySpotsAcrossStyles() throws {
+        for style in ["cozy-wood", "japanese", "modern"] {
+            let world = try Self.reactionWorld(style: style)
+            let ac = try #require(world.spots.first { $0.kind == "ac" && world.nodes[$0.node].room == "a" })
+            let entry = try #require(world.spots.first { $0.kind == "entry" && world.nodes[$0.node].room == "c" })
+            #expect(ac.point == world.nodes[ac.node].point)
+            #expect(entry.point == world.nodes[entry.node].point)
+            #expect(!world.path(from: ac.node, to: entry.node).isEmpty)
+        }
+    }
+
+    @Test func acLoungesOnlyAfterChangeAndWhileOn() throws {
+        let world = try Self.reactionWorld(), rig = try Self.rig(), behavior = HousePetBehavior(rig: rig)
+        let pet = HousePet(id: "p_1234"), event = Date(timeIntervalSince1970: 1792270000)
+        let context = HousePetContext(changedAt: event, acRooms: ["a"])
+        let before = event.addingTimeInterval(-1)
+        #expect(behavior.pose(pet, world: world, context: context, at: before) == behavior.pose(pet, world: world, at: before))
+        for offset in [120.0, 600] {
+            let time = event.addingTimeInterval(offset), pose = behavior.pose(pet, world: world, context: context, at: time)
+            #expect(pose.action == "sit" && pose.room == "a")
+            #expect(world.spots.contains { $0.kind == "ac" && $0.point == pose.point })
+            #expect(pose == HousePetBehavior(rig: rig).pose(pet, world: world, context: context, at: time))
+        }
+        let off = HousePetContext(changedAt: event)
+        #expect(behavior.pose(pet, world: world, context: off, at: event.addingTimeInterval(600)) == behavior.pose(pet, world: world, at: event.addingTimeInterval(600)))
+    }
+
+    @Test func entryRunsThenSitsAndExpiresWithoutRestarting() throws {
+        let world = try Self.reactionWorld(), behavior = HousePetBehavior(rig: try Self.rig())
+        let pet = HousePet(id: "p_1234"), event = Date(timeIntervalSince1970: 1792270000)
+        let context = HousePetContext(acRooms: ["a"], entryAt: event, entryRoom: "c")
+        let destination = try #require(world.spots.first { $0.kind == "entry" })
+        let moving = (1..<240).map { behavior.pose(pet, world: world, context: context, at: event.addingTimeInterval(Double($0) / 4)) }
+        #expect(moving.contains { ["walk", "jump"].contains($0.action) && $0.point != destination.point })
+        let arrived = behavior.pose(pet, world: world, context: context, at: event.addingTimeInterval(120))
+        #expect(arrived.action == "sit" && arrived.point == destination.point && arrived.room == "c")
+        var competing = context; competing.night = true; competing.tvRooms = ["a"]; competing.changedAt = event.addingTimeInterval(60)
+        #expect(behavior.pose(pet, world: world, context: competing, at: event.addingTimeInterval(120)) == arrived)
+        for offset in [-1.0, 180, 600] {
+            let time = event.addingTimeInterval(offset)
+            #expect(behavior.pose(pet, world: world, context: context, at: time) == behavior.pose(pet, world: world, context: .init(acRooms: ["a"]), at: time))
+        }
+    }
+
+    @Test func vacuumFleesOutsideRoomAndBeatsEntryNightTVAndAC() throws {
+        let world = try Self.reactionWorld(), rig = try Self.rig(), behavior = HousePetBehavior(rig: rig)
+        let pet = HousePet(id: "p_1234"), event = Date(timeIntervalSince1970: 1792270000)
+        let context = HousePetContext(night: true, tvRooms: ["a"], changedAt: event, acRooms: ["a"],
+                                      vacuumRooms: ["a", "c"], entryAt: event, entryRoom: "c")
+        let moving = (1..<240).map { behavior.pose(pet, world: world, context: context, at: event.addingTimeInterval(Double($0) / 4)) }
+        #expect(moving.contains { ["walk", "jump"].contains($0.action) })
+        let time = event.addingTimeInterval(120), pose = behavior.pose(pet, world: world, context: context, at: time)
+        #expect(pose.room == "b" && pose.action == "sleep")
+        #expect(world.spots.contains { ["sleep", "perch"].contains($0.kind) && $0.point == pose.point })
+        #expect(pose == HousePetBehavior(rig: rig).pose(pet, world: world, context: context, at: time))
+        var elsewhere = context; elsewhere.vacuumRooms = ["b", "c"]
+        #expect(behavior.pose(pet, world: world, context: elsewhere, at: time).room == "a")
+        var roster = context; roster.petIDs = ["p_1234", "p_2345", "p_3456"]
+        for id in roster.petIDs {
+            #expect(behavior.pose(HousePet(id: id), world: world, context: roster, at: time).room == "b")
+        }
+    }
+
+    @Test func vacuumSingleRoomAndHomeRoomStaySafe() throws {
+        let world = try HousePetWorld(layout: [.init(room: "a", module: "living", col: 0, row: 0, level: 0)],
+                                     catalog: Self.catalog(), spots: Self.spots())
+        let behavior = HousePetBehavior(rig: try Self.rig()), event = Date(timeIntervalSince1970: 1792270000)
+        let context = HousePetContext(changedAt: event, vacuumRooms: ["a"])
+        let pose = behavior.pose(HousePet(id: "p_1234"), world: world, context: context, at: event.addingTimeInterval(120))
+        #expect(pose.room == "a" && pose.action == "sleep")
+        #expect(world.spots.contains { ["sleep", "perch"].contains($0.kind) && $0.point == pose.point })
+        let larger = try Self.reactionWorld()
+        #expect(behavior.pose(HousePet(id: "p_1234", homeRoom: "a"), world: larger, context: context, at: event.addingTimeInterval(120)).room == "a")
+        var restricted = context; restricted.rooms = ["a"]
+        #expect(behavior.pose(HousePet(id: "p_1234"), world: larger, context: restricted, at: event.addingTimeInterval(120)).room == "a")
+    }
+
+    @Test func vacuumModelsAndNamesRemainVisibleOnMain() {
+        for model in ["roborock.vacuum.a1", "vendor.sweeper.v1", "vendor.robot.v1"] {
+            #expect(HouseCatalog.isVacuum(category: .other, model: model))
+            #expect(HouseCatalog.showable(.other, model: model))
+        }
+        #expect(HouseCatalog.isVacuum(category: .other, name: "掃地機"))
+        #expect(!HouseCatalog.isVacuum(category: .other, model: "vendor.sensor.v1"))
+        let device = Device(did: "test-vacuum", name: "Cleaner", model: "roborock.vacuum.a1", isOnline: true,
+                            homeId: "h", homeName: "", roomName: "Living", roomId: "a")
+        #expect(device.category == .other)
+        let result = HouseResolver.resolve(devices: [device], config: nil, isHidden: { _ in false }, name: { $0.name })
+        #expect(result.rooms.contains { $0.devices.contains { $0.did == device.did } })
+    }
+
     @Test func sleepingOpaqueBoundsMatchSittingVisualWeight() throws {
         let rig = try Self.rig(), width = rig.frameSize[0], height = rig.frameSize[1]
         for pattern in rig.patterns {
