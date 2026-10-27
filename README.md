@@ -24,8 +24,8 @@
 
 - **QR sign-in** — scan with the Mi Home app, no password. Mainland China server by default; Europe, US, Russia, Singapore and India are one click away. Credentials stay in the macOS Keychain.
 - **Automatic device list** — all homes, rooms and shared devices with online state. Offline and long-unused devices are hidden by default.
-- **House cutaway** — pixel-art isometric home at the top of the list: tap fixtures (lights, TV or monitor, air conditioner, entry light) to toggle matched devices, with per-fixture lighting instead of lighting the whole room. Separate day and night art follows local time (~6:00–17:59); **Enlarge** opens a dedicated House window.
-- **House pets** — up to three customizable pixel cats; choose a palette or generate one from a photo analyzed only on your Mac.
+- **House cutaway** — pixel-art isometric home at the top of the list: composed layouts draw room fixtures and appliances; tap them to toggle matched devices. Lighting stays local to each fixture, day/night art follows local time, and **Enlarge** opens a dedicated House window.
+- **House pets** — up to three customizable pixel cats and dogs; choose a palette or generate one from a photo analyzed only on your Mac.
 - **A page designed for each device type** — air conditioner, fan, light, plug, TV, speaker, camera, printer, kitchen appliances, water purifier, heater, dehumidifier and sensors, each with its own skeuomorphic illustration.
 - **Restrained motion** — fast, non-bouncy springs (< 300 ms); fan blades spin with speed, the TV screen glows, heaters radiate; the power button ripples; sliders track 1:1, snap and tick the trackpad. Reduce Motion is respected.
 - **Keyboard first** — `↑/↓` select, `↩` open, `Space` power, `←/→` adjust the main slider, `/` search, `Esc` back, `⌘Q` quit.

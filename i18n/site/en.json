@@ -26,7 +26,7 @@
 
   "house_eyebrow": "House cutaway",
   "house_title": "See the whole home. Tap what you want to change.",
-  "house_lead": "A pixel-art isometric cutaway sits at the top of your device list. <b>Tap a fixture</b> — lights, TV, air conditioner, entry light — to toggle the device it maps to.",
+  "house_lead": "A pixel-art isometric cutaway sits at the top of your device list. Composed layouts draw room fixtures and appliances. <b>Tap them to toggle matched devices.</b>",
   "house_p1_t": "Fixture by fixture.",
   "house_p1_d": "Turn on one light and only that corner lights up — not the whole room.",
   "house_p2_t": "Day and night.",
