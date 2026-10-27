@@ -197,6 +197,16 @@ An entry room gets a central walk-node `entry` spot (priority 2); no reliable
 door-side geometry exists in the current catalog. Authored `ac`/`entry` spots
 override generated spots of that kind in their room, without editing every style.
 
+Free floor decor uses this same walk grid (`HouseFreeDecor`, see `HOUSE.md`). Resolved
+`free:<id>` placements carry their footprint cell. `HousePetWorld` omits those cells before
+building edges, so paths detour around S/M one-cell and L 2×2 obstacles. Its initializer
+remains source-compatible: pass resolved placements through the existing `decor` argument
+and the item catalog through `items`. Free `petSpot` items create preferred sleep spots
+on the nearest remaining floor node, never on their blocked footprint. Validation protects
+fixed sleep/perch approach nodes and keeps the remaining room floor connected. Invalid or
+disabled free decor is not resolved and therefore does not leave invisible obstacles.
+No extra pet occupancy is imposed on fixed decor or cross-room doorway cells by v1.
+
 Keep one `HousePetBehavior(rig:rigs:)` instance (the single-rig initializer remains
 compatible). `pose(_:world:context:at:)` is a pure
 function of these inputs despite internal plan/path memoization. Stable FNV/LCG

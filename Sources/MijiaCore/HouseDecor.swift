@@ -111,6 +111,7 @@ public struct HouseDecorPlacement: Equatable, Sendable {
     public var surface: String
     public var wall: String?
     public var source: Source
+    public var freeCell: [Int]? = nil
 }
 
 public enum HouseDecor {
@@ -130,7 +131,8 @@ public enum HouseDecor {
     }
     public static func resolve(layout: [HouseLayoutCell], catalog: HouseModuleCatalog, overrides: [String: HouseDecorEntry] = [:],
                                prefs: HouseDecorPrefs = .init(), date: Date = Date(), items: HouseDecorCatalog,
-                               calendar: Calendar = .current, includeHidden: Bool = false) -> [HouseDecorPlacement] {
+                               calendar: Calendar = .current, includeHidden: Bool = false,
+                               free: [String: HouseFreeDecorEntry] = [:], grids: [HouseFreeDecor.Grid] = []) -> [HouseDecorPlacement] {
         guard prefs.enabled else { return [] }
         let active = prefs.seasonal ? HouseSeasons.activeSeasons(on: date, calendar: calendar, seasons: items.seasons) : []
         let hidden = hiddenSlots(layout: layout, catalog: catalog)
@@ -158,6 +160,6 @@ public enum HouseDecor {
                                     surface: slot.surface, wall: slot.wall, source: source))
             }
         }
-        return result
+        return result + HouseFreeDecor.resolve(entries: free, grids: grids, items: items, fixed: result)
     }
 }

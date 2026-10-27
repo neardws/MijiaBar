@@ -93,6 +93,92 @@ Drag a tile onto a compatible visible slot (surface and size), or click a slot t
 Drag placed decor back to the panel or outside the house to remove it; cut-wall slots are hidden.
 Edits save through the same `house.json`/undo path as device edits. Reset to automatic in this tab resets only decor overrides.
 
+### Free floor decor (Phase 3, v1)
+
+Composed houses support snap-to-grid placement independently of fixed slots. The legacy
+hand-drawn classic scene has no walk grid and does **not** display free decor; use a composed
+layout (or a home with pets, which already selects the composer). No new renderer is involved.
+
+Optional home field, still **schema 1**:
+
+```json
+"freeDecor": {
+  "<roomKey>/f1": {"item": "monstera", "cell": [6, 4], "updatedAt": "2026-10-27T08:00:00Z"}
+}
+```
+
+`cell` is **zero-based `[col,row]`**, with `walk[row][col]` from the style's
+`pets/pet-spots.json` art set. The example cell is illustrative: validate it against the
+current room, style and fixed decor before placing. IDs are short stable identifiers;
+automatic `f1`, `f2`, … allocation avoids existing keys, including retained tombstones.
+`item: null` is a removal tombstone. Entries merge independently by `updatedAt`; tombstones
+are pruned after 30 days, like fixed decor. `house decor reset` and full `house reset` both
+tombstone free entries. Old synthesized/keyed decoders ignore this unknown field; they can
+read the file, but an older build rewriting it may discard fields it does not understand.
+
+- Only `surface: "floor"` items qualify (rugs, walls and tables remain slot-only).
+- Maximum **4 live entries per room**, exported as `HouseFreeDecor.maxPerRoom`.
+- S/M occupies one walk cell. L occupies 2×2 cells with `cell` as its top-left anchor.
+- Every footprint cell must be `.` and in bounds, without another free item. The nearest
+  walk cell of each currently occupied fixed floor slot is reserved against free placement.
+- Fixed sleep/perch approach nodes (`from`, or nearest floor node to `at`) are protected.
+  A four-neighbor BFS must leave the room's remaining walk floor connected. Cross-room
+  doorway preservation is deliberately outside v1.
+- Module pixel coordinates use `tip + (160*(u-v),66*(u+v))`, where the footprint center is
+  `((col+0.5)/N,(row+0.5)/N)` for S/M or `((col+1)/N,(row+1)/N)` for L; N is `cellsPerGrid`,
+  not the rectangular module width. Sprite bounds subtract the sprite's anchor.
+- Resolution revalidates in stable key order, skipping invalid entries after layout/style
+  changes or conflicting merges. Skipped live entries remain stored and are listed with
+  `hidden: "invalid"`. Decorations off hides free entries (`hidden: "disabled"`) and removes
+  their pet blockers. Seasonal replacement never changes a user free item.
+
+```sh
+mijiabar house decor place '<roomKey>' monstera --cell 6,4 --id f1
+mijiabar house decor move '<roomKey>/f1' --cell 7,4
+mijiabar house decor remove '<roomKey>/f1'
+mijiabar house decor list --room '<roomKey>' --json
+```
+
+Writes return JSON; rule failures include `ok: false`, `error` and typed `reason`:
+`notFloorItem`, `roomFull`, `blocked`, `occupied`, `petSpot`, `disconnects`, `unknownRoom`,
+`unknownItem`. Invalid identifier syntax returns `invalidID`. `place --id` refuses to
+overwrite a live entry; use `move` or the editor to change an existing placement.
+`decor list` / MCP `get_house_decor` include `free: [{key,room,item,cell,at,hidden?}]`.
+`set_house_decor` accepts one optional `free` operation instead of slot/preferences:
+
+```json
+{"free":{"action":"place","room":"<roomKey>","id":"f1","item":"cat_bed","cell":[7,5]}}
+```
+
+`move` needs room/id/cell; `remove` needs room/id. These are appearance-only operations
+and do not alter device-control permissions. CLI writes validate inside the coordinated
+store update against current entries.
+
+In **Style & decor**, compatible fixed slots take priority when dragging. Other room-floor
+targets snap to the nearest walkable cell, with a green/red footprint diamond and localized
+rejection text. Invalid drops do nothing. Free items have dashed yellow outlines: drag to
+move, or to the panel/outside the house to remove. Click for a floor-item picker, room picker,
+zero-based column/row steppers, validation text and Remove; Apply is disabled until valid.
+Per-room counts show `n / 4`. VoiceOver labels identify room, free placement, item and cell.
+Moves, replacements, room changes and removals use the existing timestamp-independent
+undo diff, preserving conflict detection and ⌘Z/redo.
+
+Scene JSON includes `freeDecor: [{key,room,item,cell,rect}]`, with sprite bounds in canvas
+pixels. `HouseFreeDecorCanvas` maps between module/grid and canvas coordinates using the
+scene origin, module tip, layout and elevation. Composed menu-bar and enlarged views use
+the same `HouseModuleAssets.decorations` resolver and cache fingerprint.
+
+Executor-only visual check: `MijiaBarApp --house-free-decor-snapshot <dir>` exports
+`free-decor-before-day.png`, `free-decor-after-day.png`, `free-decor-after-night.png`,
+`free-decor-grid-day.png`, `free-decor-menubar-day.png`, `free-decor-editor.png`,
+`free-decor-pets-day.png` and day/night scene JSON. The mock cozy-wood fixture places three
+items across living/bedroom, including an L monstera and cat bed. The editor image is the
+standalone numeric panel (not a captured live popover); the pet debug image shows remaining
+nodes/edges and a blue detour whose original unobstructed route crossed a free footprint.
+Grid colors: walkable green, furniture/protected approaches red, free footprints
+yellow. It never writes the real house file. These fixtures require separate visual review;
+unit tests do not establish visual correctness.
+
 The adjacent **Pets** editor tab adds up to three customizable pixel cats (manual
 palette or on-device photo analysis), with room restrictions and independent
 visibility toggles. Pet edits/removal support ⌘Z and sync through the same store.

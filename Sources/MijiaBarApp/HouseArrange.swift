@@ -366,7 +366,7 @@ enum HouseModuleAssets {
         let key = "\(styleId)|\(phase.assetName)|\(decorFingerprint(config, date: date))|" + layout.map { "\($0.room)=\($0.module)@\($0.col),\($0.row)^\(HouseLevels.effective($0))" }.joined(separator: ";")
         if let s = scenes[key] { return s }
         guard let (cat, images) = load(phase: phase, style: styleId) else { return nil }
-        let decor = decorations(layout: layout, catalog: cat, phase: phase, config: config, date: date)
+        let decor = decorations(layout: layout, catalog: cat, phase: phase, config: config, date: date, style: styleId)
         let r = HouseComposer.compose(.init(layout: layout, catalog: cat, images: images, night: phase == .night, wallCaps: wallCaps(style: styleId), decor: decor))
         guard let u = r.unlit, let l = r.lit else { return nil }
         let scene: HouseCutawaySceneFile
@@ -382,7 +382,7 @@ enum HouseModuleAssets {
 
     @MainActor static func compose(layout: [HouseLayoutCell], phase: HousePhase, style: String? = nil, config: HomeHouse = HomeHouse()) -> (image: NSImage, ms: Double)? {
         guard let (cat, images) = load(phase: phase, style: style) else { return nil }
-        let decor = decorations(layout: layout, catalog: cat, phase: phase, config: config)
+        let decor = decorations(layout: layout, catalog: cat, phase: phase, config: config, style: style)
         let r = HouseComposer.compose(.init(layout: layout, catalog: cat, images: images, night: phase == .night, wallCaps: wallCaps(style: style), decor: decor))
         // 预览：白天看关灯底图，夜间看开灯（暖光）版
         guard let img = phase == .day ? r.unlit : r.lit else { fputs("HouseModuleAssets: compose produced nil\n", stderr); return nil }
