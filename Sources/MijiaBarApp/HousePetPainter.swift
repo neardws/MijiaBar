@@ -6,7 +6,12 @@ import MijiaCore
 final class HousePetPainter {
     static let shared = HousePetPainter()
     let directory: URL?
-    let rig: HousePetRig?
+    let rigs: [String: HousePetRig]
+    var rig: HousePetRig? { rigs["cat-short"] }
+    func rig(for pet: HousePet) -> HousePetRig? {
+        guard rigs[pet.rig]?.species == pet.species else { return nil }
+        return rigs[pet.rig]
+    }
     let spots: HousePetSpots?
     let cache = HousePetFrameCache()
     let behavior: HousePetBehavior?
@@ -15,10 +20,15 @@ final class HousePetPainter {
     init() {
         let url = AppResources.url("cat-short", "json", subdirectory: "House/pets") ?? AppResources.url("cat-short", "json")
         directory = url?.deletingLastPathComponent()
-        rig = url.flatMap { try? HousePetRig.load(from: $0) }
+        let loaded: [String: HousePetRig] = Dictionary(uniqueKeysWithValues: HousePetRig.supported.keys.sorted().compactMap { id in
+            let resource = AppResources.url(id, "json", subdirectory: "House/pets") ?? AppResources.url(id, "json")
+            guard let resource, let rig = try? HousePetRig.load(from: resource), rig.id == id else { return nil }
+            return (id, rig)
+        })
+        rigs = loaded
         let spotURL = AppResources.url("pet-spots", "json", subdirectory: "House/pets") ?? AppResources.url("pet-spots", "json")
         spots = spotURL.flatMap { try? HousePetSpots.load(from: $0) }
-        behavior = rig.map(HousePetBehavior.init)
+        behavior = loaded["cat-short"].map { HousePetBehavior(rig: $0, rigs: loaded) }
     }
 
     static func transform(rig: HousePetRig, pose: HousePetPose) -> CGAffineTransform {
@@ -97,8 +107,9 @@ final class HousePetPainter {
     }
 
     func regions(pet: HousePet) -> [[UInt8]]? {
-        if let frames = regionFrames[pet.pattern] { return frames }
-        guard let rig, let directory, let file = rig.sheets[pet.pattern], !file.contains("/"), !file.contains("\\"),
+        let key = pet.rig + "/" + pet.pattern
+        if let frames = regionFrames[key] { return frames }
+        guard let rig = rig(for: pet), let directory, let file = rig.sheets[pet.pattern], !file.contains("/"), !file.contains("\\"),
               let sheet = try? HousePetSheet.load(from: directory.appendingPathComponent(file)) else { return nil }
         let width = rig.frameSize[0], height = rig.frameSize[1]
         guard sheet.width >= rig.columns * width, sheet.height >= ((rig.frameCount + rig.columns - 1) / rig.columns) * height else { return nil }
@@ -109,12 +120,12 @@ final class HousePetPainter {
                 return sheet.rgba[(row * sheet.width + column) * 4] & 15
             }
         }
-        regionFrames[pet.pattern] = frames
+        regionFrames[key] = frames
         return frames
     }
 
     func frame(pet: HousePet, pose: HousePetPose, night: Bool, lit: Bool, unlitImage: CGImage?, litImage: CGImage?) -> CGImage? {
-        guard let rig, let directory, let frames = try? cache.frames(pet: pet, rig: rig, directory: directory, phase: "day"),
+        guard let rig = rig(for: pet), let directory, let frames = try? cache.frames(pet: pet, rig: rig, directory: directory, phase: "day"),
               frames.indices.contains(pose.frameIndex) else { return nil }
         let frame = frames[pose.frameIndex]
         let nightLight = rig.lighting["night"] ?? .init()
@@ -132,7 +143,7 @@ final class HousePetPainter {
     func draw(in context: CGContext, pets: [HousePet], world: HousePetWorld, scene: HouseCutawaySceneFile,
               byRoom: Bool = true, context state: HousePetContext, date: Date,
               unlit: CGImage?, lit: CGImage?, poses: [String: HousePetPose] = [:]) {
-        guard state.enabled, let rig, let behavior else { return }
+        guard state.enabled, let behavior else { return }
         let active = pets.filter { $0.enabled && !$0.deleted }
         let resolved = behavior.poses(active, world: world, context: state, at: date, overrides: poses)
         var ordered: [(HousePet, HousePetPose)] = []
@@ -145,7 +156,7 @@ final class HousePetPainter {
             return left.1.point.y < right.1.point.y
         }
         for (pet, pose) in ordered where pose.visible {
-            guard let module = scene.modules[byRoom ? pose.room : pose.module],
+            guard let rig = rig(for: pet), let module = scene.modules[byRoom ? pose.room : pose.module],
                   let image = frame(pet: pet, pose: pose, night: state.night, lit: state.lights[pose.room] == true, unlitImage: unlit, litImage: lit) else { continue }
             context.saveGState()
             HousePetOcclusion.clipFurniture(HousePetOcclusion.holes(for: pose, in: world), in: context)

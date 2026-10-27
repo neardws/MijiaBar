@@ -1,5 +1,6 @@
 import Foundation
 import CoreGraphics
+import SwiftUI
 import Testing
 import MijiaCore
 @testable import MijiaBarApp
@@ -51,6 +52,45 @@ import MijiaCore
         #expect(HousePetsLayer.entryContacts(rooms: [room]).isEmpty)
     }
 
+    @Test func speciesPickerCommitsValidPairAndPreservesOtherFields() throws {
+        let model = AppModel(mock: true)
+        let original = HousePet(id: "p_1234", name: "Preview", pattern: "bicolor")
+        #expect(model.houseSavePet(original, label: "add"))
+        model.houseChangePet(original.id) { $0.name = "Renamed" }
+        var writes = 0
+        var baseline = original
+        let binding = Binding<HousePet>(get: { model.house.homes[model.houseHomeKey]?.pets?[original.id] ?? original }, set: { value in
+            writes += 1
+            #expect(HousePetRig.accepts(species: value.species, rig: value.rig, pattern: value.pattern))
+            model.houseChangePetAppearance(value, from: baseline)
+        })
+        let fields = HousePetAppearanceFields(pet: binding)
+        fields.speciesSelection.wrappedValue = "dog"
+        #expect(writes == 1)
+        var saved = try #require(model.house.homes[model.houseHomeKey]?.pets?[original.id])
+        #expect(saved.species == "dog" && saved.rig == "dog-short" && saved.pattern == "bicolor" && saved.name == "Renamed")
+        baseline = saved
+        fields.speciesSelection.wrappedValue = "cat"
+        saved = try #require(model.house.homes[model.houseHomeKey]?.pets?[original.id])
+        #expect(writes == 2 && saved.species == "cat" && saved.rig == "cat-short")
+    }
+    @Test func dogPainterUsesItsOwnRigAndRegionCache() throws {
+        let painter = HousePetPainter.shared
+        let cat = HousePet(), dog = HousePet(species: "dog", rig: "dog-short")
+        let rig = try #require(painter.rig(for: dog))
+        #expect(rig.id == "dog-short" && painter.rig?.id == "cat-short")
+        #expect(painter.rig(for: .init(species: "cat", rig: "dog-short")) == nil)
+        let catRegions = try #require(painter.regions(pet: cat))
+        let dogRegions = try #require(painter.regions(pet: dog))
+        #expect(catRegions != dogRegions)
+        #expect(painter.regions(pet: cat) == catRegions)
+        let pose = HousePetPose(point: .init(x: 100, y: 100), action: "sit",
+                               frameIndex: rig.frame(action: "sit", facing: "SE", elapsed: 0).index, module: "living", room: "room")
+        for night in [false, true] {
+            let frame = try #require(painter.frame(pet: dog, pose: pose, night: night, lit: false, unlitImage: nil, litImage: nil))
+            #expect(frame.width == rig.frameSize[0] && frame.height == rig.frameSize[1])
+        }
+    }
     private func rig() throws -> HousePetRig { try #require(HousePetPainter.shared.rig) }
     private let blackPalette = HousePetPalette(base: "#2E2B30", second: "#1C1A1E", white: "#F2F0EC", eye: "#E9C24A")
     private func rgba(_ image: CGImage) throws -> [UInt8] {

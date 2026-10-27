@@ -16,7 +16,7 @@ fail() { echo "❌ App resource verification failed: $*" >&2; exit 1; }
   || fail "no decor PNGs in $BUNDLE"
 [ -n "$(find "$BUNDLE" -type f -name 'decor-catalog.json' -print -quit)" ] \
   || fail "no decor catalog in $BUNDLE"
-for pet in cat-short.json pet-spots.json cat-short-solid.png cat-short-tabby.png cat-short-tabbyWhite.png cat-short-bicolor.png cat-short-calico.png cat-short-colorpoint.png; do
+for pet in pet-spots.json {cat,dog}-short.json {cat,dog}-short-{solid,tabby,tabbyWhite,bicolor,calico,colorpoint}.png; do
   [ -n "$(find "$BUNDLE" -type f -name "$pet" -print -quit)" ] || fail "missing pet resource $pet in $BUNDLE"
 done
 

@@ -10,6 +10,7 @@ public struct HousePetContext: Equatable, Sendable {
     public var entryRoom: String?
     public var rooms: Set<String>
     public var petIDs: [String]
+    public var petSpecies: [String: String] = [:]
     public var changedAt: Date?
     public var changedRoom: String?
     public var restOnly: Bool
@@ -70,6 +71,7 @@ public final class HousePetBehavior: @unchecked Sendable {
     private struct RequestKey: Hashable {
         var world: ObjectIdentifier
         var pet: String
+        var species: String
         var home: String?
         var day: Date
         var zone: String
@@ -78,17 +80,20 @@ public final class HousePetBehavior: @unchecked Sendable {
     }
     private struct PreparedKey { var text: String; var roster: [String]; var rank: Int }
     private let rig: HousePetRig
+    private let rigs: [String: HousePetRig]
     private let lock = NSLock()
     private var plans: [String: Plan] = [:]
     private var retainedWorlds: [ObjectIdentifier: HousePetWorld] = [:]
     private var preparedKeys: [RequestKey: PreparedKey] = [:]
-    public init(rig: HousePetRig) { self.rig = rig }
+    public init(rig: HousePetRig, rigs: [String: HousePetRig] = [:]) { self.rig = rig; self.rigs = rigs }
 
     private static func seed(_ text: String) -> UInt64 {
         text.utf8.reduce(14695981039346656037) { ($0 ^ UInt64($1)) &* 1099511628211 }
     }
     public func poses(_ pets: [HousePet], world: HousePetWorld, context: HousePetContext, at date: Date,
                       overrides: [String: HousePetPose] = [:]) -> [String: HousePetPose] {
+        var context = context
+        for pet in pets { context.petSpecies[pet.id] = pet.species }
         var result: [String: HousePetPose] = [:]
         for pet in pets { result[pet.id] = overrides[pet.id] ?? pose(pet, world: world, context: context, at: date) }
         guard context.restOnly else { return result }
@@ -125,7 +130,7 @@ public final class HousePetBehavior: @unchecked Sendable {
         lock.lock(); defer { lock.unlock() }
         if plans.count > 24 { plans.removeAll(); retainedWorlds.removeAll(); preparedKeys.removeAll() }
         retainedWorlds[identity] = world
-        let request = RequestKey(world: identity, pet: pet.id, home: pet.homeRoom, day: day, zone: context.timeZone.identifier, rooms: rooms, petIDs: context.petIDs)
+        let request = RequestKey(world: identity, pet: pet.id, species: pet.species, home: pet.homeRoom, day: day, zone: context.timeZone.identifier, rooms: rooms, petIDs: context.petIDs)
         let prepared: PreparedKey
         if let cached = preparedKeys[request] { prepared = cached } else {
             let roster = Array(Set(context.petIDs + [pet.id])).sorted()
@@ -134,11 +139,11 @@ public final class HousePetBehavior: @unchecked Sendable {
             if preparedKeys.count >= 24 { preparedKeys.removeAll() }
             preparedKeys[request] = prepared
         }
-        let key = prepared.text, roster = prepared.roster, rank = prepared.rank
+        let key = prepared.text + (pet.species == "cat" ? "" : "|" + pet.species), roster = prepared.roster, rank = prepared.rank
         func reservedSpots() -> [HousePetWorld.Spot] {
             var separated: [HousePetWorld.Spot] = []
             for room in rooms.sorted() {
-                var candidates = world.spots.filter { world.nodes[$0.node].room == room && !["light", "ac", "entry"].contains($0.kind) }
+                var candidates = world.spots.filter { world.nodes[$0.node].room == room && !["light", "ac", "entry"].contains($0.kind) && $0.accepts(pet) }
                 for node in world.nodes where node.room == room {
                     candidates.append(.init(id: "~\(node.id)", kind: "sit", node: node.id, point: node.point, facing: "SE", priority: 4))
                 }
@@ -208,10 +213,11 @@ public final class HousePetBehavior: @unchecked Sendable {
             let light = context.changedRoom == room && context.changedAt != nil
             if vacuum || entry || nightSleep || tv || ac || light {
                 let targetKind = vacuum ? "sleep" : entry ? "entry" : nightSleep ? "sleep" : tv ? "tv" : ac ? "ac" : "light"
-                let reactionKey = key + "|reaction|\(startTime)|\(targetKind)|\(vacuum)|\(context.entryAt?.timeIntervalSince1970 ?? -1)|\(context.entryRoom ?? "")|\(context.changedRoom ?? "")|" + [context.tvRooms, context.acRooms, context.vacuumRooms].map { $0.sorted().joined(separator: ",") }.joined(separator: "|") + "|" + context.lights.keys.sorted().map { "\($0)=\(context.lights[$0]!)" }.joined(separator: ",")
+                let speciesKey = context.petSpecies.keys.sorted().filter { context.petSpecies[$0] != "cat" }.map { $0 + "=" + context.petSpecies[$0]! }.joined(separator: ",")
+                let reactionKey = key + "|reaction|\(startTime)|\(targetKind)|\(vacuum)|\(context.entryAt?.timeIntervalSince1970 ?? -1)|\(context.entryRoom ?? "")|\(context.changedRoom ?? "")|" + [context.tvRooms, context.acRooms, context.vacuumRooms].map { $0.sorted().joined(separator: ",") }.joined(separator: "|") + "|" + context.lights.keys.sorted().map { "\($0)=\(context.lights[$0]!)" }.joined(separator: ",") + "|" + speciesKey
                 let reaction: Plan
                 if let cached = plans[reactionKey] { reaction = cached } else {
-                    var available = world.spots.filter { rooms.contains(world.nodes[$0.node].room) && (pet.homeRoom == nil || world.nodes[$0.node].room == pet.homeRoom) }
+                    var available = world.spots.filter { $0.accepts(pet) && rooms.contains(world.nodes[$0.node].room) && (pet.homeRoom == nil || world.nodes[$0.node].room == pet.homeRoom) }
                         .filter { spot in
                             let destination = world.nodes[spot.node].room
                             switch targetKind {
@@ -222,16 +228,23 @@ public final class HousePetBehavior: @unchecked Sendable {
                             default: return spot.kind == "light" && destination == room
                             }
                         }
-                        .sorted { $0.priority == $1.priority ? $0.id < $1.id : $0.priority < $1.priority }
+                        .sorted {
+                            if ($0.species != nil) != ($1.species != nil) { return $0.species != nil }
+                            return $0.priority == $1.priority ? $0.id < $1.id : $0.priority < $1.priority
+                        }
                     if vacuum {
                         let safe = available.filter { !context.vacuumRooms.contains(world.nodes[$0.node].room) && !world.path(from: start.node, to: $0.node, room: pet.homeRoom, allowedRooms: rooms).isEmpty }
                         if !safe.isEmpty { available = safe }
                     }
                     var target = available.first(where: { !world.path(from: start.node, to: $0.node, room: pet.homeRoom, allowedRooms: rooms).isEmpty }) ?? start.rest
+                    let reservationRoster = targetKind == "sleep" && target.species != nil
+                        ? roster.filter { $0 == pet.id || (context.petSpecies[$0] ?? "cat") == pet.species } : roster
+                    let reservationRank = reservationRoster.firstIndex(of: pet.id) ?? 0
                     var distinct: [HousePetWorld.Spot] = []
-                    if targetKind == "sleep" && roster.count > 1 {
+                    if targetKind == "sleep" && reservationRoster.count > 1 {
                         let reachable = available.filter { !world.path(from: start.node, to: $0.node, room: pet.homeRoom, allowedRooms: rooms).isEmpty }
                             .sorted {
+                                if ($0.species != nil) != ($1.species != nil) { return $0.species != nil }
                                 let leftDark = context.lights[world.nodes[$0.node].room] != true, rightDark = context.lights[world.nodes[$1.node].room] != true
                                 if leftDark != rightDark { return leftDark }
                                 return $0.priority == $1.priority ? $0.id < $1.id : $0.priority < $1.priority
@@ -241,19 +254,19 @@ public final class HousePetBehavior: @unchecked Sendable {
                             for candidate in reachable where distinct.allSatisfy({ $0.point.distance(to: candidate.point) >= cells * world.cellSize - 0.001 }) {
                                 distinct.append(candidate)
                             }
-                            if distinct.count >= roster.count { break }
+                            if distinct.count >= reservationRoster.count { break }
                         }
                     }
-                    if distinct.count >= roster.count { target = distinct[rank] }
-                    else if roster.count > 1 {
+                    if distinct.count >= reservationRoster.count { target = distinct[reservationRank] }
+                    else if reservationRoster.count > 1 {
                         let near = world.nodes.filter { rooms.contains($0.room) && (pet.homeRoom == nil || $0.room == pet.homeRoom) }
                             .sorted { $0.point.distance(to: target.point) == $1.point.distance(to: target.point) ? $0.id < $1.id : $0.point.distance(to: target.point) < $1.point.distance(to: target.point) }
                         var candidates = [target]
                         for node in near where node.room == world.nodes[target.node].room && !world.path(from: target.node, to: node.id, room: pet.homeRoom, allowedRooms: rooms).isEmpty {
                             candidates.append(.init(id: target.id, kind: target.kind, node: node.id, point: node.point, facing: target.facing, priority: target.priority))
                         }
-                        let separated = Self.separatedSpots(candidates, count: roster.count, cellSize: world.cellSize)
-                        if separated.indices.contains(rank) { target = separated[rank] }
+                        let separated = Self.separatedSpots(candidates, count: reservationRoster.count, cellSize: world.cellSize)
+                        if separated.indices.contains(reservationRank) { target = separated[reservationRank] }
                     }
                     let path = world.path(from: start.node, to: target.node, room: pet.homeRoom, allowedRooms: rooms)
                     var segments: [Segment] = [], time = startTime
@@ -279,7 +292,7 @@ public final class HousePetBehavior: @unchecked Sendable {
         }
         localTime = max(0, elapsed - selected.start)
         let progress = min(1, localTime / max(0.001, selected.duration)), node = world.nodes[selected.node]
-        let frame = rig.frame(action: selected.action, facing: selected.facing, elapsed: localTime)
+        let frame = (rigs[pet.rig] ?? rig).frame(action: selected.action, facing: selected.facing, elapsed: localTime)
         return .init(point: .init(x: selected.from.x + (selected.to.x - selected.from.x) * progress, y: selected.from.y + (selected.to.y - selected.from.y) * progress),
                      facing: selected.facing, action: selected.action, frameIndex: frame.index, mirrored: frame.mirrored,
                      jumpLift: selected.action == "jump" ? 4 * 28 * progress * (1 - progress) : 0, module: node.module, room: node.room,

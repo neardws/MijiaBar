@@ -24,6 +24,17 @@ extension AppModel {
             catch { showToast(error.localizedDescription, error: true) }
         }
     }
+
+    func houseChangePetAppearance(_ value: HousePet, from original: HousePet) {
+        houseChangePet(original.id) { current in
+            if value.name != original.name { current.name = value.name }
+            if value.species != original.species || value.rig != original.rig { current.species = value.species; current.rig = value.rig }
+            if value.pattern != original.pattern { current.pattern = value.pattern }
+            for key in [\HousePetPalette.base, \.second, \.white, \.eye] where value.palette[keyPath: key] != original.palette[keyPath: key] {
+                current.palette[keyPath: key] = value.palette[keyPath: key]
+            }
+        }
+    }
 }
 
 enum HousePetPatterns {
@@ -52,7 +63,7 @@ private final class HousePetPreviewCache {
     private var cache: [Key: [Int: CGImage]] = [:]
 
     func frames(pet: HousePet, painter: HousePetPainter, animated: Bool) -> [Int: CGImage]? {
-        guard let rig = painter.rig, let directory = painter.directory else { return nil }
+        guard let rig = painter.rig(for: pet), let directory = painter.directory else { return nil }
         let key = Key(directory: directory, rig: rig.id, pattern: pet.pattern,
                       palette: [pet.palette.base, pet.palette.second, pet.palette.white, pet.palette.eye], animated: animated)
         if let frames = cache[key] { return frames }
@@ -83,7 +94,7 @@ struct HousePetPreview: View {
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 8, paused: !animated || reduceMotion || lowPower || !visible)) { tick in
             let time = animated && !reduceMotion && !lowPower ? tick.date.timeIntervalSinceReferenceDate : 0
-            if let rig = HousePetPainter.shared.rig,
+            if let rig = HousePetPainter.shared.rig(for: pet),
                let frames = HousePetPreviewCache.shared.frames(pet: pet, painter: HousePetPainter.shared, animated: animated) {
                 let action = Int(time / 6) % 2 == 0 ? "sit" : "idle"
                 let index = rig.frame(action: action, facing: "SE", elapsed: time).index
@@ -104,11 +115,22 @@ struct HousePetPreview: View {
 
 struct HousePetAppearanceFields: View {
     @Binding var pet: HousePet
+    var speciesSelection: Binding<String> {
+        Binding(get: { pet.species }, set: { species in
+            var value = pet; value.species = species; value.rig = species + "-short"
+            withoutAnimation { pet = value }
+        })
+    }
     var body: some View {
+        Picker(L("种类", "Species"), selection: speciesSelection) {
+            Text(L("猫", "Cat")).tag("cat")
+            Text(L("狗", "Dog")).tag("dog")
+        }.accessibilityLabel(L("种类", "Species"))
+            .accessibilityValue(pet.species == "dog" ? L("狗", "Dog") : L("猫", "Cat"))
         TextField(L("名字", "Name"), text: $pet.name).textFieldStyle(.roundedBorder)
             .accessibilityLabel(L("宠物名字", "Pet name"))
         LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 6) {
-            ForEach(HousePetRig.patterns, id: \.self) { pattern in
+            ForEach(HousePetRig.supported[pet.rig]?.patterns ?? [], id: \.self) { pattern in
                 Button { pet.pattern = pattern } label: {
                     VStack(spacing: 2) {
                         HousePetPreview(pet: patterned(pattern), size: 52, animated: false)
@@ -207,13 +229,7 @@ struct HousePetsEditor: View {
 
     private func binding(_ pet: HousePet) -> Binding<HousePet> {
         Binding(get: { m.house.homes[m.houseHomeKey]?.pets?[pet.id] ?? pet }, set: { value in
-            m.houseChangePet(pet.id) { current in
-                if value.name != pet.name { current.name = value.name }
-                if value.pattern != pet.pattern { current.pattern = value.pattern }
-                for key in [\HousePetPalette.base, \.second, \.white, \.eye] where value.palette[keyPath: key] != pet.palette[keyPath: key] {
-                    current.palette[keyPath: key] = value.palette[keyPath: key]
-                }
-            }
+            m.houseChangePetAppearance(value, from: pet)
         })
     }
 
@@ -253,7 +269,7 @@ private struct HousePetPhotoSheet: View {
     @State private var pet: HousePet
     init(draft: HousePetPhotoDraft, add: @escaping (HousePet) -> Void, cancel: @escaping () -> Void) {
         self.draft = draft; self.add = add; self.cancel = cancel
-        _pet = State(initialValue: HousePet(name: L("橘子", "Orange"), pattern: draft.result.pattern, palette: draft.result.palette))
+        _pet = State(initialValue: draft.result.pet())
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {

@@ -77,8 +77,8 @@ import Testing
         }
     }
 
-    @Test func bundledStaticCropIsSmallerAndScalesUpInPatternTile() throws {
-        let rig = try HousePetTests.rig()
+    @Test(arguments: ["cat-short", "dog-short"]) func bundledStaticCropIsSmallerAndScalesUpInPatternTile(_ rigID: String) throws {
+        let rig = try HousePetTests.rig(rigID)
         let staticIndices = HousePetPreviewGeometry.frameIndices(rig: rig, animated: false)
         let animatedIndices = HousePetPreviewGeometry.frameIndices(rig: rig, animated: true)
         #expect(staticIndices == [rig.frame(action: "sit", facing: "SE", elapsed: 0).index])
@@ -93,7 +93,8 @@ import Testing
             #expect(staticBounds.height < animatedBounds.height)
             let scale = HousePetPreviewGeometry.displayScale(width: staticBounds.width, height: staticBounds.height,
                                                             boxWidth: 52, boxHeight: 52, backingScale: 2)
-            #expect(scale >= 1.5)
+            #expect(scale >= (rigID == "cat-short" ? 1.5 : 1.0))
+            #expect(scale * 2 == (scale * 2).rounded(.down))
             #expect(Double(staticBounds.width) * scale <= 52)
             #expect(Double(staticBounds.height) * scale <= 52)
         }

@@ -46,6 +46,7 @@ public struct HouseDecorCatalog: Codable, Equatable, Sendable {
         public var sprites: [String: Sprite]
         public var anchor: [Double]
         public var petSpot: Bool?
+        public var species: [String]?
         public var season: String?
         public var text: Bool?
         public func fits(_ slot: HouseDecorSlot) -> Bool {

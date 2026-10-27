@@ -41,7 +41,9 @@ def stamp_eyes(F, C, style=None):
     p = f['nose']; dirv = (p - hc) / np.linalg.norm(p - hc)
     if dirv @ F_W > 0.1:
         sx, sy = project(p); i, j = int(np.floor((sy - y0) / CELL)), int(np.floor((sx - x0) / CELL))
-        if 0 <= i < H and 0 <= j < W and obj[i, j] and abs(np.nan_to_num(dep[i, j], nan=-99) - p @ F_W) < 4: reg[i, j] = PT.PINK
+        if 0 <= i < H and 0 <= j < W and obj[i, j] and abs(np.nan_to_num(dep[i, j], nan=-99) - p @ F_W) < 4:
+            reg[i, j] = PT.PUPIL if style == 'dog' else PT.PINK
+            if style == 'dog' and j > 0 and obj[i, j - 1]: reg[i, j - 1] = PT.PUPIL
     return reg
 
 def cleanup(reg, obj):
