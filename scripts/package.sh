@@ -10,6 +10,9 @@
 #   SKIP_APPCAST    设为 1 时跳过 appcast 生成
 set -euo pipefail
 cd "$(dirname "$0")/.."
+HOUSE_STYLE_BUNDLE="${HOUSE_STYLE_BUNDLE:-all}"
+case "$HOUSE_STYLE_BUNDLE" in all|default) ;; *) echo "Invalid HOUSE_STYLE_BUNDLE: $HOUSE_STYLE_BUNDLE" >&2; exit 1 ;; esac
+export HOUSE_STYLE_BUNDLE
 VERSION="${VERSION:-0.1.15}"
 ARCHS="${ARCHS:---arch arm64 --arch x86_64}"
 NOTARY_PROFILE="${NOTARY_PROFILE-MijiaBar-notary}"
@@ -57,7 +60,10 @@ for bundle in "$BIN"/*.bundle; do
   [ -d "$bundle" ] || continue
   cp -a "$bundle" "$APP/Contents/Resources/"
 done
+if [ "$HOUSE_STYLE_BUNDLE" = all ]; then
 for style in japanese modern light-wood walnut; do
+  mkdir -p "$APP/Contents/Resources/House/styles/$style"
+  cp "assets/house/styles/$style/manifest.json" "$APP/Contents/Resources/House/styles/$style/"
   for sub in modules classic; do
     source="assets/house/styles/$style/$sub"
     [ -d "$source" ] || continue
@@ -72,6 +78,7 @@ for style in japanese modern light-wood walnut; do
     done
   done
 done
+fi
 scripts/verify-app-bundle.sh "$APP"
 cp "$BIN/MijiaBarApp" "$APP/Contents/MacOS/MijiaBar"
 cp "$BIN/mijiabar" "$APP/Contents/Resources/bin/mijiabar"

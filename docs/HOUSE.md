@@ -4,6 +4,51 @@ The pixel **house cutaway** at the top of the device list is laid out automatica
 devices. Anything you change — in the House window's edit mode, with `mijiabar house …`, or through MCP — is stored
 as a small set of **overrides** in one JSON file. Delete an override (or run `reset`) and that part goes back to automatic.
 
+## On-demand style packs (v1)
+
+Cozy wood is always in the SwiftPM resource bundle and works on the first launch without a network connection.
+Japanese, Modern, Light wood and Walnut can either be bundled (the packaging default) or downloaded when selected.
+The picker shows **Bundled**, **Download + size**, download progress, **Downloaded / Remove**, or an error with **Retry**.
+An offline failure does not change the selection. A style selected on another Mac remains in `house.json`, but this Mac
+renders Cozy wood until the pack is available. Downloading and removing packs is local to this Mac; it does not delete
+synced preferences or change device placement. Removing the active downloaded pack also falls back to Cozy wood.
+
+### Format and trust
+
+- `scripts/build-style-packs.sh [outdir]` produces `<id>/<version>.zip` and `index.json` (schema 1).
+- Each ZIP contains `manifest.json`, `modules/*.png|json`, and optionally `classic/*.png|json`; no `src/` files.
+  The manifest must match the index's `id` and integer `version`, and at least one module PNG must exist.
+- The signed app embeds `Sources/MijiaBarApp/Resources/House/style-packs.json`. Each entry has `id`, `version`, relative
+  `url`, `sha256`, exact byte `size`, and optional `minAppVersion`. **The client does not fetch or trust a remote index.**
+  A new pack version requires a new baked index in an app build; existing pack URLs must be immutable.
+- Downloads use an ephemeral URLSession, no cookies, no redirects, a 90-second resource timeout and a 100 MB pack limit.
+  Exact size and SHA-256 are checked before extraction. A strict ZIP preflight checks both local and central headers,
+  rejecting traversal, absolute paths, symlinks, special files, duplicate paths, encryption, extra fields, data descriptors,
+  ZIP64, and files outside the allowlist. Uncompressed content is limited to 256 MB, 32 MB per entry, and 2,048 entries.
+  Use the build script rather than a generic desktop ZIP utility (which may add unsupported metadata).
+- Extraction uses `/usr/bin/ditto` in a temporary sibling directory. Only after manifest validation is `.pack.json`
+  written and the directory atomically moved/replaced at `~/Library/Application Support/MijiaBar/House/styles/<id>/`.
+  Missing or invalid `.pack.json` means an interrupted/foreign directory is not an installed pack. Failed installs leave
+  an existing installation untouched. The installer serializes downloads/removal per style ID.
+
+### Resource lookup and fallback
+
+For optional styles, lookup order is app `Resources/House/styles` → SwiftPM resource bundle → verified installation
+in Application Support → developer checkout `assets/house/styles` (via `#filePath`) → Cozy wood resources.
+Developer assets count as available locally, so development runs can show **Bundled** even when no optional files are in
+the app bundle. Test the truly unbundled distribution away from the source checkout. Bundled/developer assets cannot be
+removed from the picker. An absent module uses Cozy wood's art **and** catalog anchors, not mismatched style coordinates.
+
+The default download base is `https://files.neardws.com/mijiabar/house/styles/`. **It is not populated until a maintainer
+uploads these packs**; packaging remains `HOUSE_STYLE_BUNDLE=all` until then. Override with environment variable
+`MIJIABAR_STYLE_PACK_BASE_URL` (highest priority) or UserDefaults key `MijiaBarStylePackBaseURL`.
+Production accepts HTTPS only, with no credentials, query or fragment in the base URL. Tests can explicitly opt into
+HTTP for `localhost` or `127.0.0.1`; this exception is not enabled by the app. No background download occurs at launch.
+
+Executor-only visual check (mock statuses, no downloads):
+`MijiaBarApp --house-style-packs-snapshot <dir>` emits `style-packs-picker.png` and `style-packs-picker-dark.png`, showing
+bundled, available, downloading at 40%, hash failure / Retry, and downloaded / Remove states using the real card component.
+
 ## Where the file lives and how it syncs
 
 | Mode | Path | Notes |

@@ -841,7 +841,7 @@ extension Snapshot {
             }
         }
         for style in ["cozy-wood", "japanese", "modern"] {
-            guard HouseModuleAssets.resourceURL("module-living-day-unlit", "png", style: style) != nil else { continue }
+            guard HouseStylePackStore.hasAssets(style) else { continue }
             func save(_ name: String, layout: [HouseLayoutCell]?, phase: HousePhase, lit: Bool, closed: Bool = false, edit: Bool = false) {
                 guard let source = HouseSceneSource.make(layout: layout, phase: phase, style: style) else { return }
                 let scene = HouseCutawaySceneView(rooms: rooms(lit, closed: closed), phase: phase, showLabels: false,

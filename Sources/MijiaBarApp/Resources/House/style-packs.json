@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "packs": [
+    {
+      "id": "japanese",
+      "version": 1,
+      "url": "japanese/1.zip",
+      "sha256": "89d0e5af36e1422d2831999af92ad9c5ea1e74157ecf35c9ef91d9bd810a2ef9",
+      "size": 6122702
+    },
+    {
+      "id": "modern",
+      "version": 1,
+      "url": "modern/1.zip",
+      "sha256": "7525c873bde0a5fb53ffda9d5279d917d6f13676ce1ab2102cf2f4a72f5bbecb",
+      "size": 6407726
+    },
+    {
+      "id": "light-wood",
+      "version": 1,
+      "url": "light-wood/1.zip",
+      "sha256": "8ebbd0c39853aaa1d0379a1223b891820c37517a02ceeed70162087a7928244e",
+      "size": 9563089
+    },
+    {
+      "id": "walnut",
+      "version": 1,
+      "url": "walnut/1.zip",
+      "sha256": "35cd8fed9d25fbbe18b50b73b6f1e308d9a42f9a4ad8400c8049f7c1a6d5eec0",
+      "size": 8892488
+    }
+  ]
+}
