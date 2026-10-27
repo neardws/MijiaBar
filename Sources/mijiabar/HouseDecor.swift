@@ -62,9 +62,11 @@ enum HouseDecorFiles {
     else { home = try await houseHome(requestedHome) }
     let config = file.homes[home.id] ?? HomeHouse()
     let modules = HouseDecorFiles.modules(style: config.style)
+    let homeDevices = config.layout == nil ? try await devices().filter { $0.homeId == home.id } : []
+    let effective = HouseAutoLayout.effective(devices: homeDevices, config: config, isHidden: prefs.isHidden)
     let layout: [HouseLayoutCell]
-    if let cells = config.layout { layout = cells }
-    else if !HouseStyles.info(config.style).hasClassicArt {
+    if let cells = effective, !HouseLayoutSolver.isClassicGeometry(cells) { layout = cells }
+    else if !HouseStyles.info(config.style).hasClassicArt || (config.pets ?? [:]).values.contains(where: { !$0.deleted }) {
         let rooms = try await houseResolved(home: home.id).rooms
         layout = HouseLayoutSolver.classicFour.map { cell in
             .init(room: rooms.first { $0.module.rawValue == cell.module }?.key ?? cell.module, module: cell.module, col: cell.col, row: cell.row, level: 0)

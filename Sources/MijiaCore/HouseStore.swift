@@ -26,7 +26,7 @@ public struct HouseDeviceOverride: Codable, Equatable, Sendable {
 public struct HomeHouse: Codable, Equatable, Sendable {
     public var rooms: [String: HouseRoomOverride] = [:]
     public var devices: [String: HouseDeviceOverride] = [:]
-    /// nil = 经典四室 / 自动；非空 = 用户的格子布局（最多 3×2）
+    /// nil = 动态自动布局；非空 = 保存的格子布局（含显式经典四室，最多 3×2）
     public var layout: [HouseLayoutCell]? = nil
     public var layoutUpdatedAt: Date? = nil
     /// nil = 默认温馨木屋；见 HouseStyles

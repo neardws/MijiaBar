@@ -13,10 +13,10 @@ let houseUsage = """
   mijiabar house assign <设备> <位置>                位置 = 灯具位 id（如 floor_lamp）| badge | badge:b2 | none | auto
   mijiabar house set <设备> [--visible true|false|auto] [--place <位置>]
   mijiabar house room <房间> <模块>                   模块 = living | bedroom | study | kitchen | bathroom | balcony | generic | none | auto
-  mijiabar house layout [--json]                     当前格子布局（nil = 经典四室 / 自动）
+  mijiabar house layout [--json]                     有效格子布局与 source（saved / auto / classic）
   mijiabar house layout set <房间:模块:col:row[@层]> ... 设置布局，例如 客厅:living:0:1 卧室:bedroom:0:0@1（层 -1|0|1，省略 = 自动）
-  mijiabar house layout auto [--home H]              按设备数自动填 3×2
-  mijiabar house layout classic [--home H]           恢复经典四室几何（清掉 layout 覆盖，走整图）
+  mijiabar house layout auto [--home H]              清掉布局覆盖，动态选择经典或 3×2 合成
+  mijiabar house layout classic [--home H]           保存经典四室几何，强制走整图
   mijiabar house layout level <房间> <-1|0|1|auto>    错层：这个房间的地面抬高 / 下沉一级（每级 48px），auto = 自动图案
   mijiabar house layout flat | stagger [--home H]    整屋平铺（全部 0）/ 回到自动错层（后排两角高、前排右格低）
   mijiabar house reset [<设备> | --room <房间> | --layout] [--home H]   恢复自动
@@ -58,7 +58,7 @@ let houseUsage = """
 @MainActor func houseResolved(home: String) async throws -> ResolvedHouse {
     let ds = try await devices().filter { $0.homeId == home }
     let cfg = HouseStore.load().homes[home]
-    return HouseResolver.resolve(devices: ds, config: cfg, isHidden: prefs.isHidden, name: prefs.name, layout: cfg?.layout)
+    return HouseResolver.resolve(devices: ds, config: cfg, isHidden: prefs.isHidden, name: prefs.name)
 }
 
 func spotString(_ s: HouseSpot?) -> Any {
@@ -204,22 +204,19 @@ func parseVisible(_ s: String) throws -> Bool? {
     let h = try await houseHome(opt(rest, "--home"))
     let file = HouseStore.load()
     let home = file.homes[h.id] ?? HomeHouse()
+    let homeDevices = try await devices().filter { $0.homeId == h.id }
+    let effective = HouseAutoLayout.effective(devices: homeDevices, config: home, isHidden: prefs.isHidden)
     let sub = pos.first ?? "show"
     switch sub {
     case "show":
         break
     case "classic":
         try checkHouseWrite()
-        try HouseStore.update { $0.setLayout(home: h.id, layout: nil) }
+        let classic = HouseAutoLayout.classic(devices: homeDevices, config: home, isHidden: prefs.isHidden)
+        try HouseStore.update { $0.setLayout(home: h.id, layout: classic) }
     case "auto":
         try checkHouseWrite()
-        let r = try await houseResolved(home: h.id)
-        let rooms = r.rooms.map { (key: $0.key, module: $0.module, score: $0.devices.count) }
-            + r.excluded.map { (key: $0.key, module: $0.module, score: $0.deviceCount) }
-        let layout = HouseLayoutSolver.autolayout(rooms: rooms)
-        let problems = HouseLayoutSolver.validate(layout)
-        guard problems.isEmpty else { throw MijiaError.unknownProperty("layout: \(problems.map(\.rawValue).joined(separator: ","))") }
-        try HouseStore.update { $0.setLayout(home: h.id, layout: layout) }
+        try HouseStore.update { $0.setLayout(home: h.id, layout: nil) }
     case "set":
         try checkHouseWrite()
         var cells: [HouseLayoutCell] = []
@@ -249,7 +246,7 @@ func parseVisible(_ s: String) throws -> Bool? {
             throw MijiaError.unknownProperty("house layout level <room> <-1|0|1|auto>")
         }
         let room = try await houseResolveRoom(pos[1], home: h.id)
-        guard let cur = home.layout else {
+        guard let cur = effective else {
             throw MijiaError.unknownProperty(L("经典四室走整图，没有错层；先 house layout auto 或 set", "classic four uses the single cutaway (no levels); run house layout auto or set first"))
         }
         guard let next = HouseLayoutSolver.setLevel(cur, room: room.key, level: lv) else {
@@ -258,7 +255,7 @@ func parseVisible(_ s: String) throws -> Bool? {
         try HouseStore.update { $0.setLayout(home: h.id, layout: next) }
     case "flat", "stagger":
         try checkHouseWrite()
-        guard let cur = home.layout else {
+        guard let cur = effective else {
             throw MijiaError.unknownProperty(L("经典四室走整图，没有错层；先 house layout auto 或 set", "classic four uses the single cutaway (no levels); run house layout auto or set first"))
         }
         try HouseStore.update { $0.setLayout(home: h.id, layout: HouseLayoutSolver.setAllLevels(cur, flat: sub == "flat")) }
@@ -266,15 +263,22 @@ func parseVisible(_ s: String) throws -> Bool? {
         throw MijiaError.unknownProperty("house layout " + sub)
     }
     let after = HouseStore.load().homes[h.id]
-    let classic = HouseLayoutSolver.isClassicGeometry(after?.layout)
+    return houseLayoutReport(home: h.id, devices: homeDevices, config: after, isHidden: prefs.isHidden)
+}
+
+func houseLayoutReport(home: String, devices: [Device], config: HomeHouse?, isHidden: (Device) -> Bool) -> [String: Any] {
+    let effective = HouseAutoLayout.effective(devices: devices, config: config, isHidden: isHidden)
+    let classic = HouseLayoutSolver.isClassicGeometry(effective)
+    let cells = effective ?? HouseAutoLayout.classic(devices: devices, config: config, isHidden: isHidden)
     return [
-        "ok": true, "home": h.id,
+        "ok": true, "home": home,
+        "source": HouseAutoLayout.source(config: config, effective: effective),
         "classic": classic,
-        "layout": after?.layout?.map { c -> [String: Any] in
+        "layout": cells.map { c -> [String: Any] in
             ["room": c.room, "module": c.module, "col": c.col, "row": c.row,
              "level": c.level.map { $0 as Any } ?? "auto",
              "effective_level": classic ? 0 : HouseLevels.effective(c)]
-        } ?? NSNull(),
+        },
         "level_step_px": HouseGrid.levelStep,
         "file": HouseStore.url.path,
     ]
@@ -329,7 +333,7 @@ nonisolated(unsafe) let houseSchema: [String: Any] = [
         "home": ["type": "object", "properties": [
             "rooms": ["type": "object", "description": "room key (Mi Home room id, or \"name:<room name>\") → override", "additionalProperties": ["$ref": "#/$defs/room"]],
             "devices": ["type": "object", "description": "device did → override", "additionalProperties": ["$ref": "#/$defs/device"]],
-            "layout": ["type": ["array", "null"], "description": "Phase 2 grid layout (max 3×2); null = classic four", "items": ["$ref": "#/$defs/cell"]],
+            "layout": ["type": ["array", "null"], "description": "Grid layout (max 3×2); null = dynamic auto, classic geometry = explicit classic", "items": ["$ref": "#/$defs/cell"]],
             "layoutUpdatedAt": ["type": "string", "format": "date-time"],
             "decor": ["type": ["object", "null"], "additionalProperties": ["$ref": "#/$defs/decor"]],
             "freeDecor": ["type": ["object", "null"], "additionalProperties": ["type": "object", "required": ["cell", "updatedAt"], "properties": ["item": ["type": ["string", "null"]], "cell": ["type": "array", "items": ["type": "integer", "minimum": 0], "minItems": 2, "maxItems": 2], "updatedAt": ["type": "string", "format": "date-time"]]]],
@@ -474,10 +478,10 @@ nonisolated(unsafe) let houseMCPTools: [[String: Any]] = [
      "inputSchema": ["type": "object", "properties": ["device": ["type": "string"], "visible": ["description": "true | false | \"auto\""], "place": ["type": "string"]], "required": ["device"]]],
     ["name": "set_house_room", "description": "设置米家房间在小屋里用哪个模块：living | bedroom | study | kitchen | bathroom | balcony | generic | none | auto。",
      "inputSchema": ["type": "object", "properties": ["room": ["type": "string"], "module": ["type": "string"], "home": ["type": "string"]], "required": ["room", "module"]]],
-    ["name": "get_house_layout", "description": "当前小屋格子布局。classic=true 表示走 Phase 1 整图。",
+    ["name": "get_house_layout", "description": "有效小屋格子布局；source=saved|auto|classic，classic=true 表示走经典整图。",
      "inputSchema": ["type": "object", "properties": ["home": ["type": "string"]]]],
-    ["name": "set_house_layout", "description": "设置格子布局。cells 为 [{room,module,col,row,level?}]，level = -1|0|1（错层，每级 48px；省略 = 自动图案）；传 null 或 mode=classic 恢复经典四室；mode=auto 自动填 3×2；mode=flat 全部平铺；mode=stagger 回到自动错层。",
-     "inputSchema": ["type": "object", "properties": ["home": ["type": "string"], "mode": ["type": "string", "enum": ["classic", "auto", "flat", "stagger"]], "cells": ["type": "array"]], "required": []]],
+    ["name": "set_house_layout", "description": "设置格子布局。cells 为 [{room,module,col,row,level?}]，level = -1|0|1（错层，每级 48px；省略 = 自动图案）；传 null 或 mode=auto 清掉覆盖、动态自动布局；mode=classic 保存经典四室；mode=flat 全部平铺；mode=stagger 回到自动错层。",
+     "inputSchema": ["type": "object", "properties": ["home": ["type": "string"], "mode": ["type": "string", "enum": ["classic", "auto", "flat", "stagger"]], "cells": ["type": ["array", "null"]]], "required": []]],
     ["name": "set_house_room_level", "description": "错层：把小屋布局里一个房间的地面抬高 / 下沉一级。level = -1 | 0 | 1 | \"auto\"（回到自动图案）。Set a room's floor level in the composed house.",
      "inputSchema": ["type": "object", "properties": ["room": ["type": "string"], "level": ["description": "-1 | 0 | 1 | \"auto\""], "home": ["type": "string"]], "required": ["room", "level"]]],
     ["name": "get_house_styles", "description": "列出小屋风格（温馨木屋 / 浅木白墙 / 胡桃木 / 和风 / 现代）和当前选用。",
@@ -496,7 +500,8 @@ nonisolated(unsafe) let houseMCPTools: [[String: Any]] = [
      "inputSchema": ["type": "object", "properties": ["home": ["type": "string"], "device": ["type": "string"], "room": ["type": "string"]]]],
 ]
 
-@MainActor func callHouseTool(_ name: String, _ a: [String: Any]) async throws -> Any? {
+@MainActor func callHouseTool(_ name: String, _ a: [String: Any],
+                              layoutCommand: @MainActor ([String], [String]) async throws -> [String: Any] = { try await houseLayout(pos: $0, rest: $1) }) async throws -> Any? {
     switch name {
     case "get_house_pets", "set_house_pets":
         var rest: [String] = []
@@ -536,14 +541,14 @@ nonisolated(unsafe) let houseMCPTools: [[String: Any]] = [
     case "set_house_room": return try await houseSetRoom(anyString(a["room"]), module: anyString(a["module"]), home: a["home"] as? String)
     case "get_house_layout":
         var rest1: [String] = []; if let h = a["home"] as? String { rest1 = ["--home", h] }
-        return try await houseLayout(pos: ["show"], rest: rest1)
+        return try await layoutCommand(["show"], rest1)
     case "set_house_layout":
         var rest2: [String] = []; if let h = a["home"] as? String { rest2 = ["--home", h] }
         if let mode = a["mode"] as? String, ["classic", "auto", "flat", "stagger"].contains(mode) {
-            return try await houseLayout(pos: [mode], rest: rest2)
+            return try await layoutCommand([mode], rest2)
         }
         if a["cells"] == nil || a["cells"] is NSNull {
-            return try await houseLayout(pos: ["classic"], rest: rest2)
+            return try await layoutCommand(["auto"], rest2)
         }
         guard let cells = a["cells"] as? [[String: Any]] else { throw MijiaError.unknownProperty("cells") }
         var tokens = ["set"]
@@ -552,11 +557,11 @@ nonisolated(unsafe) let houseMCPTools: [[String: Any]] = [
             if let lv = c["level"], !(lv is NSNull) { t += "@\(lv)" }
             tokens.append(t)
         }
-        return try await houseLayout(pos: tokens, rest: rest2)
+        return try await layoutCommand(tokens, rest2)
     case "set_house_room_level":
         var rest3: [String] = []; if let h = a["home"] as? String { rest3 = ["--home", h] }
         let lv = a["level"].map { $0 is NSNull ? "auto" : "\($0)" } ?? "auto"
-        return try await houseLayout(pos: ["level", anyString(a["room"]), lv], rest: rest3)
+        return try await layoutCommand(["level", anyString(a["room"]), lv], rest3)
     case "get_house_styles":
         return try await houseStyle(pos: ["list"], rest: a["home"] as? String != nil ? ["--home", a["home"] as! String] : [], asJSON: true)
     case "get_house_decor", "set_house_decor":

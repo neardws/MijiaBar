@@ -133,7 +133,7 @@ public enum HouseLayoutSolver {
             return false
         }
 
-        let sorted = rooms.sorted { $0.score > $1.score }
+        let sorted = rooms.sorted { $0.score != $1.score ? $0.score > $1.score : ($0.module.rawValue, $0.key) < ($1.module.rawValue, $1.key) }
         // living first if present
         if let living = sorted.first(where: { $0.module == .living }) {
             _ = place(living.key, .living, fw: 2, fh: 1)

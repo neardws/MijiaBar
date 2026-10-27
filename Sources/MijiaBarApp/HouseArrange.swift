@@ -18,12 +18,7 @@ struct HouseArrangeView: View {
 
     private var home: String { m.houseHomeKey }
     private var layout: [HouseLayoutCell] {
-        m.house.homes[home]?.layout ?? HouseLayoutSolver.classicFour.enumerated().map { i, c in
-            // bind classic geometry to current resolved rooms by module
-            let rooms = m.houseResolved.rooms
-            let match = rooms.first { $0.module.rawValue == c.module }
-            return HouseLayoutCell(room: match?.key ?? "slot\(i)", module: c.module, col: c.col, row: c.row)
-        }
+        m.houseEffectiveLayout ?? m.houseClassicLayout
     }
 
     var body: some View {
@@ -35,7 +30,7 @@ struct HouseArrangeView: View {
                     Text(L("错层（房间高低错落）", "Split levels (rooms at staggered heights)")).font(.system(size: 12))
                 }
                 .toggleStyle(.checkbox)
-                .disabled(m.house.homes[home]?.layout == nil)
+                .disabled(m.houseLayoutCells == nil)
                 Text(L("拖动房间卡片交换位置；客厅占两格。最多 3×2。经典四室走整图，自定义布局才拼模块。卡片上的 ▲▼ 把房间地面抬高 / 降低一级（默认自动：后排两角高、前排右格低）。",
                        "Drag room cards to swap. Living room takes two cells. Max 3×2. Classic four uses the single cutaway; custom layouts stitch modules. ▲▼ on a card raises / lowers that room's floor one step (default: back corners up, front right down)."))
                     .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -69,22 +64,23 @@ struct HouseArrangeView: View {
         }
         .onAppear { refreshPreview() }
         .onChange(of: m.house) { _, _ in refreshPreview() }
+        .onChange(of: layout) { _, _ in refreshPreview() }
         .onChange(of: phase) { _, _ in refreshPreview() }
     }
 
     private var toolbar: some View {
         HStack(spacing: 8) {
             Text(L("房间布局", "Room layout")).font(.system(size: 15, weight: .semibold))
+            if m.house.homes[home]?.layout == nil {
+                Text(L("自动", "Auto")).font(.system(size: 11)).foregroundStyle(.secondary)
+            }
             Spacer()
             Button(L("经典四室", "Classic four")) {
-                m.houseEdit(L("经典四室", "Classic four")) { $0.setLayout(home: home, layout: nil) }
+                let classic = m.houseClassicLayout
+                m.houseEdit(L("经典四室", "Classic four")) { $0.setLayout(home: home, layout: classic) }
             }.buttonStyle(.bordered).controlSize(.small)
-            Button(L("自动填满", "Auto-fill")) {
-                let r = m.houseResolved
-                let rooms = r.rooms.map { (key: $0.key, module: $0.module, score: $0.devices.count) }
-                    + r.excluded.filter { $0.reason != .excluded }.map { (key: $0.key, module: $0.module, score: $0.deviceCount) }
-                let layout = HouseLayoutSolver.autolayout(rooms: rooms)
-                m.houseEdit(L("自动布局", "Auto layout")) { $0.setLayout(home: home, layout: layout) }
+            Button(L("自动", "Auto")) {
+                m.houseEdit(L("自动布局", "Auto layout")) { $0.setLayout(home: home, layout: nil) }
             }.buttonStyle(.bordered).controlSize(.small)
         }
     }
@@ -163,7 +159,7 @@ struct HouseArrangeView: View {
 
     private func roomCard(_ c: HouseLayoutCell) -> some View {
         let title = roomTitle(c)
-        let classic = HouseLayoutSolver.isClassicGeometry(m.house.homes[home]?.layout)
+        let classic = HouseLayoutSolver.isClassicGeometry(m.houseEffectiveLayout)
         let lv = classic ? 0 : HouseLevels.effective(c)
         return VStack(alignment: .leading, spacing: 2) {
             Text(title).font(.system(size: 12, weight: .semibold)).lineLimit(1)
@@ -234,9 +230,9 @@ struct HouseArrangeView: View {
     /// 错层开关：开 = 自动图案（清掉手动层），关 = 全部平铺
     private var staggerBinding: Binding<Bool> {
         Binding(
-            get: { (m.house.homes[home]?.layout).map { !$0.allSatisfy { $0.level == 0 } } ?? false },
+            get: { m.houseLayoutCells.map { !$0.allSatisfy { $0.level == 0 } } ?? false },
             set: { on in
-                guard let cur = m.house.homes[home]?.layout else { return }
+                guard let cur = m.houseLayoutCells else { return }
                 let next = HouseLayoutSolver.setAllLevels(cur, flat: !on)
                 m.houseEdit(on ? L("错层", "Split levels") : L("平铺", "Flat floors")) { $0.setLayout(home: home, layout: next) }
             })
@@ -251,7 +247,7 @@ struct HouseArrangeView: View {
     private func refreshPreview() {
         // 同步合成：截图 CLI 的 RunLoop 等待很短，异步 Task 来不及
         // 经典四室实际走整图（平地），预览也按平地合成，避免和真实小屋不一致
-        let shown = HouseLayoutSolver.isClassicGeometry(m.house.homes[home]?.layout) ? HouseLayoutSolver.setAllLevels(layout, flat: true) : layout
+        let shown = HouseLayoutSolver.isClassicGeometry(m.houseEffectiveLayout) ? HouseLayoutSolver.setAllLevels(layout, flat: true) : layout
         if !HouseStyles.info(m.houseStyle).hasClassicArt {
             let start = CFAbsoluteTimeGetCurrent()
             let source = HouseSceneSource.make(layout: shown, phase: phase, style: m.houseStyle, config: m.house.homes[home] ?? HomeHouse())

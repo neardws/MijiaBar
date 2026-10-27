@@ -54,7 +54,7 @@ private func resolve(_ ds: [Device], _ cfg: HomeHouse? = nil, hidden: Set<String
         #expect(HouseModule.from(roomName: "卫生间") == .bathroom)
         #expect(HouseModule.from(roomName: "阳台") == .balcony)
         #expect(HouseModule.from(roomName: "餐厅") == .generic)
-        #expect(!HouseModule.kitchen.hasArt && HouseModule.living.hasArt)
+        #expect(HouseModule.allCases.allSatisfy { $0.hasArt })
     }
 
     @Test func placesDemoHome() {
@@ -245,8 +245,8 @@ private func resolve(_ ds: [Device], _ cfg: HomeHouse? = nil, hidden: Set<String
         let ds = demo + [dev("x1", "次卧灯", "yeelink.light.x", room: "次卧", roomId: "r9"), dev("k", "电饭煲", "chunmi.cooker.x", room: "厨房", roomId: "rk")]
         let h = resolve(ds)
         #expect(h.rooms.first { $0.module == .bedroom }?.key == "r2")   // 主卧设备更多
-        #expect(h.excluded.contains { $0.key == "r9" && $0.reason == .spotTaken })
-        #expect(h.excluded.contains { $0.key == "rk" && $0.reason == .noArt })
+        #expect(h.excluded.contains { $0.key == "r9" && $0.reason == .notInLayout })
+        #expect(h.rooms.contains { $0.key == "rk" && $0.module == .kitchen })
 
         var cfg = HomeHouse()
         cfg.rooms["r9"] = HouseRoomOverride(module: "bedroom")
@@ -376,7 +376,7 @@ private func resolve(_ ds: [Device], _ cfg: HomeHouse? = nil, hidden: Set<String
             .appendingPathComponent("Sources/MijiaBarApp/Resources/House/house-cutaway.json")
         let o = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [String: Any]
         let modules = o["modules"] as! [String: [String: Any]]
-        for m in HouseCatalog.artModules {
+        for m in HouseCatalog.classicModules {
             let lights = (modules[m.rawValue]?["lights"] as? [[String: Any]] ?? []).compactMap { $0["id"] as? String }
             #expect(HouseCatalog.fixtureSetProblems(m, lightIds: lights).isEmpty, "\(m)")
             #expect((modules[m.rawValue]?["badges"] as? [[Double]])?.count == HouseCatalog.badgeCount(m), "\(m) badges")
@@ -410,7 +410,7 @@ private func resolve(_ ds: [Device], _ cfg: HomeHouse? = nil, hidden: Set<String
         for m in [HouseModule.living, .bedroom, .study] { #expect(h.rooms.first { $0.module == m }?.device(at: .fixture("curtain")) != nil, "\(m)") }
         // 同一房间第二个窗帘：位置已占 → 徽章
         #expect(h.rooms.first { $0.module == .living }?.devices.first { $0.did == "c4" }?.spot == .badge("b1"))
-        // 厨房 / 卫生间 / 阳台只有自定义布局（模块合成）里有
+        // 厨房 / 卫生间 / 阳台使用模块合成
         let layout: [HouseLayoutCell] = [.init(room: "name:厨房", module: "kitchen", col: 0, row: 0), .init(room: "name:卫生间", module: "bathroom", col: 1, row: 0),
                                          .init(room: "name:阳台", module: "balcony", col: 2, row: 0)]
         let ap = [dev("f", "冰箱", "viomi.fridge.x3", room: "厨房"), dev("k", "厨房窗帘", "lumi.curtain.hagl05", room: "厨房"),
