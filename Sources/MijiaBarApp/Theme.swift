@@ -33,6 +33,8 @@ extension DeviceCategory {
         case .fan: return "fan"
         case .heater: return "heater.vertical"
         case .dehumidifier: return "dehumidifier"
+        case .humidifier: return "humidifier"
+        case .vacuum: return "circle.circle"
         case .sensor: return "thermometer.medium"
         case .tv: return "tv"
         case .camera: return "video"
@@ -55,7 +57,7 @@ extension DeviceCategory {
         case .light: return .yellow
         case .fan: return .teal
         case .heater: return Theme.heat
-        case .dehumidifier: return .cyan
+        case .dehumidifier, .humidifier, .vacuum: return .cyan
         case .sensor: return .mint
         case .tv: return .indigo
         case .camera: return .purple

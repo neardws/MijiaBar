@@ -53,6 +53,16 @@ struct HouseLightSpec: Decodable, Identifiable {
     var led: [Double]? = nil
     var door: HouseDoor? = nil
     var body: [[Double]]? = nil
+    var anchor: [Double]? = nil
+
+    var isFloorAppliance: Bool { ["fan", "air-purifier", "dehumidifier", "heater", "humidifier", "vacuum"].contains(role) }
+    var floorAnchor: CGPoint? {
+        if let anchor, anchor.count == 2 { return CGPoint(x: anchor[0], y: anchor[1]) }
+        guard let body, !body.isEmpty, body.allSatisfy({ $0.count == 2 }),
+              let left = body.map({ $0[0] }).min(), let right = body.map({ $0[0] }).max(),
+              let bottom = body.map({ $0[1] }).max() else { return nil }
+        return CGPoint(x: (left + right) / 2, y: bottom)
+    }
 
     /// 只有灯 / 屏幕 / 空调烘焙了光；窗帘、冰箱、热水器、洗衣机的状态全由 App 动态画（不露 lit 图）
     var bakesLight: Bool { ["light", "tv", "ac"].contains(role) }
@@ -172,6 +182,14 @@ enum HouseAssets {
     }
 
     static func clearImageCache() { images.removeAll() }
+
+    static func fixture(role: String, on: Bool) -> NSImage? {
+        let name = "fixture-\(role)-\(on ? "on" : "off")"
+        if let img = images[name] { return img }
+        guard let url = resourceURL(name, "png"), let img = NSImage(contentsOf: url) else { return nil }
+        images[name] = img
+        return img
+    }
 
     /// 徽章小图标：badge-<category>-{on,off}.png（scripts/gen-house-badges.py 生成，12×12）
     static func badge(_ c: DeviceCategory, on: Bool) -> NSImage? {
@@ -372,6 +390,11 @@ struct HouseCutawaySceneView: View {
                                             lit: lit, unlit: unlit, artSize: artSize, phase: phase, style: style, onToggle: edit == nil ? onToggle : nil)
                     }
                 }
+                ForEach(rooms) { room in
+                    if let module = src.module(for: room) {
+                        HouseFloorApplianceLayer(module: module, devices: room.devices, phase: phase, artSize: artSize)
+                    }
+                }
                 if (decorConfig.petPrefs?.enabled ?? true), (decorConfig.pets ?? [:]).values.contains(where: { $0.enabled && !$0.deleted }) {
                     HousePetsLayer(source: src, rooms: rooms, layout: layout, style: style, config: decorConfig,
                                    phase: phase, restOnly: petsRestOnly, date: petDate, poses: petPoses)
@@ -495,6 +518,42 @@ struct HouseAirflow: View {
 }
 
 /// 单个房间：每盏开着的灯按「房间多边形 ∩ 灯具蒙版」露出 lit 底图；关着的灯具本体用 unlit 盖回去。
+private struct HouseFloorApplianceLayer: View {
+    let module: HouseCutawayModule
+    let devices: [HouseDevice]
+    let phase: HousePhase
+    let artSize: CGSize
+
+    var body: some View {
+        // 必须用 Canvas，独立 Image 视图无法合成到 cacheDisplay 截图。
+        Canvas { context, _ in
+            for light in module.lights where light.isFloorAppliance && light.hidden != true {
+                if let device = light.matchedDevice(in: devices), let anchor = light.floorAnchor,
+                   let image = HouseAssets.fixture(role: light.role, on: device.on && device.online),
+                   let sprite = image.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+                    if device.on && device.online {
+                        let glow = light.role == "heater" ? Color(red: 1, green: 0.6, blue: 0.3) : Color(red: 0.55, green: 0.9, blue: 1)
+                        var glowContext = context
+                        glowContext.translateBy(x: anchor.x, y: anchor.y)
+                        glowContext.scaleBy(x: (image.size.width + 20) / 2, y: 6)
+                        glowContext.fill(Path(ellipseIn: CGRect(x: -1, y: -1, width: 2, height: 2)),
+                                         with: .radialGradient(Gradient(colors: [glow.opacity(phase == .night ? 0.65 : 0.35), glow.opacity(0)]),
+                                                               center: .zero, startRadius: 0, endRadius: 1))
+                    }
+                    var spriteContext = context
+                    spriteContext.opacity = device.online ? 1 : 0.45
+                    spriteContext.draw(Image(decorative: sprite, scale: 1).interpolation(.none),
+                                       in: CGRect(x: anchor.x - image.size.width / 2, y: anchor.y - image.size.height,
+                                                  width: image.size.width, height: image.size.height))
+                }
+            }
+        }
+        .frame(width: artSize.width, height: artSize.height, alignment: .topLeading)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
 private struct HouseRoomLightLayer: View {
     let module: HouseCutawayModule
     let devices: [HouseDevice]
@@ -680,7 +739,7 @@ struct HouseBadge: View {
         switch device.category {
         case .light: return Color(red: 1, green: 0.8, blue: 0.4)
         case .tv, .camera: return Color(red: 0.5, green: 0.75, blue: 1)
-        case .ac, .fan, .airPurifier, .purifier, .dehumidifier: return Color(red: 0.55, green: 0.9, blue: 1)
+        case .ac, .fan, .airPurifier, .purifier, .dehumidifier, .humidifier, .vacuum: return Color(red: 0.55, green: 0.9, blue: 1)
         case .heater, .kitchen, .waterHeater: return Color(red: 1, green: 0.6, blue: 0.3)
         default: return Color(red: 0.55, green: 1, blue: 0.6)
         }

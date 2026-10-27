@@ -170,7 +170,7 @@ enum Snapshot {
             m.page = .list
             render(root, out.appendingPathComponent("warmup.png")); wait(10)
             var picks: [Device] = []
-            for c in [DeviceCategory.ac, .light, .plug, .fan, .sensor, .heater, .dehumidifier, .speaker, .camera, .tv, .printer, .purifier, .airPurifier, .other, .kitchen] {
+            for c in [DeviceCategory.ac, .light, .plug, .fan, .sensor, .heater, .dehumidifier, .humidifier, .vacuum, .speaker, .camera, .tv, .printer, .purifier, .airPurifier, .other, .kitchen] {
                 if let d = m.devices.first(where: { $0.category == c && $0.isOnline && $0.homeId == m.currentHomeId }) ?? m.devices.first(where: { $0.category == c && $0.isOnline }) ?? m.devices.first(where: { $0.category == c }) { picks.append(d) }
             }
             for d in picks where m.states[d.did] == nil {

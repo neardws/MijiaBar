@@ -75,17 +75,31 @@ public enum HouseCatalog {
             HouseFixture("tv", [.tv], hints: ["电视", "電視", "tv", "投影", "projector"]),
             HouseFixture("ac", [.ac]),
             HouseFixture("curtain", [.curtain]),
+            HouseFixture("fan", [.fan]),
+            HouseFixture("air_purifier", [.airPurifier]),
+            HouseFixture("humidifier", [.humidifier]),
+            HouseFixture("vacuum", [.vacuum]),
+            HouseFixture("dehumidifier", [.dehumidifier]),
+            HouseFixture("heater", [.heater]),
         ]
         case .bedroom: return [
             HouseFixture("bedside", [.light], hints: ["床头", "床頭", "台灯", "檯燈", "bedside", "nightstand", "lamp"]),
             HouseFixture("ac", [.ac]),
             HouseFixture("curtain", [.curtain]),
+            HouseFixture("fan", [.fan]),
+            HouseFixture("air_purifier", [.airPurifier]),
+            HouseFixture("humidifier", [.humidifier]),
+            HouseFixture("vacuum", [.vacuum]),
+            HouseFixture("dehumidifier", [.dehumidifier]),
+            HouseFixture("heater", [.heater]),
         ]
         case .study: return [
             HouseFixture("ceiling", [.light], hints: ["吸顶", "吸頂", "主灯", "主燈", "顶灯", "頂燈", "ceiling"]),
             HouseFixture("monitor", [.light, .tv, .other], hints: ["显示器", "顯示器", "屏幕", "螢幕", "挂灯", "掛燈", "monitor", "display", "screen"], hintRequired: true),
             HouseFixture("ac", [.ac]),
             HouseFixture("curtain", [.curtain]),
+            HouseFixture("fan", [.fan]),
+            HouseFixture("heater", [.heater]),
         ]
         case .generic: return [
             HouseFixture("entry_light", [.light]),
@@ -99,6 +113,7 @@ public enum HouseCatalog {
         case .bathroom: return [
             HouseFixture("ceiling", [.light], hints: ["吸顶", "吸頂", "镜", "鏡", "ceiling", "mirror"]),
             HouseFixture("water_heater", [.waterHeater]),
+            HouseFixture("dehumidifier", [.dehumidifier]),
         ]
         case .balcony: return [
             HouseFixture("wall_lamp", [.light], hints: ["壁灯", "壁燈", "wall"]),
@@ -129,9 +144,10 @@ public enum HouseCatalog {
     public static func deviceClass(category: DeviceCategory, model: String = "") -> HouseDeviceClass {
         let m = model.lowercased()
         func has(_ s: String...) -> Bool { s.contains { m.contains($0) } }
-        // DeviceCategory 还没细分的类型先按 model 关键词认（它们现在归 other / plug，不进小屋或显示徽章）
+        if category == .humidifier { return .fixture(.humidifier) }
+        if category == .vacuum { return .fixture(.vacuum) }
         if has("vacuum", "roborock", "sweeper", ".robot.") { return .fixture(.vacuum) }
-        if has("humidifier") && !has("dehumid") { return .fixture(.humidifier) }
+        if has("humidifier", "jsq") && !has("dehumid", "derh") { return .fixture(.humidifier) }
         switch category {
         case .ac: return .fixture(.ac)
         case .light: return .fixture(.light)
@@ -139,6 +155,8 @@ public enum HouseCatalog {
         case .fan: return .fixture(.fan)
         case .airPurifier: return .fixture(.airPurifier)
         case .dehumidifier: return .fixture(.dehumidifier)
+        case .humidifier: return .fixture(.humidifier)
+        case .vacuum: return .fixture(.vacuum)
         case .heater: return .fixture(.heater)
         case .curtain: return .fixture(.curtain)
         case .fridge: return .fixture(.fridge)
@@ -157,6 +175,12 @@ public enum HouseCatalog {
         if f.accepts(.fridge) { return .fridge }
         if f.accepts(.washer) { return .washer }
         if f.accepts(.waterHeater) { return .waterHeater }
+        if f.accepts(.fan) { return .fan }
+        if f.accepts(.airPurifier) { return .airPurifier }
+        if f.accepts(.dehumidifier) { return .dehumidifier }
+        if f.accepts(.heater) { return .heater }
+        if f.accepts(.humidifier) { return .humidifier }
+        if f.accepts(.vacuum) { return .vacuum }
         return .light
     }
 
@@ -176,7 +200,7 @@ public enum HouseCatalog {
 public enum HouseDeviceClass: Hashable, Sendable {
     case fixture(HouseFixtureKind)
     case badge
-    /// 现在就有灯具位美术的 A 类；其余 A 类（风扇、净化器……）先按徽章显示，见 docs/HOUSE.md
+    /// 已有美术的 A 类；模块缺少可用位置时仍退回徽章，见 docs/HOUSE.md
     public var hasFixtureArt: Bool {
         if case .fixture(let k) = self { return k.implemented }
         return false
@@ -186,10 +210,10 @@ public enum HouseDeviceClass: Hashable, Sendable {
 public enum HouseFixtureKind: String, CaseIterable, Sendable {
     // A1：画进模块美术（灯 / 屏幕 / 空调烘焙光；窗帘贴片、家电指示灯 / 动画运行时画）
     case light, screen, ac, curtain, fridge, waterHeater = "water-heater", washer
-    // A2：落地电器小精灵（与 3b 装饰共用图层），扫地机与 3c 宠物共用寻路
+    // A2：固定落地电器精灵，由 Canvas 绘制开关状态
     case fan, airPurifier = "air-purifier", humidifier, dehumidifier, heater, vacuum
     /// 已有灯具位美术
-    public var implemented: Bool { [.light, .screen, .ac, .curtain, .fridge, .waterHeater, .washer].contains(self) }
+    public var implemented: Bool { [.light, .screen, .ac, .curtain, .fridge, .waterHeater, .washer, .fan, .airPurifier, .dehumidifier, .heater, .humidifier, .vacuum].contains(self) }
 }
 
 /// 设备在小屋里的位置
@@ -417,4 +441,3 @@ public enum HouseResolver {
         }
     }
 }
-

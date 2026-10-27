@@ -20,7 +20,13 @@
          "core": [[57, 228], [119, 217], [120, 246], [70, 265], [56, 265]], "reveal": [102, 264, 62, 44]},
         {"id": "curtain", "kind": "curtain", "role": "curtain", "slot": 0, "wall": "ne",
          "patch": "curtain-classic-living", "rect": [292, 180, 98, 108], "mid": 341.0, "anchor": [341, 235],
-         "quad": [[292, 181.3], [390, 211.9], [390, 286.9], [292, 260.1]]}
+         "quad": [[292, 181.3], [390, 211.9], [390, 286.9], [292, 260.1]]},
+        {"id": "fan", "kind": "fan", "role": "fan", "slot": 0, "anchor": [180, 470], "body": [[167, 432], [193, 432], [193, 470], [167, 470]]},
+        {"id": "dehumidifier", "kind": "dehumidifier", "role": "dehumidifier", "slot": 0, "anchor": [290, 500], "body": [[279, 470], [301, 470], [301, 500], [279, 500]]},
+        {"id": "heater", "kind": "heater", "role": "heater", "slot": 0, "anchor": [350, 488], "body": [[339, 456], [361, 456], [361, 488], [339, 488]]},
+        {"id": "air_purifier", "kind": "air-purifier", "role": "air-purifier", "slot": 0, "anchor": [430, 458], "body": [[422, 416], [438, 416], [438, 458], [422, 458]]},
+        {"id": "humidifier", "kind": "humidifier", "role": "humidifier", "slot": 0, "anchor": [240, 495], "body": [[227, 457], [253, 457], [253, 495], [227, 495]]},
+        {"id": "vacuum", "kind": "vacuum", "role": "vacuum", "slot": 0, "anchor": [120, 505], "body": [[102, 479], [138, 479], [138, 505], [102, 505]]}
       ]
     },
     "bedroom": {
@@ -37,7 +43,13 @@
          "reveal": [330, 90, 70, 50]},
         {"id": "curtain", "kind": "curtain", "role": "curtain", "slot": 0, "wall": "ne",
          "patch": "curtain-classic-bedroom", "rect": [446, 26, 118, 104], "mid": 505.0, "anchor": [505, 78],
-         "quad": [[446, 26.3], [564, 51.4], [564, 129], [446, 104.6]]}
+         "quad": [[446, 26.3], [564, 51.4], [564, 129], [446, 104.6]]},
+        {"id": "fan", "kind": "fan", "role": "fan", "slot": 0, "anchor": [520, 200], "body": [[507, 162], [533, 162], [533, 200], [507, 200]]},
+        {"id": "dehumidifier", "kind": "dehumidifier", "role": "dehumidifier", "slot": 0, "anchor": [560, 185], "body": [[549, 155], [571, 155], [571, 185], [549, 185]]},
+        {"id": "heater", "kind": "heater", "role": "heater", "slot": 0, "anchor": [590, 170], "body": [[579, 138], [601, 138], [601, 170], [579, 170]]},
+        {"id": "air_purifier", "kind": "air-purifier", "role": "air-purifier", "slot": 0, "anchor": [630, 195], "body": [[622, 153], [638, 153], [638, 195], [622, 195]]},
+        {"id": "humidifier", "kind": "humidifier", "role": "humidifier", "slot": 0, "anchor": [475, 205], "body": [[462, 167], [488, 167], [488, 205], [462, 205]]},
+        {"id": "vacuum", "kind": "vacuum", "role": "vacuum", "slot": 0, "anchor": [430, 192], "body": [[412, 166], [448, 166], [448, 192], [412, 192]]}
       ]
     },
     "study": {
@@ -55,7 +67,9 @@
          "core": [[679, 69], [625, 62], [624, 91], [666, 106], [680, 106]], "reveal": [638, 107, 62, 44]},
         {"id": "curtain", "kind": "curtain", "role": "curtain", "slot": 0, "wall": "ne",
          "patch": "curtain-classic-study", "rect": [696, 78, 104, 112], "mid": 748.0, "anchor": [748, 132],
-         "quad": [[696, 79.5], [800, 102.7], [800, 188.2], [696, 156]]}
+         "quad": [[696, 79.5], [800, 102.7], [800, 188.2], [696, 156]]},
+        {"id": "fan", "kind": "fan", "role": "fan", "slot": 0, "anchor": [620, 280], "body": [[607, 242], [633, 242], [633, 280], [607, 280]]},
+        {"id": "heater", "kind": "heater", "role": "heater", "slot": 0, "anchor": [700, 290], "body": [[689, 258], [711, 258], [711, 290], [689, 290]]}
       ]
     },
     "generic": {

@@ -92,7 +92,10 @@ private func dev(_ did: String, _ name: String, _ model: String, room: String, r
         let h = house()
         #expect(HouseEditing.planClear(did: "d3", house: h) == [HouseDropChange(did: "d3", place: "badge")])
         #expect(HouseEditing.planClear(did: "d1", house: h) == [HouseDropChange(did: "d1", place: "badge")])   // 客厅空调位 → 徽章
-        #expect(HouseEditing.planClear(did: "d4", house: h) == [HouseDropChange(did: "d4", place: "none")])    // 风扇徽章 → 只在按钮行
+        #expect(HouseEditing.planClear(did: "d4", house: h) == [HouseDropChange(did: "d4", place: "badge")])
+        var file = HouseFile()
+        file.setDevice(home: "h", did: "d4") { $0.place = "badge" }
+        #expect(HouseEditing.planClear(did: "d4", house: house(file.homes["h"])) == [HouseDropChange(did: "d4", place: "none")])
     }
 }
 

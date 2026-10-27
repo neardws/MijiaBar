@@ -254,6 +254,8 @@ func zhCategory(_ c: DeviceCategory) -> String {
     case .fan: return L("风扇", "Fan")
     case .heater: return L("取暖器", "Heater")
     case .dehumidifier: return L("除湿机", "Dehumidifier")
+    case .humidifier: return L("加湿器", "Humidifier")
+    case .vacuum: return L("扫地机", "Vacuum")
     case .sensor: return L("传感器", "Sensor")
     case .tv: return L("电视", "TV")
     case .camera: return L("摄像机", "Camera")
