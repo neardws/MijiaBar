@@ -797,7 +797,7 @@ extension AppModel {
         ]
         for (roomID, room) in [("living", L("客厅", "Living room")), ("bedroom", L("主卧", "Bedroom"))] {
             for (kind, title, model) in appliances {
-                if devices.contains(where: { $0.roomName == room && $0.category == DeviceCategory.guess(model) }) { continue }
+                if devices.contains(where: { $0.homeId == "h1" && $0.roomName == room && $0.category == DeviceCategory.guess(model) }) { continue }
                 let id = "fixture-\(roomID)-\(kind)"
                 devices.append(dev(id, title, model, room))
                 let spec = DeviceSpec(type: "", description: "", services: [S(2, kind, [P(2, 1, "on", "bool")])])
