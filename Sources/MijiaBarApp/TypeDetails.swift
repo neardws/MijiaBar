@@ -10,6 +10,8 @@ struct TypeDetailView: View {
         let dc = DC(device: device, state: state)
         switch device.category {
         case .fan: FanDetail(dc: dc)
+        case .humidifier: HumidifierDetail(dc: dc)
+        case .vacuum: VacuumDetail(dc: dc)
         case .light: LightDetail(dc: dc)
         case .plug: PlugDetail(dc: dc)
         case .tv: TVDetail(dc: dc)
@@ -79,6 +81,8 @@ struct DeviceStatusCard: View {
     case .kitchen: CookerArt(cooking: false, tint: tint)
     case .purifier: PurifierArt(on: false, filter: nil, tint: tint)
     case .heater, .dehumidifier: ApplianceArt(kind: d.category, on: false, level: 0.3, tint: tint)
+    case .humidifier: HumidifierArt(on: false, tint: tint)
+    case .vacuum: VacuumArt(on: false, busy: false, tint: tint)
     case .sensor:
         switch d.form {
         case .motion: MotionSensorArt(on: false, tint: tint)
@@ -86,7 +90,7 @@ struct DeviceStatusCard: View {
         case .leak: LeakSensorArt(on: false, wet: nil, tint: tint)
         default: ThermoArt(temp: nil, tint: tint)
         }
-    case .other, .curtain, .fridge, .washer, .waterHeater, .humidifier, .vacuum: GenericArt(on: false, tint: tint)
+    case .other, .curtain, .fridge, .washer, .waterHeater: GenericArt(on: false, tint: tint)
     case .airPurifier: AirPurifierArt(on: false, level: 0.5, tint: tint)
     }
 }
@@ -344,6 +348,90 @@ struct PurifierDetail: View {
                                ("aqi.medium", minFilter.map { L("滤芯 ", "Filter ") + "\(Int($0))%" })], tint: tint)
             if dc.spec == nil {
                 Text(L("这个型号没有公开的 MIoT 规格，只能显示在线状态", "No public MIoT spec; only online state is available")).font(.system(size: 10)).foregroundStyle(.tertiary)
+            }
+        }
+    }
+}
+
+struct HumidifierDetail: View {
+    @EnvironmentObject var m: AppModel
+    let dc: DC
+    var body: some View {
+        let device = dc.device, tint = device.category.color
+        let on = m.powerInfo(device)?.isOn ?? false
+        let target = dc.p("target-humidity")
+        TypeShell(device: device, tint: tint, isOn: on, title: on ? L("运行中", "Running") : L("已关闭", "Off"),
+                  subtitle: joined([L("加湿器", "Humidifier"), dc.text(dc.p("mode"))]),
+                  powerOn: on, onPower: powerHandler(m, device)) {
+            HumidifierArt(on: on, tint: tint)
+        } content: {
+            if let target {
+                BigValue(value: dc.num(target).map { "\(Int($0))" }, unit: "%", caption: L("目标湿度", "Target humidity"), dim: !on)
+                if target.writable { PropSlider(dc: dc, prop: target, colors: [Theme.heat, .cyan, Theme.cool], enabled: on) }
+            }
+            ReadoutRow(items: [("humidity.fill", dc.num(dc.p("relative-humidity")).map { L("湿度 ", "Humidity ") + "\(Int($0))%" })], tint: tint)
+            HStack(spacing: 8) {
+                PropTile(dc: dc, prop: dc.p("mode"), title: L("模式", "Mode"), icon: "slider.horizontal.3", tint: tint)
+                PropTile(dc: dc, prop: dc.p("fan-level"), title: L("风速", "Fan"), icon: "wind", tint: tint)
+                PropTile(dc: dc, prop: dc.p("physical-controls-locked"), title: L("童锁", "Child lock"), icon: "lock", tint: tint)
+            }
+        }
+    }
+}
+
+enum VacuumCommand: CaseIterable {
+    case start, stop, charge
+    var names: [String] {
+        switch self {
+        case .start: return ["start-sweep", "start"]
+        case .stop: return ["stop-sweeping", "stop"]
+        case .charge: return ["start-charge", "charge", "dock"]
+        }
+    }
+    var title: String {
+        switch self {
+        case .start: return L("开始清扫", "Start cleaning")
+        case .stop: return L("停止", "Stop")
+        case .charge: return L("回充", "Dock")
+        }
+    }
+    var icon: String {
+        switch self {
+        case .start: return "play.fill"
+        case .stop: return "stop.fill"
+        case .charge: return "house.fill"
+        }
+    }
+    func action(in dc: DC) -> SpecAction? {
+        let actions = dc.spec?.controlServices.flatMap(\.actions) ?? []
+        return names.lazy.compactMap { name in actions.first { $0.name == name && $0.inputs.isEmpty } }.first
+    }
+}
+
+struct VacuumDetail: View {
+    @EnvironmentObject var m: AppModel
+    let dc: DC
+    var body: some View {
+        let device = dc.device, tint = device.category.color
+        let power = m.powerInfo(device)
+        let on = power?.isOn ?? device.isOnline
+        let working = on && HouseDeviceState.busy(dc.state, otherwise: false)
+        let status = dc.text(dc.p("status"))
+        TypeShell(device: device, tint: tint, isOn: on,
+                  title: !on ? L("已关闭", "Off") : status ?? (working ? L("运行中", "Running") : L("待机", "Idle")),
+                  subtitle: L("扫地机", "Vacuum"), powerOn: power?.isOn, onPower: powerHandler(m, device)) {
+            VacuumArt(on: on, busy: working, tint: tint)
+        } content: {
+            if let battery = dc.p("battery-level") {
+                BigValue(value: dc.num(battery).map { "\(Int($0))" }, unit: "%", caption: L("电量", "Battery"), dim: !on)
+            }
+            HStack(spacing: 8) {
+                ForEach(VacuumCommand.allCases, id: \.self) { command in
+                    if let action = command.action(in: dc) {
+                        ActionTile(title: command.title, icon: command.icon, tint: tint) { m.runAction(device, action) }
+                            .disabled(!device.isOnline || m.busy.contains(device.did))
+                    }
+                }
             }
         }
     }

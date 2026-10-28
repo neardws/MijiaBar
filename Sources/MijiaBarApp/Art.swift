@@ -597,6 +597,57 @@ struct PurifierArt: View {
 }
 
 /// 取暖器 / 除湿机
+struct HumidifierArt: View {
+    let on: Bool, tint: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var body: some View {
+        ZStack {
+            Ambient(tint, on ? 0.65 : 0, width: 170, height: 110).position(x: 100, y: 80)
+            ForEach(0..<3, id: \.self) { plume in
+                Capsule().fill(LinearGradient(colors: [tint.opacity(0), tint.opacity(0.65)], startPoint: .top, endPoint: .bottom))
+                    .frame(width: 5, height: plume == 1 ? 30 : 22)
+                    .offset(y: plume == 1 ? -4 : 0)
+                    .position(x: CGFloat(88 + plume * 12), y: 24).opacity(on ? 1 : 0)
+            }
+            RoundedRectangle(cornerRadius: 24).appliance(tint, on ? 1 : 0)
+                .frame(width: 96, height: 85).position(x: 100, y: 85)
+            Ellipse().fill(shellFill).overlay(Ellipse().stroke(Theme.stroke, lineWidth: 1))
+                .frame(width: 90, height: 18).position(x: 100, y: 47)
+            Capsule().fill(darkGlass).frame(width: 26, height: 5).position(x: 100, y: 47)
+            Capsule().fill(Theme.tile).frame(width: 10, height: 36).position(x: 100, y: 88)
+            Capsule().fill(tint.opacity(on ? 0.8 : 0.2)).frame(width: 6, height: 24).position(x: 100, y: 92)
+            Circle().fill(on ? tint : Color.secondary.opacity(0.4)).frame(width: 4, height: 4).position(x: 100, y: 116)
+        }
+        .frame(width: 200, height: 136)
+        .animation(reduceMotion ? nil : Motion.smooth, value: on)
+    }
+}
+
+struct VacuumArt: View {
+    let on: Bool, busy: Bool, tint: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var body: some View {
+        ZStack {
+            Ambient(tint, on ? 0.6 : 0, width: 180, height: 105).position(x: 100, y: 83)
+            ForEach(0..<3, id: \.self) { trail in
+                Capsule().fill(tint.opacity(0.35)).frame(width: CGFloat(32 - trail * 7), height: 3)
+                    .position(x: 25, y: CGFloat(74 + trail * 12)).opacity(on && busy ? 1 : 0)
+            }
+            Ellipse().fill(aluminum).frame(width: 132, height: 76).position(x: 105, y: 94)
+            Ellipse().appliance(tint, on ? 1 : 0).frame(width: 138, height: 80).position(x: 105, y: 83)
+            Ellipse().stroke(Theme.stroke, lineWidth: 2).frame(width: 118, height: 64).position(x: 105, y: 82)
+            RoundedRectangle(cornerRadius: 8).fill(darkGlass).frame(width: 34, height: 20).position(x: 105, y: 61)
+            Ellipse().fill(shellFill).frame(width: 34, height: 18).position(x: 105, y: 55)
+            Ellipse().fill(tint.opacity(on ? 0.8 : 0.15)).frame(width: 20, height: 9).position(x: 105, y: 55)
+            Capsule().fill(on ? tint : Color.secondary.opacity(0.4)).frame(width: 15, height: 4).position(x: 105, y: 89)
+            Capsule().fill(darkGlass).frame(width: 36, height: 5).position(x: 105, y: 119)
+        }
+        .frame(width: 200, height: 136)
+        .animation(reduceMotion ? nil : Motion.smooth, value: on)
+        .animation(reduceMotion ? nil : Motion.smooth, value: busy)
+    }
+}
+
 struct ApplianceArt: View {
     let kind: DeviceCategory, on: Bool, level: Double, tint: Color
     var body: some View {

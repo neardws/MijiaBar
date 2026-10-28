@@ -29,6 +29,8 @@ extension AppModel {
             // 放在第二个家里：只用来截详情页，不改变「我的家」列表截图
             dev("d12", L("阳台门", "Balcony door"), "lumi.sensor_magnet.aq2", L("阳台", "Balcony"), home: "h2"),
             dev("d13", L("厨房水浸", "Kitchen leak sensor"), "lumi.flood.agl02", L("厨房", "Kitchen"), home: "h2"),
+            dev("d15", L("加湿器", "Humidifier"), "deerma.humidifier.demo", L("主卧", "Bedroom"), home: "h2"),
+            dev("d16", L("扫地机", "Vacuum"), "roborock.vacuum.demo", L("客厅", "Living room"), home: "h2"),
         ]
         prefs.devices["d1"] = { var p = DevicePrefs(); p.favorite = true; return p }()
         prefs.devices["d2"] = { var p = DevicePrefs(); p.favorite = true; return p }()
@@ -69,13 +71,34 @@ extension AppModel {
         states["d12"] = DeviceState(values: ["2.1": .bool(false), "3.1": .int(82)], spec: magnet, legacy: false, source: "cloud")
         let flood = DeviceSpec(type: "", description: "", services: [S(2, "submersion-sensor", [P(2, 1, "submersion-state", "bool", ["read", "notify"])]), battery])
         states["d13"] = DeviceState(values: ["2.1": .bool(true), "3.1": .int(91)], spec: flood, legacy: false, source: "cloud")
+        let humidifier = DeviceSpec(type: "", description: "", services: [S(2, "humidifier", [
+            P(2, 1, "on", "bool"), P(2, 2, "target-humidity", "uint8", range: [30, 80, 5], unit: "percentage"),
+            P(2, 3, "mode", "uint8", opts: [ValueOption(value: 0, description: "Auto"), ValueOption(value: 1, description: "Manual")]),
+            P(2, 4, "fan-level", "uint8", opts: [1, 2, 3].map { ValueOption(value: $0, description: "Level\($0)") }),
+            P(2, 5, "physical-controls-locked", "bool")]),
+            S(3, "environment", [P(3, 1, "relative-humidity", "uint8", ["read"], unit: "percentage")])])
+        states["d15"] = DeviceState(values: ["2.1": .bool(true), "2.2": .int(55), "2.3": .int(0), "2.4": .int(2), "2.5": .bool(false), "3.1": .int(42)], spec: humidifier, legacy: false, source: "cloud")
+        let vacuum = DeviceSpec.parse(["services": [
+            ["iid": 2, "type": "urn:miot-spec-v2:service:vacuum:0", "properties": [
+                ["iid": 1, "type": "urn:miot-spec-v2:property:status:0", "format": "uint8", "access": ["read"],
+                 "value-list": [["value": 1, "description": "Cleaning"], ["value": 2, "description": "Idle"]]]
+            ], "actions": [
+                ["iid": 1, "type": "urn:miot-spec-v2:action:start-sweep:0", "in": []],
+                ["iid": 2, "type": "urn:miot-spec-v2:action:stop-sweeping:0", "in": []],
+                ["iid": 3, "type": "urn:miot-spec-v2:action:start-charge:0", "in": []]
+            ]],
+            ["iid": 3, "type": "urn:miot-spec-v2:service:battery:0", "properties": [
+                ["iid": 1, "type": "urn:miot-spec-v2:property:battery-level:0", "format": "uint8", "access": ["read"], "unit": "percentage"]
+            ]]
+        ]])
+        states["d16"] = DeviceState(values: ["2.1": .int(1), "3.1": .int(76)], spec: vacuum, legacy: false, source: "cloud")
         for d in devices { if let st = states[d.did], let t = Transport.from(st.source, device: d) { transports[d.did] = t } }
     }
 }
 
 /// 所有插画的开/关对照（自检用，不进 README）：没有演示设备的类型也能检查画风是否统一
 struct ArtGallery: View {
-    static let size = CGSize(width: 480, height: 2484)
+    static var size: CGSize { CGSize(width: 480, height: rows.count * 138) }
     /// (名字, 开, 关)；网站的设备阵列（--art）也用这份清单
     static var rows: [(String, AnyView, AnyView)] { [
             ("fan", AnyView(FanArt(on: true, level: 0.5, swing: false, tint: .teal)), AnyView(FanArt(on: false, level: 0.5, swing: false, tint: .teal))),
@@ -89,6 +112,8 @@ struct ArtGallery: View {
             ("purifier", AnyView(PurifierArt(on: true, filter: 72, tint: .blue)), AnyView(PurifierArt(on: false, filter: 72, tint: .blue))),
             ("heater", AnyView(ApplianceArt(kind: .heater, on: true, level: 0.6, tint: Theme.heat)), AnyView(ApplianceArt(kind: .heater, on: false, level: 0.6, tint: Theme.heat))),
             ("dehumidifier", AnyView(ApplianceArt(kind: .dehumidifier, on: true, level: 0.4, tint: .cyan)), AnyView(ApplianceArt(kind: .dehumidifier, on: false, level: 0.4, tint: .cyan))),
+            ("humidifier", AnyView(HumidifierArt(on: true, tint: .cyan)), AnyView(HumidifierArt(on: false, tint: .cyan))),
+            ("vacuum", AnyView(VacuumArt(on: true, busy: true, tint: .cyan)), AnyView(VacuumArt(on: false, busy: false, tint: .cyan))),
             ("thermo", AnyView(ThermoArt(temp: 25.6, tint: .mint)), AnyView(ThermoArt(temp: nil, tint: .mint))),
             ("motion", AnyView(MotionSensorArt(on: true, tint: .mint)), AnyView(MotionSensorArt(on: false, tint: .mint))),
             ("contact", AnyView(ContactSensorArt(on: true, open: true, tint: .mint)), AnyView(ContactSensorArt(on: false, open: nil, tint: .mint))),
@@ -205,6 +230,12 @@ enum Snapshot {
             m.atHome = false; render(root, f("camera-away")); m.atHome = nil
             m.page = .detail("d11"); render(root, f("doorbell")); m.page = .detail("d12"); render(root, f("contact"))
             m.page = .detail("d13"); render(root, f("leak"))
+            m.page = .detail("d15"); render(root, f("humidifier"))
+            m.states["d15"]?.values["2.1"] = .bool(false); render(root, f("humidifier-off"))
+            m.states["d15"]?.values["2.1"] = .bool(true)
+            m.page = .detail("d16"); render(root, f("vacuum"))
+            m.states["d16"]?.values["2.1"] = .int(2); render(root, f("vacuum-idle"))
+            m.states["d16"]?.values["2.1"] = .int(1)
             m.page = .detail("d6"); render(root, f("thermo-history"), size: CGSize(width: 360, height: 900))
             m.page = .detail("d12"); render(root, f("contact-history"), size: CGSize(width: 360, height: 640))
             LiveControls.snapshotWatching = true

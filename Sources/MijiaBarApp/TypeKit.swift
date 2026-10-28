@@ -222,7 +222,7 @@ struct PropTile: View {
     var body: some View {
         if let p = prop {
             let v = dc.v(p)
-            if p.format == "bool" {
+            if p.format == "bool", p.writable {
                 ToggleTile(title: title, icon: icon, isOn: v?.boolValue ?? false, tint: tint) {
                     m.write(dc.device, p.key, .bool(!(v?.boolValue ?? false)))
                 }
@@ -319,7 +319,7 @@ extension View {
     case .fan: return dc.spec?.controlServices.flatMap(\.properties).first { $0.name == "fan-level" && $0.options != nil } ?? dc.p("fan-level") ?? dc.p("speed-level")
     case .light: return dc.p("brightness")
     case .heater: return dc.p("target-temperature")
-    case .dehumidifier: return dc.p("target-humidity")
+    case .dehumidifier, .humidifier: return dc.p("target-humidity")?.writable == true ? dc.p("target-humidity") : nil
     case .tv, .speaker: return dc.p("volume", in: "speaker") ?? dc.p("volume")
     default: return nil
     }
