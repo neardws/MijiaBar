@@ -44,6 +44,7 @@ public enum HouseFreeDecor {
         public let scale: Int
         public let walk: [String]
         public let protected: Set<Cell>
+        public let doorwayCells: Set<Cell>
         public var cells: Set<Cell> {
             Set(walk.enumerated().flatMap { row, line in line.enumerated().compactMap { col, token in token == "." ? Cell(col, row) : nil } })
         }
@@ -58,15 +59,31 @@ public enum HouseFreeDecor {
     }
     public static func grids(layout: [HouseLayoutCell], catalog: HouseModuleCatalog, spots: HousePetSpots, style: String?) -> [Grid] {
         let modules = spots.sets[spots.artSets[HouseStyles.resolve(style)] ?? "cozy"] ?? [:]
+        let doorways = HouseDoorwayPlanner.plan(layout: layout, catalog: catalog)
         return layout.sorted { HouseGrid.painterKey(col: $0.col, row: $0.row) < HouseGrid.painterKey(col: $1.col, row: $1.row) }.compactMap { placed in
             guard let module = modules[placed.module], let art = catalog.modules[placed.module], art.tip.count == 2, spots.cellsPerGrid > 0 else { return nil }
-            let grid = Grid(room: HouseDecor.roomKey(placed), module: placed.module, tip: art.tip, scale: spots.cellsPerGrid, walk: module.walk, protected: [])
+            let grid = Grid(room: HouseDecor.roomKey(placed), module: placed.module, tip: art.tip, scale: spots.cellsPerGrid, walk: module.walk, protected: [], doorwayCells: [])
             let protected = Set(module.spots.filter { ["sleep", "perch"].contains($0.kind) }.compactMap { spot -> Cell? in
                 if let from = spot.from, from.count == 2, grid.cells.contains(Cell(from[0], from[1])) { return Cell(from[0], from[1]) }
                 guard spot.at.count == 2 else { return nil }
                 return grid.snap(point: .init(x: Double(art.tip[0]) + 160 * (spot.at[0] - spot.at[1]), y: Double(art.tip[1]) + 66 * (spot.at[0] + spot.at[1])))
             })
-            return Grid(room: grid.room, module: grid.module, tip: grid.tip, scale: grid.scale, walk: grid.walk, protected: protected)
+            let doorwayCells = Set(doorways.filter { $0.back == placed || $0.front == placed }.flatMap { doorway in
+                let tile = 1.0 / Double(grid.scale)
+                let lowerSide = HouseLevels.elevation(placed) < max(HouseLevels.elevation(doorway.back), HouseLevels.elevation(doorway.front))
+                let depth = doorway.stairs && lowerSide ? max(tile, doorway.approachDepth) : tile
+                let acrossLower = doorway.back == placed ? doorway.boundary - depth : doorway.boundary
+                let acrossUpper = doorway.back == placed ? doorway.boundary : doorway.boundary + depth
+                return grid.cells.filter { cell in
+                    let horizontal = Double(placed.col) + Double(cell.col) * tile
+                    let vertical = Double(placed.row) + Double(cell.row) * tile
+                    let along = doorway.axis == .u ? vertical : horizontal
+                    let across = doorway.axis == .u ? horizontal : vertical
+                    return along < doorway.upper - 0.000001 && along + tile > doorway.lower + 0.000001
+                        && across < acrossUpper - 0.000001 && across + tile > acrossLower + 0.000001
+                }
+            })
+            return Grid(room: grid.room, module: grid.module, tip: grid.tip, scale: grid.scale, walk: grid.walk, protected: protected, doorwayCells: doorwayCells)
         }
     }
     public static func footprint(cell: [Int], size: String) -> Set<Cell> {
@@ -91,6 +108,7 @@ public enum HouseFreeDecor {
         guard others.count < maxPerRoom else { return .roomFull }
         let footprint = footprint(cell: cell, size: item.size), walk = grid.cells
         guard !footprint.isEmpty, footprint.isSubset(of: walk) else { return .blocked }
+        guard footprint.isDisjoint(with: grid.doorwayCells) else { return .blocked }
         let occupied = Set(others.values.flatMap { entry -> Set<Cell> in
             guard let other = items.items.first(where: { $0.id == entry.item }) else { return [] }
             return self.footprint(cell: entry.cell, size: other.size)
