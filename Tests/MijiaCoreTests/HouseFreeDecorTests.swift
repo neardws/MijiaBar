@@ -46,6 +46,79 @@ import Testing
         let grids = HouseFreeDecor.grids(layout: layout, catalog: modules, spots: spots, style: nil)
         #expect(HouseFreeDecor.validate(room: "room", item: "plant", cell: [2, 0], grids: grids, items: items) == .disconnects)
     }
+    @Test func protectsDoorwayTilesAndStairs() throws {
+        for axis in [HouseDoorway.Axis.u, .v] {
+            for level in [-1, 0, 1] {
+                for scale in [4, 8, 16] {
+                    for fallback in [false, true] {
+                        var (modules, items, spots, _) = try Self.fixture(walk: Array(repeating: String(repeating: ".", count: scale), count: scale))
+                        spots.cellsPerGrid = scale
+                        spots.sets["cozy"]?["test"]?.spots = []
+                        let ranges: [String: [[Double]]] = ["nw": [[0.2, 0.8]], "ne": [[0.2, 0.8]], "sw": [[0.2, 0.8]], "se": [[0.2, 0.8]]]
+                        modules.modules["test"]?.stairRanges = ["3": ["nw": [], "ne": [], "sw": [], "se": []], "2": ranges]
+                        if fallback { modules.modules["test"]?.doorwayRanges = ["nw": [], "ne": [], "sw": [], "se": []] }
+                        let layout: [HouseLayoutCell] = [
+                            .init(room: "back", module: "test", col: -2, row: 3, level: 0),
+                            .init(room: "front", module: "test", col: axis == .u ? -1 : -2, row: axis == .u ? 3 : 4, level: level)
+                        ]
+                        let doorway = try #require(HouseDoorwayPlanner.plan(layout: layout, catalog: modules).first)
+                        #expect(doorway.usedFallback == fallback)
+                        let grids = HouseFreeDecor.grids(layout: layout, catalog: modules, spots: spots, style: nil)
+                        for grid in grids {
+                            let back = grid.room == "back"
+                            let lowerSide = level > 0 ? back : !back
+                            let depth = level != 0 && lowerSide ? Int(ceil(doorway.approachDepth * Double(scale))) : 1
+                            let alongStart = Int(floor(0.35 * Double(scale))), alongEnd = Int(ceil(0.65 * Double(scale)))
+                            var expected: Set<HouseFreeDecor.Cell> = []
+                            for along in alongStart..<alongEnd {
+                                for distance in 0..<depth {
+                                    let across = back ? scale - 1 - distance : distance
+                                    expected.insert(axis == .u ? .init(across, along) : .init(along, across))
+                                }
+                            }
+                            #expect(grid.doorwayCells == expected)
+                            #expect(grid.cells.count == scale * scale)
+                            for cell in grid.cells {
+                                #expect(grid.snap(point: grid.px(for: cell)) == cell)
+                                let reason = HouseFreeDecor.validate(room: grid.room, item: "plant", cell: cell.array, grids: grids, items: items)
+                                #expect(reason == (expected.contains(cell) ? .blocked : nil))
+                            }
+                            for cell in grid.cells where cell.col < scale - 1 && cell.row < scale - 1 {
+                                let footprint = HouseFreeDecor.footprint(cell: cell.array, size: "L")
+                                if !footprint.isDisjoint(with: expected) {
+                                    #expect(HouseFreeDecor.validate(room: grid.room, item: "large", cell: cell.array, grids: grids, items: items) == .blocked)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    @Test func resolutionKeepsDoorwaysClearAfterLayoutChanges() throws {
+        let (modules, items, spots, original) = try Self.fixture(walk: Array(repeating: "........", count: 8))
+        let entries: [String: HouseFreeDecorEntry] = [
+            "room/f1": .init(item: "plant", cell: [7, 3]),
+            "room/f2": .init(item: "plant", cell: [7, 1])
+        ]
+        let single = HouseFreeDecor.grids(layout: original, catalog: modules, spots: spots, style: nil)
+        #expect(HouseFreeDecor.resolve(entries: entries, grids: single, items: items).count == 2)
+        let layout = original + [HouseLayoutCell(room: "next", module: "test", col: 1, row: 0, level: 1)]
+        let grids = HouseFreeDecor.grids(layout: layout, catalog: modules, spots: spots, style: nil)
+        let placements = HouseFreeDecor.resolve(entries: entries, grids: grids, items: items)
+        #expect(placements.map(\.slot) == ["free:f2"])
+        let baseline = HousePetWorld(layout: layout, catalog: modules, spots: spots)
+        let world = HousePetWorld(layout: layout, catalog: modules, spots: spots, decor: placements, items: items)
+        #expect(world.doorways == baseline.doorways)
+        for grid in grids {
+            for cell in grid.doorwayCells {
+                #expect(world.nodes.contains { $0.room == grid.room && $0.col == cell.col && $0.row == cell.row })
+            }
+        }
+        let start = try #require(world.nodes.first { $0.room == "room" })
+        let end = try #require(world.nodes.first { $0.room == "next" })
+        #expect(!world.path(from: start.id, to: end.id).isEmpty)
+    }
     @Test func protectsNearestSpotAndResolvesConflictsDeterministically() throws {
         let (modules, items, original, layout) = try Self.fixture()
         var spots = original
