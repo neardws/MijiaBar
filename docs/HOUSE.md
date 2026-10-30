@@ -167,8 +167,9 @@ read the file, but an older build rewriting it may discard fields it does not un
 - Every footprint cell must be `.` and in bounds, without another free item. The nearest
   walk cell of each currently occupied fixed floor slot is reserved against free placement.
 - Fixed sleep/perch approach nodes (`from`, or nearest floor node to `at`) are protected.
-  A four-neighbor BFS must leave the room's remaining walk floor connected. Cross-room
-  doorway preservation is deliberately outside v1.
+  A four-neighbor BFS must leave the room's remaining walk floor connected.
+- Doorway/stair cells from `HouseDoorwayPlanner` (`grid.doorwayCells`) are protected
+  against free placement; overlapping footprints return `doorway`, not `blocked`.
 - Module pixel coordinates use `tip + (160*(u-v),66*(u+v))`, where the footprint center is
   `((col+0.5)/N,(row+0.5)/N)` for S/M or `((col+1)/N,(row+1)/N)` for L; N is `cellsPerGrid`,
   not the rectangular module width. Sprite bounds subtract the sprite's anchor.
@@ -185,7 +186,7 @@ mijiabar house decor list --room '<roomKey>' --json
 ```
 
 Writes return JSON; rule failures include `ok: false`, `error` and typed `reason`:
-`notFloorItem`, `roomFull`, `blocked`, `occupied`, `petSpot`, `disconnects`, `unknownRoom`,
+`notFloorItem`, `roomFull`, `blocked`, `doorway`, `occupied`, `petSpot`, `disconnects`, `unknownRoom`,
 `unknownItem`. Invalid identifier syntax returns `invalidID`. `place --id` refuses to
 overwrite a live entry; use `move` or the editor to change an existing placement.
 `decor list` / MCP `get_house_decor` include `free: [{key,room,item,cell,at,hidden?}]`.

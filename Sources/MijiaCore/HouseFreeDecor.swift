@@ -16,12 +16,13 @@ public struct HouseFreeDecorEntry: Codable, Equatable, Sendable {
 public enum HouseFreeDecor {
     public static let maxPerRoom = 4
     public enum Reason: String, Error, Codable, Sendable {
-        case notFloorItem, roomFull, blocked, occupied, petSpot, disconnects, unknownRoom, unknownItem
+        case notFloorItem, roomFull, blocked, doorway, occupied, petSpot, disconnects, unknownRoom, unknownItem
         public var message: String {
             switch self {
             case .notFloorItem: return L("只能自由摆放落地装饰", "Only floor decor can be freely placed")
             case .roomFull: return L("每个房间最多四件自由装饰", "At most four free items per room")
             case .blocked: return L("占地超出可行走区域", "Footprint is outside the walkable floor")
+            case .doorway: return L("请勿挡住门洞或楼梯", "Don't block doorways or stairs")
             case .occupied: return L("位置已有装饰", "Position is occupied by decor")
             case .petSpot: return L("请保留宠物休息点入口", "Keep pet resting spot approaches clear")
             case .disconnects: return L("请保留连通的行走通道", "Keep the walking floor connected")
@@ -108,7 +109,7 @@ public enum HouseFreeDecor {
         guard others.count < maxPerRoom else { return .roomFull }
         let footprint = footprint(cell: cell, size: item.size), walk = grid.cells
         guard !footprint.isEmpty, footprint.isSubset(of: walk) else { return .blocked }
-        guard footprint.isDisjoint(with: grid.doorwayCells) else { return .blocked }
+        guard footprint.isDisjoint(with: grid.doorwayCells) else { return .doorway }
         let occupied = Set(others.values.flatMap { entry -> Set<Cell> in
             guard let other = items.items.first(where: { $0.id == entry.item }) else { return [] }
             return self.footprint(cell: entry.cell, size: other.size)
