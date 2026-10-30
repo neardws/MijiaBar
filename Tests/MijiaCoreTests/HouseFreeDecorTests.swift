@@ -81,12 +81,12 @@ import Testing
                             for cell in grid.cells {
                                 #expect(grid.snap(point: grid.px(for: cell)) == cell)
                                 let reason = HouseFreeDecor.validate(room: grid.room, item: "plant", cell: cell.array, grids: grids, items: items)
-                                #expect(reason == (expected.contains(cell) ? .blocked : nil))
+                                #expect(reason == (expected.contains(cell) ? .doorway : nil))
                             }
                             for cell in grid.cells where cell.col < scale - 1 && cell.row < scale - 1 {
                                 let footprint = HouseFreeDecor.footprint(cell: cell.array, size: "L")
                                 if !footprint.isDisjoint(with: expected) {
-                                    #expect(HouseFreeDecor.validate(room: grid.room, item: "large", cell: cell.array, grids: grids, items: items) == .blocked)
+                                    #expect(HouseFreeDecor.validate(room: grid.room, item: "large", cell: cell.array, grids: grids, items: items) == .doorway)
                                 }
                             }
                         }
