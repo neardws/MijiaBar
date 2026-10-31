@@ -623,6 +623,101 @@ struct HumidifierArt: View {
     }
 }
 
+struct FridgeArt: View {
+    let on: Bool, tint: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var body: some View {
+        PowerTimeline(on: on) { _, level in
+            ZStack {
+                Ambient(tint, level, width: 160, height: 125).position(x: 100, y: 70)
+                RoundedRectangle(cornerRadius: 12).appliance(tint, level)
+                    .frame(width: 78, height: 116).position(x: 100, y: 66)
+                RoundedRectangle(cornerRadius: 8).fill(shellFill).overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.stroke, lineWidth: 1))
+                    .frame(width: 70, height: 70).position(x: 100, y: 47)
+                RoundedRectangle(cornerRadius: 6).fill(shellFill).overlay(RoundedRectangle(cornerRadius: 6).stroke(Theme.stroke, lineWidth: 1))
+                    .frame(width: 70, height: 33).position(x: 100, y: 103)
+                Capsule().fill(tint.opacity(level * 0.8)).frame(width: 2, height: 63).position(x: 133, y: 48)
+                Capsule().fill(aluminum).frame(width: 4, height: 24).position(x: 72, y: 59)
+                Capsule().fill(aluminum).frame(width: 22, height: 3).position(x: 83, y: 94)
+                RoundedRectangle(cornerRadius: 3).fill(darkGlass).frame(width: 16, height: 27).position(x: 117, y: 35)
+                ForEach(0..<3, id: \.self) { strip in
+                    Capsule().fill(tint.opacity(0.12 + level * 0.88)).frame(width: 8, height: 2)
+                        .position(x: 117, y: CGFloat(28 + strip * 6))
+                }
+            }
+            .frame(width: 200, height: 136)
+        }
+        .animation(reduceMotion ? nil : Motion.smooth, value: on)
+    }
+}
+
+struct WasherArt: View {
+    let on: Bool, busy: Bool, tint: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var body: some View {
+        PowerTimeline(on: on, running: busy) { time, level in
+            ZStack {
+                Ambient(tint, level, width: 175, height: 120).position(x: 100, y: 77)
+                RoundedRectangle(cornerRadius: 12).appliance(tint, level)
+                    .frame(width: 106, height: 111).position(x: 100, y: 70)
+                Capsule().fill(aluminum).frame(width: 27, height: 5).position(x: 72, y: 30)
+                Circle().fill(aluminum).frame(width: 12, height: 12).position(x: 103, y: 30)
+                RoundedRectangle(cornerRadius: 3).fill(darkGlass).frame(width: 24, height: 12).position(x: 130, y: 30)
+                Capsule().fill(tint.opacity(0.12 + level * 0.88)).frame(width: 14, height: 3).position(x: 130, y: 30)
+                Circle().fill(aluminum).frame(width: 74, height: 74).position(x: 100, y: 80)
+                Circle().fill(darkGlass).frame(width: 61, height: 61).position(x: 100, y: 80)
+                Circle().stroke(tint.opacity(level * 0.4), lineWidth: 2).frame(width: 52, height: 52).position(x: 100, y: 80)
+                ZStack {
+                    ForEach(0..<3, id: \.self) { paddle in
+                        Capsule().fill(aluminum).frame(width: 5, height: 14).offset(y: -17)
+                            .rotationEffect(.degrees(Double(paddle) * 120))
+                    }
+                    Circle().trim(from: 0.05, to: 0.32).stroke(tint, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .frame(width: 44, height: 44).opacity(on && busy ? 1 : 0)
+                }
+                .rotationEffect(.degrees(on && busy && !reduceMotion ? time.truncatingRemainder(dividingBy: 3) * 120 : 0))
+                .position(x: 100, y: 80)
+                Capsule().fill(aluminum).frame(width: 5, height: 18).position(x: 134, y: 80)
+            }
+            .frame(width: 200, height: 136)
+        }
+        .animation(reduceMotion ? nil : Motion.smooth, value: on)
+        .animation(reduceMotion ? nil : Motion.smooth, value: busy)
+    }
+}
+
+struct WaterHeaterArt: View {
+    let on: Bool, heating: Bool, tint: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var body: some View {
+        PowerTimeline(on: on) { _, level in
+            ZStack {
+                Ambient(tint, level, width: 185, height: 115).position(x: 100, y: 65)
+                ForEach(0..<2, id: \.self) { pipe in
+                    Capsule().fill(aluminum).frame(width: 8, height: 37).position(x: CGFloat(82 + pipe * 36), y: 105)
+                    Capsule().fill(pipe == 0 ? Theme.cool : Theme.heat).frame(width: 10, height: 5)
+                        .position(x: CGFloat(82 + pipe * 36), y: 111)
+                }
+                RoundedRectangle(cornerRadius: 33).appliance(tint, level)
+                    .frame(width: 156, height: 76).position(x: 100, y: 59)
+                Capsule().stroke(Theme.stroke, lineWidth: 1).frame(width: 22, height: 64).position(x: 36, y: 59)
+                RoundedRectangle(cornerRadius: 7).fill(darkGlass).frame(width: 42, height: 27).position(x: 108, y: 62)
+                Capsule().fill(tint.opacity(0.12 + level * 0.88)).frame(width: 22, height: 3).position(x: 108, y: 56)
+                HStack(spacing: 3) {
+                    ForEach(0..<3, id: \.self) { _ in
+                        Capsule().fill(Theme.heat).frame(width: 3, height: 9)
+                    }
+                }
+                .opacity(on && heating ? 1 : 0).position(x: 108, y: 66)
+                Circle().fill(tint.opacity(0.12 + level * 0.88)).frame(width: 4, height: 4).position(x: 151, y: 59)
+            }
+            .frame(width: 200, height: 136)
+        }
+        .animation(reduceMotion ? nil : Motion.smooth, value: on)
+        .animation(reduceMotion ? nil : Motion.smooth, value: heating)
+    }
+}
+
 struct VacuumArt: View {
     let on: Bool, busy: Bool, tint: Color
     @Environment(\.accessibilityReduceMotion) private var reduceMotion

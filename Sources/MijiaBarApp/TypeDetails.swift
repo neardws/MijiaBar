@@ -12,6 +12,9 @@ struct TypeDetailView: View {
         case .fan: FanDetail(dc: dc)
         case .humidifier: HumidifierDetail(dc: dc)
         case .vacuum: VacuumDetail(dc: dc)
+        case .fridge: FridgeDetail(dc: dc)
+        case .washer: WasherDetail(dc: dc)
+        case .waterHeater: WaterHeaterDetail(dc: dc)
         case .light: LightDetail(dc: dc)
         case .plug: PlugDetail(dc: dc)
         case .tv: TVDetail(dc: dc)
@@ -90,7 +93,10 @@ struct DeviceStatusCard: View {
         case .leak: LeakSensorArt(on: false, wet: nil, tint: tint)
         default: ThermoArt(temp: nil, tint: tint)
         }
-    case .other, .curtain, .fridge, .washer, .waterHeater: GenericArt(on: false, tint: tint)
+    case .fridge: FridgeArt(on: false, tint: tint)
+    case .washer: WasherArt(on: false, busy: false, tint: tint)
+    case .waterHeater: WaterHeaterArt(on: false, heating: false, tint: tint)
+    case .other, .curtain: GenericArt(on: false, tint: tint)
     case .airPurifier: AirPurifierArt(on: false, level: 0.5, tint: tint)
     }
 }
@@ -375,6 +381,75 @@ struct HumidifierDetail: View {
                 PropTile(dc: dc, prop: dc.p("fan-level"), title: L("风速", "Fan"), icon: "wind", tint: tint)
                 PropTile(dc: dc, prop: dc.p("physical-controls-locked"), title: L("童锁", "Child lock"), icon: "lock", tint: tint)
             }
+        }
+    }
+}
+
+struct FridgeDetail: View {
+    @EnvironmentObject var m: AppModel
+    let dc: DC
+    var body: some View {
+        let device = dc.device, tint = device.category.color
+        let power = m.powerInfo(device), target = dc.p("target-temperature")
+        let on = power?.isOn ?? device.isOnline
+        TypeShell(device: device, tint: tint, isOn: on,
+                  title: power == nil ? (on ? L("在线", "Online") : L("离线", "Offline")) : (on ? L("运行中", "Running") : L("已关闭", "Off")),
+                  subtitle: joined([L("冰箱", "Fridge"), dc.text(dc.p("mode"))]),
+                  powerOn: power?.isOn, onPower: powerHandler(m, device)) {
+            FridgeArt(on: on, tint: tint)
+        } content: {
+            if let target {
+                BigValue(value: dc.num(target).map { fmt1($0) }, unit: "°C", caption: L("目标温度", "Target temperature"), dim: !on)
+                if target.writable { PropSlider(dc: dc, prop: target, colors: [Theme.cool, tint], enabled: on) }
+            }
+            ReadoutRow(items: [("thermometer.medium", dc.num(dc.p("temperature")).map { L("温度", "Temperature") + " \(fmt1($0))°C" })], tint: tint)
+            PropTile(dc: dc, prop: dc.p("mode"), title: L("模式", "Mode"), icon: "snowflake", tint: tint)
+        }
+    }
+}
+
+struct WasherDetail: View {
+    @EnvironmentObject var m: AppModel
+    let dc: DC
+    var body: some View {
+        let device = dc.device, tint = device.category.color
+        let power = m.powerInfo(device), remaining = dc.p("remaining-time")
+        let on = power?.isOn ?? device.isOnline
+        let busy = on && HouseDeviceState.busy(dc.state, otherwise: false)
+        TypeShell(device: device, tint: tint, isOn: on,
+                  title: !on ? L("已关闭", "Off") : dc.text(dc.p("status")) ?? L("在线", "Online"),
+                  subtitle: L("洗衣机", "Washer"), powerOn: power?.isOn, onPower: powerHandler(m, device)) {
+            WasherArt(on: on, busy: busy, tint: tint)
+        } content: {
+            if let remaining {
+                BigValue(value: dc.text(remaining), unit: unitText(remaining), caption: L("剩余时间", "Remaining"), dim: !on)
+            }
+            ReadoutRow(items: [("chart.bar.fill", dc.p("progress").flatMap { prop in dc.text(prop).map { L("进度", "Progress") + " " + $0 + unitText(prop) } }),
+                               ("battery.75percent", dc.num(dc.p("battery-level")).map { L("电量", "Battery") + " \(Int($0))%" })], tint: tint)
+            PropTile(dc: dc, prop: dc.p("mode"), title: L("模式", "Mode"), icon: "slider.horizontal.3", tint: tint)
+        }
+    }
+}
+
+struct WaterHeaterDetail: View {
+    @EnvironmentObject var m: AppModel
+    let dc: DC
+    var heating: Bool { dc.bool(dc.p("heating")) ?? HouseDeviceState.busy(dc.state, otherwise: false) }
+    var body: some View {
+        let device = dc.device, tint = device.category.color
+        let power = m.powerInfo(device), target = dc.p("target-temperature")
+        let on = power?.isOn ?? device.isOnline
+        TypeShell(device: device, tint: tint, isOn: on,
+                  title: !on ? L("已关闭", "Off") : (heating ? L("加热中", "Heating") : dc.text(dc.p("status")) ?? L("在线", "Online")),
+                  subtitle: L("热水器", "Water heater"), powerOn: power?.isOn, onPower: powerHandler(m, device)) {
+            WaterHeaterArt(on: on, heating: on && heating, tint: tint)
+        } content: {
+            if let target {
+                BigValue(value: dc.num(target).map { fmt1($0) }, unit: "°C", caption: L("目标温度", "Target temperature"), dim: !on)
+                if target.writable { PropSlider(dc: dc, prop: target, colors: [Theme.cool, Theme.heat], enabled: on) }
+            }
+            ReadoutRow(items: [("thermometer.medium", dc.num(dc.p("temperature")).map { L("温度", "Temperature") + " \(fmt1($0))°C" })], tint: tint)
+            PropTile(dc: dc, prop: dc.p("mode"), title: L("模式", "Mode"), icon: "slider.horizontal.3", tint: tint)
         }
     }
 }
